@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const sectorSlug = searchParams.get('sector');
+    const categorySlug = searchParams.get('category');
     const productId = searchParams.get('product');
 
     await connectDB();
@@ -22,6 +23,13 @@ export async function GET(req: NextRequest) {
       const Sector = (await import('@/models/Sector')).default;
       const sector = await Sector.findOne({ slug: sectorSlug });
       if (sector) filter.sector = sector._id;
+    }
+
+    if (categorySlug) {
+      const ReportCategory = (await import('@/models/ReportCategory')).default;
+      const cat = await ReportCategory.findOne({ slug: categorySlug, status: 'active' });
+      if (cat) filter.category = cat._id;
+      else return successResponse([]);
     }
 
     if (productId) filter.product = productId;

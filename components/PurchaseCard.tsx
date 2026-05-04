@@ -57,11 +57,19 @@ export default function PurchaseCard({ slug, price, duration, regularPrice, sale
         </>
       ) : (
         <>
-          <Link href={`/auth/register?plan=${slug}`} className="btn-subscribe" style={{ marginBottom: '0.75rem', display: 'block', textAlign: 'center', textDecoration: 'none' }}>
-            Subscribe Now →
+          <Link
+            href={`/checkout/guest?plan=${slug}`}
+            className="btn-subscribe"
+            style={{ marginBottom: '0.75rem', display: 'block', textAlign: 'center', textDecoration: 'none', background: '#3b82f6' }}
+          >
+            Subscribe Now — Pay with PayPal →
           </Link>
-          <Link href={`/auth/login?plan=${slug}`} className="btn-subscribe outlined" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+          <div style={{ textAlign: 'center', fontSize: 12, color: '#94a3b8', margin: '0.5rem 0', fontWeight: 500 }}>— or —</div>
+          <Link href={`/auth/login?plan=${slug}`} className="btn-subscribe outlined" style={{ marginBottom: '0.5rem', display: 'block', textAlign: 'center', textDecoration: 'none' }}>
             I already have an account
+          </Link>
+          <Link href={`/auth/register?plan=${slug}`} style={{ display: 'block', textAlign: 'center', fontSize: 12, color: '#64748b', textDecoration: 'none', marginTop: '0.25rem' }}>
+            Create account first
           </Link>
         </>
       )}

@@ -1,9 +1,13 @@
 import connectDB from '@/lib/mongoose';
 import StaticPage from '@/models/StaticPage';
 import Blog from '@/models/Blog';
+import BlogCategory from '@/models/BlogCategory';
+import ReportCategory from '@/models/ReportCategory';
+import Report from '@/models/Report';
+import Sector from '@/models/Sector';
 import SiteLayout from '@/components/SiteLayout';
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import ContentListing from '@/components/ContentListing';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,18 +24,23 @@ export async function generateMetadata({ params }: P) {
     description: page.metaDescription || '',
   };
 
-  const blogTypeInfo = await Blog.findOne({ blogType: normalSlug, publishStatus: 'published' })
-    .select('blogTypeLabel').lean() as any;
-  if (blogTypeInfo) return {
-    title: `${blogTypeInfo.blogTypeLabel || normalSlug} – PristineGaze`,
-    description: `Browse all ${blogTypeInfo.blogTypeLabel || normalSlug} articles on PristineGaze.`,
+  const blogCat = await BlogCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
+  if (blogCat) return {
+    title: `${blogCat.name} – PristineGaze`,
+    description: blogCat.description || `Browse all ${blogCat.name} articles on PristineGaze.`,
+  };
+
+  const reportCat = await ReportCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
+  if (reportCat) return {
+    title: `${reportCat.name} – PristineGaze`,
+    description: reportCat.description || `Browse all ${reportCat.name} reports on PristineGaze.`,
   };
 
   return { title: 'Not Found – PristineGaze' };
 }
 
 function fmtDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 function excerpt(html: string, len = 160) {
   return html ? html.replace(/<[^>]+>/g, '').slice(0, len) + '…' : '';
@@ -42,7 +51,7 @@ export default async function CatchAllPage({ params }: P) {
   const normalSlug = slug.toLowerCase();
   await connectDB();
 
-  // ── 1. Static page ───────────────────────────────────────────────────────
+  // ── 1. Static page ────────────────────────────────────────────────────────
   const page = await StaticPage.findOne({ slug: normalSlug, isPublished: true }).lean() as any;
   if (page) {
     return (
@@ -67,123 +76,103 @@ export default async function CatchAllPage({ params }: P) {
     );
   }
 
-  // ── 2. Blog type listing ─────────────────────────────────────────────────
-  const blogTypeInfo = await Blog.findOne({ blogType: normalSlug, publishStatus: 'published' })
-    .select('blogTypeLabel').lean() as any;
-
-  if (blogTypeInfo) {
-    const [blogs, latestAll] = await Promise.all([
-      Blog.find({ blogType: normalSlug, publishStatus: 'published' })
-        .select('title slug featuredImage blogTypeLabel createdAt metaDescription content')
+  // ── 2. Blog category listing ──────────────────────────────────────────────
+  const blogCat = await BlogCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
+  if (blogCat) {
+    const [blogs, latestBlogs, allBlogCats] = await Promise.all([
+      Blog.find({ category: blogCat._id, publishStatus: 'published' })
+        .select('title slug featuredImage createdAt metaDescription content')
         .sort({ createdAt: -1 })
         .lean() as Promise<any[]>,
       Blog.find({ publishStatus: 'published' })
-        .select('title slug featuredImage blogType blogTypeLabel createdAt')
+        .populate('category', 'slug')
+        .select('title slug featuredImage createdAt category')
         .sort({ createdAt: -1 })
-        .limit(8)
+        .limit(5)
         .lean() as Promise<any[]>,
+      BlogCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean(),
     ]);
 
-    const label = blogTypeInfo.blogTypeLabel || normalSlug;
-    const featured = blogs.slice(0, 2);
-    const rest = blogs.slice(2);
+    const items = blogs.map((b: any) => ({
+      _id: b._id.toString(),
+      title: b.title,
+      slug: b.slug,
+      featuredImage: b.featuredImage,
+      date: fmtDate(b.createdAt),
+      excerpt: b.metaDescription || excerpt(b.content || '', 120),
+      href: `/${blogCat.slug}/${b.slug}`,
+      cta: `Read ${blogCat.name} »`,
+    }));
+
+    const latestItems = latestBlogs.map((b: any) => ({
+      _id: b._id.toString(),
+      title: b.title,
+      slug: b.slug,
+      featuredImage: b.featuredImage,
+      href: b.category?.slug ? `/${b.category.slug}/${b.slug}` : `#`,
+    }));
 
     return (
       <SiteLayout>
-        {/* ── Hero ─────────────────────────────────────────────────────── */}
-        <div className="blog-listing-hero">
-          <div className="container">
-            <div className="blog-hero-label">PristineGaze Insights</div>
-            <h1 className="blog-hero-title">{label}</h1>
-            <p className="blog-hero-sub">
-              {blogs.length} article{blogs.length !== 1 ? 's' : ''} &bull; Updated daily
-            </p>
-          </div>
-        </div>
+        <ContentListing
+          title={blogCat.name}
+          items={items}
+          latestItems={latestItems}
+          sidebarType="blog"
+          latestLabel={`Latest ${blogCat.name}`}
+          categories={(allBlogCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+        />
+      </SiteLayout>
+    );
+  }
 
-        {/* ── Body ─────────────────────────────────────────────────────── */}
-        <div className="site-section">
-          <div className="container">
-            <div className="row g-4">
-              {/* Main column */}
-              <div className="col-lg-8">
+  // ── 3. Report category listing ────────────────────────────────────────────
+  const reportCat = await ReportCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
+  if (reportCat) {
+    const [reports, latestReports, allSectors, allReportCats] = await Promise.all([
+      Report.find({ category: reportCat._id, publishStatus: 'published' })
+        .populate('sector', 'name slug')
+        .select('title slug featuredImage createdAt sector')
+        .sort({ createdAt: -1 })
+        .lean() as Promise<any[]>,
+      Report.find({ publishStatus: 'published' })
+        .select('title slug featuredImage createdAt')
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean() as Promise<any[]>,
+      Sector.find({}).select('name slug').sort({ name: 1 }).lean(),
+      ReportCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean(),
+    ]);
 
-                {/* Featured pair */}
-                {featured.length > 0 && (
-                  <div className="row g-3 mb-4">
-                    {featured.map((b: any) => (
-                      <div className="col-md-6" key={b._id.toString()}>
-                        <Link href={`/blogs/${b.slug}`} className="blog-featured-card">
-                          <div className="blog-featured-img">
-                            {b.featuredImage
-                              ? <img src={b.featuredImage} alt={b.title} />
-                              : <div className="blog-featured-placeholder" />}
-                          </div>
-                          <div className="blog-featured-body">
-                            <div className="blog-featured-meta">{fmtDate(b.createdAt)}</div>
-                            <h2 className="blog-featured-title">{b.title}</h2>
-                            <p className="blog-featured-excerpt">{b.metaDescription || excerpt(b.content || '', 120)}</p>
-                            <span className="blog-featured-cta">Read More →</span>
-                          </div>
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
-                )}
+    const items = reports.map((r: any) => ({
+      _id: r._id.toString(),
+      title: r.title,
+      slug: r.slug,
+      featuredImage: r.featuredImage,
+      date: fmtDate(r.createdAt),
+      href: `/reports/${r.slug}`,
+      cta: 'Read Report »',
+    }));
 
-                {/* Remaining list */}
-                {rest.length > 0 && (
-                  <div className="blog-list-stack">
-                    {rest.map((b: any) => (
-                      <Link href={`/blogs/${b.slug}`} className="blog-list-item" key={b._id.toString()}>
-                        <div className="blog-list-thumb">
-                          {b.featuredImage
-                            ? <img src={b.featuredImage} alt={b.title} />
-                            : <div className="blog-list-placeholder" />}
-                        </div>
-                        <div className="blog-list-body">
-                          <div className="blog-list-meta">{fmtDate(b.createdAt)}</div>
-                          <h3 className="blog-list-title">{b.title}</h3>
-                          <p className="blog-list-excerpt">{b.metaDescription || excerpt(b.content || '', 100)}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+    const latestItems = latestReports.map((r: any) => ({
+      _id: r._id.toString(),
+      title: r.title,
+      slug: r.slug,
+      featuredImage: r.featuredImage,
+      href: `/reports/${r.slug}`,
+    }));
 
-                {blogs.length === 0 && (
-                  <div className="text-center py-5">
-                    <div style={{ fontSize: 48, marginBottom: 12 }}>✍️</div>
-                    <p style={{ color: '#64748b', fontSize: 15 }}>No articles published yet. Check back soon.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Sidebar */}
-              <div className="col-lg-4">
-                <div className="blog-sidebar-card">
-                  <div className="blog-sidebar-heading">Latest Exclusive Insights</div>
-                  <div className="blog-sidebar-list">
-                    {latestAll.map((b: any) => (
-                      <Link href={`/blogs/${b.slug}`} className="blog-sidebar-item" key={b._id.toString()}>
-                        <div className="blog-sidebar-thumb">
-                          {b.featuredImage
-                            ? <img src={b.featuredImage} alt={b.title} />
-                            : <div className="blog-sidebar-placeholder" />}
-                        </div>
-                        <div className="blog-sidebar-body">
-                          {b.blogTypeLabel && <div className="blog-sidebar-type">{b.blogTypeLabel}</div>}
-                          <div className="blog-sidebar-title">{b.title}</div>
-                          <div className="blog-sidebar-date">{fmtDate(b.createdAt)}</div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    return (
+      <SiteLayout>
+        <ContentListing
+          title={reportCat.name}
+          items={items}
+          latestItems={latestItems}
+          sidebarType="report"
+          latestLabel="Latest Reports"
+          sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }))}
+          categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+        />
       </SiteLayout>
     );
   }

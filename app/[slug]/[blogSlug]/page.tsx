@@ -1,0 +1,140 @@
+import connectDB from '@/lib/mongoose';
+import Blog from '@/models/Blog';
+import SiteLayout from '@/components/SiteLayout';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
+
+type P = { params: Promise<{ slug: string; blogSlug: string }> };
+
+export async function generateMetadata({ params }: P) {
+  const { blogSlug } = await params;
+  await connectDB();
+  const blog = await Blog.findOne({ slug: blogSlug, publishStatus: 'published' }).lean() as any;
+  if (!blog) return { title: 'Not Found – PristineGaze' };
+  return {
+    title: blog.metaTitle || `${blog.title} – PristineGaze`,
+    description: blog.metaDescription || '',
+    openGraph: blog.metaImage ? { images: [blog.metaImage] } : undefined,
+  };
+}
+
+function fmtDate(d: string | Date) {
+  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+export default async function BlogDetailPage({ params }: P) {
+  const { slug: categorySlug, blogSlug } = await params;
+  await connectDB();
+
+  const blog = await Blog.findOne({ slug: blogSlug, publishStatus: 'published' })
+    .populate('category', 'name slug')
+    .lean() as any;
+
+  if (!blog) notFound();
+
+  // Ensure the category slug in the URL matches the blog's actual category
+  const category = blog.category as { name: string; slug: string } | null;
+  if (category && category.slug !== categorySlug) notFound();
+
+  // Latest in same category for sidebar
+  const latestBlogs = await Blog.find({
+    category: blog.category?._id ?? null,
+    publishStatus: 'published',
+    _id: { $ne: blog._id },
+  })
+    .select('title slug featuredImage createdAt')
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .lean() as any[];
+
+  return (
+    <SiteLayout>
+      {/* Hero */}
+      <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #101251 100%)', color: '#fff', padding: '4rem 0 3rem' }}>
+        <div className="container">
+          {category && (
+            <Link
+              href={`/${category.slug}`}
+              style={{ fontSize: 12, color: '#93c5fd', textDecoration: 'none', fontWeight: 600, display: 'inline-block', marginBottom: 12 }}
+            >
+              ← {category.name}
+            </Link>
+          )}
+          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.5px', margin: '0 0 1rem', lineHeight: 1.2 }}>
+            {blog.title}
+          </h1>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
+            Published {fmtDate(blog.createdAt)}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="site-section">
+        <div className="container">
+          <div className="row g-5">
+            {/* Main */}
+            <div className="col-lg-8">
+              {blog.featuredImage && (
+                <img
+                  src={blog.featuredImage}
+                  alt={blog.title}
+                  style={{ width: '100%', borderRadius: 14, marginBottom: '2rem', maxHeight: 420, objectFit: 'cover' }}
+                />
+              )}
+              <div
+                className="tiptap-prose"
+                style={{ fontSize: 16, lineHeight: 1.85, color: '#1e293b' }}
+                dangerouslySetInnerHTML={{ __html: blog.content }}
+              />
+            </div>
+
+            {/* Sidebar */}
+            <div className="col-lg-4 d-none d-lg-block">
+              <div style={{ position: 'sticky', top: 80 }}>
+                {category && (
+                  <div style={{ background: '#fff', borderRadius: 14, padding: '1.25rem', border: '1px solid #e2e8f0', marginBottom: 16, boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#94a3b8', marginBottom: 8 }}>Category</div>
+                    <Link
+                      href={`/${category.slug}`}
+                      style={{ fontSize: 15, fontWeight: 700, color: '#0049AC', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    >
+                      {category.name} <span style={{ color: '#3b82f6' }}>→</span>
+                    </Link>
+                    <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 4 }}>View all {category.name} articles</div>
+                  </div>
+                )}
+
+                {latestBlogs.length > 0 && (
+                  <div style={{ background: '#fff', borderRadius: 14, padding: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>
+                      More {category?.name || 'Articles'}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      {latestBlogs.map((b: any) => (
+                        <Link
+                          key={b._id.toString()}
+                          href={category ? `/${category.slug}/${b.slug}` : '#'}
+                          style={{ display: 'flex', gap: 10, textDecoration: 'none', alignItems: 'center' }}
+                        >
+                          <div style={{ width: 54, height: 40, borderRadius: 6, overflow: 'hidden', flexShrink: 0, background: '#e2e8f0' }}>
+                            {b.featuredImage && (
+                              <img src={b.featuredImage} alt={b.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            )}
+                          </div>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#1e293b', lineHeight: 1.35 }}>{b.title}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SiteLayout>
+  );
+}

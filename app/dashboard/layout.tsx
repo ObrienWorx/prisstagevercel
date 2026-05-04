@@ -16,22 +16,33 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    label: 'Content',
+    label: 'Blog',
     items: [
       { label: 'Blog Categories', href: '/dashboard/blog-categories', icon: '📁', module: 'blog-categories' },
-      { label: 'Report Categories', href: '/dashboard/report-categories', icon: '📊', module: 'report-categories' },
-      { label: 'Sectors', href: '/dashboard/sectors', icon: '🏭', module: 'sectors' },
       { label: 'Blogs', href: '/dashboard/blogs', icon: '✍️', module: 'blogs' },
+    ],
+  },
+  {
+    label: 'Research & Reports',
+    items: [
+      { label: 'Products', href: '/dashboard/products', icon: '📦', module: 'products' },
+      { label: 'Sectors', href: '/dashboard/sectors', icon: '🏭', module: 'sectors' },
+      { label: 'Report Categories', href: '/dashboard/report-categories', icon: '📊', module: 'report-categories' },
       { label: 'Reports', href: '/dashboard/reports', icon: '📈', module: 'reports' },
+    ],
+  },
+  {
+    label: 'Media & Pages',
+    items: [
+      { label: 'Videos', href: '/dashboard/videos', icon: '🎥', module: 'videos' },
+      { label: 'Static Pages', href: '/dashboard/static-pages', icon: '📄', module: null },
     ],
   },
   {
     label: 'Commerce',
     items: [
-      { label: 'Products', href: '/dashboard/products', icon: '📦', module: 'products' },
       { label: 'Orders', href: '/dashboard/orders', icon: '🛍️', module: 'orders' },
       { label: 'Transactions', href: '/dashboard/transactions', icon: '💳', module: 'transactions' },
-      { label: 'Videos', href: '/dashboard/videos', icon: '🎥', module: 'videos' },
     ],
   },
   {
@@ -41,24 +52,22 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Subscribers', href: '/dashboard/subscribers', icon: '👤', module: 'subscribers' },
     ],
   },
-  {
-    label: 'Site',
-    items: [
-      { label: 'Static Pages', href: '/dashboard/static-pages', icon: '📄', module: null },
-    ],
-  },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
     if (!stored) { router.push('/login'); return; }
     setUser(JSON.parse(stored));
   }, [router]);
+
+  // Close sidebar when route changes (mobile nav)
+  useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -71,10 +80,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (user?.role === 'admin') return true;
     return user?.permissions.includes(module) ?? false;
   };
-
-  const activeHref = NAV_SECTIONS.flatMap(s => s.items).find(n =>
-    pathname === n.href || (n.href !== '/dashboard' && pathname.startsWith(n.href))
-  )?.href;
 
   const activeLabel = NAV_SECTIONS.flatMap(s => s.items).find(n =>
     pathname === n.href || (n.href !== '/dashboard' && pathname.startsWith(n.href))
@@ -90,8 +95,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div>
+      {/* Backdrop (mobile) */}
+      {sidebarOpen && (
+        <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* SIDEBAR */}
-      <aside className="sidebar">
+      <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
         <div className="sidebar-brand">
           <div className="brand-name">
             <span>🔭</span> PristineGaze
@@ -143,7 +153,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* MAIN CONTENT */}
       <div className="main-content">
         <header className="topbar">
-          <span className="page-title">{activeLabel}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <button
+              className="sidebar-toggle"
+              onClick={() => setSidebarOpen(o => !o)}
+              aria-label="Toggle sidebar"
+            >
+              <span /><span /><span />
+            </button>
+            <span className="page-title">{activeLabel}</span>
+          </div>
           <div className="topbar-right">
             <span className="badge bg-primary-subtle text-primary" style={{ borderRadius: 20, padding: '0.35em 0.8em', fontSize: 12 }}>
               {user.role === 'admin' ? '⭐ Admin' : '👤 Sub-Admin'}

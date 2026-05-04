@@ -7,8 +7,6 @@ export interface IBlog extends Document {
   featuredImage: string;
   category: Types.ObjectId | null;
   publishStatus: 'draft' | 'published';
-  blogType: string;
-  blogTypeLabel: string;
   metaTitle: string;
   metaDescription: string;
   metaImage: string;
@@ -24,8 +22,6 @@ const BlogSchema = new Schema<IBlog>(
     featuredImage: { type: String, default: '' },
     category: { type: Schema.Types.ObjectId, ref: 'BlogCategory', default: null },
     publishStatus: { type: String, enum: ['draft', 'published'], default: 'draft' },
-    blogType: { type: String, default: '', trim: true, lowercase: true },
-    blogTypeLabel: { type: String, default: '', trim: true },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },
     metaImage: { type: String, default: '' },

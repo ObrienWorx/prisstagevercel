@@ -11,14 +11,12 @@ interface Ref { _id: string; name: string; }
 interface Blog {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
   category: Ref | null; publishStatus: 'draft' | 'published';
-  blogType: string; blogTypeLabel: string;
   metaTitle: string; metaDescription: string; metaImage: string;
 }
 
 const empty = {
   title: '', slug: '', content: '', featuredImage: '',
   category: '', publishStatus: 'draft' as 'draft' | 'published',
-  blogType: '', blogTypeLabel: '',
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
@@ -61,7 +59,6 @@ export default function BlogsPage() {
       title: item.title, slug: item.slug, content: item.content, featuredImage: item.featuredImage,
       category: item.category?._id || '',
       publishStatus: item.publishStatus,
-      blogType: item.blogType || '', blogTypeLabel: item.blogTypeLabel || '',
       metaTitle: item.metaTitle,
       metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
@@ -96,7 +93,7 @@ export default function BlogsPage() {
       <div className="page-header">
         <div className="page-header-text">
           <h4>Blogs</h4>
-          <p>Manage blog posts — category only, no product gate</p>
+          <p>Manage blog posts organized by category</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Add Blog</button>
       </div>
@@ -113,7 +110,7 @@ export default function BlogsPage() {
           <div className="table-responsive">
             <table className="table">
               <thead>
-                <tr><th>Title</th><th>Category</th><th>Blog Type</th><th>Status</th><th style={{ width: 120 }}>Actions</th></tr>
+                <tr><th>Title</th><th>Category</th><th>Status</th><th style={{ width: 120 }}>Actions</th></tr>
               </thead>
               <tbody>
                 {items.map((item) => (
@@ -123,11 +120,6 @@ export default function BlogsPage() {
                       <code style={{ fontSize: 11, color: 'var(--muted)' }}>{item.slug}</code>
                     </td>
                     <td style={{ color: 'var(--muted)' }}>{item.category?.name || '—'}</td>
-                    <td>
-                      {item.blogType
-                        ? <><span className="badge bg-info text-dark">{item.blogTypeLabel || item.blogType}</span><br /><code style={{ fontSize: 11, color: 'var(--muted)' }}>{item.blogType}</code></>
-                        : <span style={{ color: 'var(--muted)' }}>—</span>}
-                    </td>
                     <td>
                       <span className={`badge ${item.publishStatus === 'published' ? 'bg-success' : 'bg-secondary'}`}>
                         {item.publishStatus}
@@ -183,21 +175,6 @@ export default function BlogsPage() {
                       <option value="draft">Draft</option>
                       <option value="published">Published</option>
                     </select>
-                  </div>
-
-                  <div className="col-md-6">
-                    <label className="form-label">Blog Type Slug</label>
-                    <input className="form-control" value={form.blogType}
-                      onChange={(e) => setForm({ ...form, blogType: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                      placeholder="e.g. trending-stock-market-news" />
-                    <div className="form-text">Used in URL: domain.com/<em>blog-type-slug</em></div>
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Blog Type Label</label>
-                    <input className="form-control" value={form.blogTypeLabel}
-                      onChange={(e) => setForm({ ...form, blogTypeLabel: e.target.value })}
-                      placeholder="e.g. Trending Stock Market News" />
-                    <div className="form-text">Display name shown in navigation</div>
                   </div>
 
                   <div className="col-12">

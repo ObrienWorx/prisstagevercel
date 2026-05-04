@@ -20,11 +20,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'blogs'); if (error) return error;
   await connectDB();
-  const { title, slug, content, featuredImage, category, publishStatus, blogType, blogTypeLabel, metaTitle, metaDescription, metaImage } = await req.json();
+  const { title, slug, content, featuredImage, category, publishStatus, metaTitle, metaDescription, metaImage } = await req.json();
   if (!title) return errorResponse('Title is required');
   const finalSlug = slug ? slugify(slug) : slugify(title);
   if (await Blog.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
-  const blog = await Blog.create({ title, slug: finalSlug, content, featuredImage, category: category || null, publishStatus: publishStatus || 'draft', blogType: blogType || '', blogTypeLabel: blogTypeLabel || '', metaTitle, metaDescription, metaImage });
+  const blog = await Blog.create({ title, slug: finalSlug, content, featuredImage, category: category || null, publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
   await blog.populate('category', 'name slug');
   return successResponse(blog, 'Blog created', 201);
 }
