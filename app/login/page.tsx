@@ -42,16 +42,13 @@ export default function LoginPage() {
   return (
     <div
       className="min-vh-100 d-flex align-items-center justify-content-center"
-      style={{ background: 'linear-gradient(135deg, #1a3c5e 0%, #2d6a9f 100%)' }}
+      style={{ background: 'linear-gradient(135deg, #03366a 0%, #2d6a9f 100%)' }}
     >
       <div className="card shadow-lg" style={{ width: '100%', maxWidth: '420px' }}>
         <div className="card-body p-5">
           {/* Logo / Brand */}
           <div className="text-center mb-4">
-            <h2 className="fw-bold" style={{ color: '#1a3c5e' }}>
-              🔭 PristineGaze
-            </h2>
-            <p className="text-muted">Admin Panel</p>
+            <div className="name"><img src="/logo.png" alt="" className='w-100' /></div>
           </div>
 
           {/* Error Alert */}
