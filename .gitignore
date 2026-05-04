@@ -36,6 +36,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local build artifacts
+*.zip
+pristinegaze-server.zip
+
+# claude code memory
+.claude/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

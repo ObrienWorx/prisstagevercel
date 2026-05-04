@@ -9,7 +9,23 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tinymce/tinymce-react": "^6.3.0",
+    "@tiptap/extension-image": "^3.22.5",
+    "@tiptap/extension-link": "^3.22.5",
+    "@tiptap/extension-placeholder": "^3.22.5",
+    "@tiptap/extension-underline": "^3.22.5",
+    "@tiptap/pm": "^3.22.5",
+    "@tiptap/react": "^3.22.5",
+    "@tiptap/starter-kit": "^3.22.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/nodemailer": "^8.0.0",
+    "bcryptjs": "^3.0.3",
+    "bootstrap": "^5.3.8",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.6.0",
     "next": "16.2.4",
+    "nodemailer": "^8.0.7",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

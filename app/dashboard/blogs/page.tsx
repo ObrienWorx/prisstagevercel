@@ -1,0 +1,256 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { slugify } from '@/lib/slugify';
+import dynamic from 'next/dynamic';
+import ImageUpload from '@/components/ImageUpload';
+
+const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false });
+
+interface Ref { _id: string; name: string; }
+interface Blog {
+  _id: string; title: string; slug: string; content: string; featuredImage: string;
+  category: Ref | null; publishStatus: 'draft' | 'published';
+  blogType: string; blogTypeLabel: string;
+  metaTitle: string; metaDescription: string; metaImage: string;
+}
+
+const empty = {
+  title: '', slug: '', content: '', featuredImage: '',
+  category: '', publishStatus: 'draft' as 'draft' | 'published',
+  blogType: '', blogTypeLabel: '',
+  metaTitle: '', metaDescription: '', metaImage: '',
+};
+
+export default function BlogsPage() {
+  const [items, setItems] = useState<Blog[]>([]);
+  const [categories, setCategories] = useState<Ref[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const [ok, setOk] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<Blog | null>(null);
+  const [form, setForm] = useState(empty);
+  const [del, setDel] = useState<Blog | null>(null);
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+  const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [bR, cR] = await Promise.all([
+        fetch('/api/blogs', { headers: h }),
+        fetch('/api/blog-categories', { headers: h }),
+      ]);
+      const [b, c] = await Promise.all([bR.json(), cR.json()]);
+      if (b.success) setItems(b.data);
+      if (c.success) setCategories(c.data);
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
+
+  const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowModal(true); };
+  const openEdit = (item: Blog) => {
+    setEditing(item);
+    setForm({
+      title: item.title, slug: item.slug, content: item.content, featuredImage: item.featuredImage,
+      category: item.category?._id || '',
+      publishStatus: item.publishStatus,
+      blogType: item.blogType || '', blogTypeLabel: item.blogTypeLabel || '',
+      metaTitle: item.metaTitle,
+      metaDescription: item.metaDescription, metaImage: item.metaImage,
+    });
+    setErr(''); setShowModal(true);
+  };
+
+  const save = async () => {
+    if (!form.title.trim()) { setErr('Title is required'); return; }
+    setErr(''); setSaving(true);
+    try {
+      const payload = { ...form, category: form.category || null };
+      const url = editing ? `/api/blogs/${editing._id}` : '/api/blogs';
+      const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
+      const d = await r.json();
+      if (d.success) { flash(d.message); setShowModal(false); loadAll(); }
+      else setErr(d.error || 'Something went wrong');
+    } finally { setSaving(false); }
+  };
+
+  const remove = async () => {
+    if (!del) return; setSaving(true);
+    try {
+      const r = await fetch(`/api/blogs/${del._id}`, { method: 'DELETE', headers: h });
+      const d = await r.json();
+      if (d.success) { flash('Blog deleted'); setDel(null); loadAll(); }
+      else { setErr(d.error || 'Delete failed'); setDel(null); }
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-header-text">
+          <h4>Blogs</h4>
+          <p>Manage blog posts — category only, no product gate</p>
+        </div>
+        <button className="btn btn-primary" onClick={openCreate}>+ Add Blog</button>
+      </div>
+
+      {ok && <div className="alert alert-success mb-4">✓ {ok}</div>}
+      {err && !showModal && <div className="alert alert-danger mb-4">{err}</div>}
+
+      <div className="card">
+        {loading ? (
+          <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
+        ) : items.length === 0 ? (
+          <div className="empty-state"><div className="empty-icon">✍️</div><p>No blogs yet. Write your first post.</p></div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr><th>Title</th><th>Category</th><th>Blog Type</th><th>Status</th><th style={{ width: 120 }}>Actions</th></tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item._id}>
+                    <td className="fw-semibold" style={{ maxWidth: 300 }}>
+                      <div className="text-truncate">{item.title}</div>
+                      <code style={{ fontSize: 11, color: 'var(--muted)' }}>{item.slug}</code>
+                    </td>
+                    <td style={{ color: 'var(--muted)' }}>{item.category?.name || '—'}</td>
+                    <td>
+                      {item.blogType
+                        ? <><span className="badge bg-info text-dark">{item.blogTypeLabel || item.blogType}</span><br /><code style={{ fontSize: 11, color: 'var(--muted)' }}>{item.blogType}</code></>
+                        : <span style={{ color: 'var(--muted)' }}>—</span>}
+                    </td>
+                    <td>
+                      <span className={`badge ${item.publishStatus === 'published' ? 'bg-success' : 'bg-secondary'}`}>
+                        {item.publishStatus}
+                      </span>
+                    </td>
+                    <td>
+                      <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
+                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Del</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
+          <div className="modal-dialog modal-xl modal-dialog-scrollable">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">{editing ? 'Edit Blog Post' : 'New Blog Post'}</h5>
+                <button className="btn-close" onClick={() => setShowModal(false)} />
+              </div>
+              <div className="modal-body">
+                {err && <div className="alert alert-danger mb-3">{err}</div>}
+                <div className="row g-3">
+                  <div className="col-md-8">
+                    <label className="form-label">Title <span className="text-danger">*</span></label>
+                    <input className="form-control" value={form.title}
+                      onChange={(e) => setForm({ ...form, title: e.target.value, slug: slugify(e.target.value) })}
+                      placeholder="Blog post title..." />
+                  </div>
+                  <div className="col-md-4">
+                    <label className="form-label">Slug</label>
+                    <input className="form-control" value={form.slug}
+                      onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+                    <div className="form-text">Auto-generated</div>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label">Blog Category</label>
+                    <select className="form-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                      <option value="">— Select Category —</option>
+                      {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Publish Status</label>
+                    <select className="form-select" value={form.publishStatus}
+                      onChange={(e) => setForm({ ...form, publishStatus: e.target.value as 'draft' | 'published' })}>
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                    </select>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label">Blog Type Slug</label>
+                    <input className="form-control" value={form.blogType}
+                      onChange={(e) => setForm({ ...form, blogType: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                      placeholder="e.g. trending-stock-market-news" />
+                    <div className="form-text">Used in URL: domain.com/<em>blog-type-slug</em></div>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Blog Type Label</label>
+                    <input className="form-control" value={form.blogTypeLabel}
+                      onChange={(e) => setForm({ ...form, blogTypeLabel: e.target.value })}
+                      placeholder="e.g. Trending Stock Market News" />
+                    <div className="form-text">Display name shown in navigation</div>
+                  </div>
+
+                  <div className="col-12">
+                    <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
+                  </div>
+
+                  <div className="col-12">
+                    <label className="form-label">Content</label>
+                    <TinyEditor value={form.content} onChange={(v) => setForm({ ...form, content: v })} />
+                  </div>
+
+                  <div className="col-12"><hr className="my-1" /><div className="form-section-title">SEO Settings</div></div>
+                  <div className="col-md-6">
+                    <label className="form-label">Meta Title</label>
+                    <input className="form-control" value={form.metaTitle} onChange={(e) => setForm({ ...form, metaTitle: e.target.value })} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Meta Description</label>
+                    <input className="form-control" value={form.metaDescription} onChange={(e) => setForm({ ...form, metaDescription: e.target.value })} />
+                  </div>
+                  <div className="col-12">
+                    <ImageUpload label="Meta Image" value={form.metaImage} onChange={(url) => setForm({ ...form, metaImage: url })} />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={save} disabled={saving}>
+                  {saving && <span className="spinner-border spinner-border-sm me-2" />}
+                  {editing ? 'Save Changes' : 'Publish Blog'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {del && (
+        <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header"><h5 className="modal-title text-danger">Delete Blog</h5><button className="btn-close" onClick={() => setDel(null)} /></div>
+              <div className="modal-body">Delete <strong>{del.title}</strong>? This cannot be undone.</div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setDel(null)}>Cancel</button>
+                <button className="btn btn-danger" onClick={remove} disabled={saving}>
+                  {saving && <span className="spinner-border spinner-border-sm me-2" />}Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
