@@ -4,14 +4,6 @@
 
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
-
-if (!MONGODB_URI) {
-  throw new Error('Please define MONGODB_URI in your .env.local file');
-}
-
-// This global variable stores the cached connection
-// It persists across hot-reloads in development
 declare global {
   var mongoose: {
     conn: typeof import('mongoose') | null;
@@ -26,19 +18,15 @@ if (!cached) {
 }
 
 async function connectDB() {
-  // If already connected, return the cached connection
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) throw new Error('MONGODB_URI environment variable is not set');
+
   if (cached.conn) {
     return cached.conn;
   }
 
-  // If no connection promise exists, create one
   if (!cached.promise) {
-    const opts = {
-      bufferCommands: false, // Don't buffer commands if not connected
-    };
-
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log('✅ MongoDB Connected');
+    cached.promise = mongoose.connect(MONGODB_URI, { bufferCommands: false }).then((mongoose) => {
       return mongoose;
     });
   }
