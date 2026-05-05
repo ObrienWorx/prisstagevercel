@@ -109,28 +109,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="brand-sub">Admin Panel</div>
         </div>
 
-        {NAV_SECTIONS.map((section) => {
-          const visible = section.items.filter(item => canSee(item.module));
-          if (!visible.length) return null;
-          return (
-            <div key={section.label}>
-              <div className="sidebar-section">{section.label}</div>
-              <ul className="nav-list">
-                {visible.map((item) => {
-                  const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-                  return (
-                    <li key={item.href} className="nav-item">
-                      <Link href={item.href} className={`nav-link ${isActive ? 'active' : ''}`}>
-                        <span className="nav-icon">{item.icon}</span>
-                        <span>{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          );
-        })}
+        <div className="sidebar-nav">
+          {NAV_SECTIONS.map((section) => {
+            const visible = section.items.filter(item => canSee(item.module));
+            if (!visible.length) return null;
+            return (
+              <div key={section.label}>
+                <div className="sidebar-section">{section.label}</div>
+                <ul className="nav-list">
+                  {visible.map((item) => {
+                    const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+                    return (
+                      <li key={item.href} className="nav-item">
+                        <Link href={item.href} className={`nav-link ${isActive ? 'active' : ''}`}>
+                          <span className="nav-icon">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
 
         <div className="sidebar-footer">
           <div className="sidebar-user">
