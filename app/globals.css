@@ -16,7 +16,7 @@
   --nav-h: 160px;
   --header-topbar-h: 38px;
   --header-main-h: 80px;
-  --header-ticker-h: 38px;
+  --header-ticker-h: 400px;
   --header-nav-h: 48px;
 }
 
@@ -532,9 +532,9 @@ body {
 
 .header-cart-btn:hover { background: #0049AC; color: #fff; border-color: #0049AC; }
 
-/* ── TICKER MARQUEE ── */
+/* ── TICKER / CHART WIDGET ── */
 .header-ticker {
-  background: #f5f7fa;
+  background: #fff;
   border-bottom: 1px solid #e2e8f0;
   height: var(--header-ticker-h);
   overflow: hidden;

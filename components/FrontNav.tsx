@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Script from 'next/script';
 
 interface SubUser { name: string; email: string; }
 interface Sector { _id: string; name: string; slug: string; reportCount: number; featuredImage?: string; }
@@ -162,35 +163,29 @@ export default function FrontNav() {
           </div>
         </div>
 
-        {/* ── TICKER MARQUEE ── */}
+        {/* ── TRADINGVIEW CHART ── */}
         <div className="header-ticker">
-          <div className="ticker-track">
-            {[
-              { sym: 'CBA', price: '173.04', chg: '-0.62', pct: '-0.36%', up: false },
-              { sym: 'BHP', price: '54.94', chg: '+0.48', pct: '+0.28%', up: true },
-              { sym: 'REA', price: '170.33', chg: '+0.48', pct: '+0.28%', up: true },
-              { sym: 'PNV', price: '0.995', chg: '-0.005', pct: '-0.50%', up: false },
-              { sym: 'LKE', price: '0.095', chg: '+0.001', pct: '+1.06%', up: true },
-              { sym: 'BC8', price: '29.04', chg: '+0.04', pct: '+0.14%', up: true },
-              { sym: 'ANZ', price: '28.40', chg: '+2.76', pct: '+9.76%', up: true },
-              { sym: 'NAB', price: '38.22', chg: '-0.18', pct: '-0.47%', up: false },
-              { sym: 'WBC', price: '32.55', chg: '+0.35', pct: '+1.09%', up: true },
-              { sym: 'CSL', price: '298.40', chg: '+1.20', pct: '+0.40%', up: true },
-            ].concat([
-              { sym: 'CBA', price: '173.04', chg: '-0.62', pct: '-0.36%', up: false },
-              { sym: 'BHP', price: '54.94', chg: '+0.48', pct: '+0.28%', up: true },
-              { sym: 'REA', price: '170.33', chg: '+0.48', pct: '+0.28%', up: true },
-              { sym: 'PNV', price: '0.995', chg: '-0.005', pct: '-0.50%', up: false },
-              { sym: 'LKE', price: '0.095', chg: '+0.001', pct: '+1.06%', up: true },
-            ]).map((t, i) => (
-              <span key={i} className="ticker-item">
-                <span className="ticker-sym">{t.sym}</span>
-                <span className="ticker-dot">·</span>
-                <span className="ticker-price">{t.price}</span>
-                <span className={`ticker-chg ${t.up ? 'up' : 'dn'}`}>{t.chg} ({t.pct})</span>
-              </span>
-            ))}
+          <div className="tradingview-widget-container" style={{ width: '100%', height: 400 }}>
+            <div id="tradingview_bhp" style={{ width: '100%', height: '100%' }} />
           </div>
+          <Script
+            src="https://s3.tradingview.com/tv.js"
+            strategy="lazyOnload"
+            onLoad={() => {
+              if (typeof (window as any).TradingView !== 'undefined') {
+                new (window as any).TradingView.widget({
+                  container_id: 'tradingview_bhp',
+                  symbol: 'ASX:BHP',
+                  interval: 'D',
+                  theme: 'light',
+                  style: '1',
+                  locale: 'en',
+                  width: '100%',
+                  height: 400,
+                });
+              }
+            }}
+          />
         </div>
 
         {/* ── NAVIGATION BAR ── */}
