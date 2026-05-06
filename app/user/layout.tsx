@@ -11,6 +11,7 @@ const navItems = [
   { href: '/user/dashboard', icon: '📊', label: 'Dashboard' },
   { href: '/user/subscriptions', icon: '📦', label: 'My Subscriptions' },
   { href: '/user/transactions', icon: '💳', label: 'Transactions' },
+  { href: '/user/portfolio', icon: '📈', label: 'My Portfolio' },
   { href: '/user/profile', icon: '👤', label: 'Profile' },
 ];
 
