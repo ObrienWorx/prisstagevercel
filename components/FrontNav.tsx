@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Script from 'next/script';
 
 interface SubUser { name: string; email: string; }
 interface Sector { _id: string; name: string; slug: string; reportCount: number; featuredImage?: string; }
@@ -18,8 +17,9 @@ export default function FrontNav() {
   const [productOpen, setProductOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const sectorRef = useRef<HTMLDivElement>(null);
+  const sectorRef  = useRef<HTMLDivElement>(null);
   const productRef = useRef<HTMLDivElement>(null);
+  const tickerRef  = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('subscriber_token');
@@ -52,6 +52,36 @@ export default function FrontNav() {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
+
+  useEffect(() => {
+    const el = tickerRef.current;
+    if (!el) return;
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
+    script.async = true;
+    script.text = JSON.stringify({
+      symbols: [
+        { proName: 'ASX:CBA',  title: 'CBA'  },
+        { proName: 'ASX:BHP',  title: 'BHP'  },
+        { proName: 'ASX:REA',  title: 'REA'  },
+        { proName: 'ASX:PNV',  title: 'PNV'  },
+        { proName: 'ASX:LKE',  title: 'LKE'  },
+        { proName: 'ASX:BC8',  title: 'BC8'  },
+        { proName: 'ASX:ANZ',  title: 'ANZ'  },
+        { proName: 'ASX:NAB',  title: 'NAB'  },
+        { proName: 'ASX:WBC',  title: 'WBC'  },
+        { proName: 'ASX:CSL',  title: 'CSL'  },
+      ],
+      showSymbolLogo: false,
+      isTransparent: true,
+      displayMode: 'adaptive',
+      colorTheme: 'light',
+      locale: 'en',
+    });
+    el.appendChild(script);
+    return () => { el.innerHTML = ''; };
+  }, []);
 
   const logout = () => {
     localStorage.removeItem('subscriber_token');
@@ -163,29 +193,9 @@ export default function FrontNav() {
           </div>
         </div>
 
-        {/* ── TRADINGVIEW CHART ── */}
+        {/* ── TRADINGVIEW TICKER TAPE ── */}
         <div className="header-ticker">
-          <div className="tradingview-widget-container" style={{ width: '100%', height: 400 }}>
-            <div id="tradingview_bhp" style={{ width: '100%', height: '100%' }} />
-          </div>
-          <Script
-            src="https://s3.tradingview.com/tv.js"
-            strategy="lazyOnload"
-            onLoad={() => {
-              if (typeof (window as any).TradingView !== 'undefined') {
-                new (window as any).TradingView.widget({
-                  container_id: 'tradingview_bhp',
-                  symbol: 'ASX:BHP',
-                  interval: 'D',
-                  theme: 'light',
-                  style: '1',
-                  locale: 'en',
-                  width: '100%',
-                  height: 400,
-                });
-              }
-            }}
-          />
+          <div className="tradingview-widget-container" ref={tickerRef} style={{ width: '100%' }} />
         </div>
 
         {/* ── NAVIGATION BAR ── */}
