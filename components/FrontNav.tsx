@@ -62,16 +62,16 @@ export default function FrontNav() {
     script.async = true;
     script.text = JSON.stringify({
       symbols: [
-        { proName: 'ASX:CBA',  title: 'CBA'  },
-        { proName: 'ASX:BHP',  title: 'BHP'  },
-        { proName: 'ASX:REA',  title: 'REA'  },
-        { proName: 'ASX:PNV',  title: 'PNV'  },
-        { proName: 'ASX:LKE',  title: 'LKE'  },
-        { proName: 'ASX:BC8',  title: 'BC8'  },
-        { proName: 'ASX:ANZ',  title: 'ANZ'  },
-        { proName: 'ASX:NAB',  title: 'NAB'  },
-        { proName: 'ASX:WBC',  title: 'WBC'  },
-        { proName: 'ASX:CSL',  title: 'CSL'  },
+        { proName: 'ASX:CBA', title: 'CBA' },
+        { proName: 'ASX:BHP', title: 'BHP' },
+        { proName: 'ASX:REA', title: 'REA' },
+        { proName: 'ASX:PNV', title: 'PNV' },
+        { proName: 'ASX:LKE', title: 'LKE' },
+        { proName: 'ASX:BC8', title: 'BC8' },
+        { proName: 'ASX:ANZ', title: 'ANZ' },
+        { proName: 'ASX:NAB', title: 'NAB' },
+        { proName: 'ASX:WBC', title: 'WBC' },
+        { proName: 'ASX:CSL', title: 'CSL' },
       ],
       showSymbolLogo: false,
       isTransparent: true,
@@ -141,16 +141,13 @@ export default function FrontNav() {
           </div>
         </div>
 
-        {/* ── MAIN HEADER (Logo + Search + Account) ── */}
+        {/* ── MAIN HEADER ── */}
         <div className="header-main">
-          <div className="container">
+          <div className="container-fluid px-5">
             <div className="header-main-inner">
-              {/* Logo */}
               <Link href="/" className="header-logo">
-                <img src="/logo.png" alt="Pristine Gaze" className='w-100'/>
+                <img src="/logo.png" alt="Pristine Gaze" className="w-100" />
               </Link>
-
-              {/* Search */}
               <form className="header-search" onSubmit={handleSearch}>
                 <input
                   type="text"
@@ -163,11 +160,9 @@ export default function FrontNav() {
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </button>
               </form>
-
-              {/* Actions */}
               <div className="header-actions">
                 {sub ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="nav-header-actions">
                     <Link href="/user/dashboard" className="header-account-btn">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       My Account
@@ -175,7 +170,7 @@ export default function FrontNav() {
                     <button onClick={logout} className="header-signout-btn">Sign out</button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="nav-header-actions">
                     <Link href="/auth/login" className="header-account-btn">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       My Account
@@ -195,7 +190,7 @@ export default function FrontNav() {
 
         {/* ── TRADINGVIEW TICKER TAPE ── */}
         <div className="header-ticker">
-          <div className="tradingview-widget-container" ref={tickerRef} style={{ width: '100%' }} />
+          <div className="tradingview-widget-container w-100" ref={tickerRef} />
         </div>
 
         {/* ── NAVIGATION BAR ── */}
@@ -206,14 +201,14 @@ export default function FrontNav() {
               <Link href="/" className={`hn-link ${pathname === '/' ? 'active' : ''}`}>Home</Link>
               <Link href="/about-us" className={`hn-link ${isActive('/about-us') ? 'active' : ''}`}>About Us</Link>
 
-              {/* Our Product dropdown */}
-              <div ref={productRef} style={{ position: 'relative' }}>
+              {/* Product dropdown */}
+              <div ref={productRef} className="position-relative">
                 <button
                   className={`hn-link hn-drop ${isActive('/subscribe') ? 'active' : ''}`}
                   onClick={() => { setProductOpen(o => !o); setSectorOpen(false); }}
                 >
                   Product
-                  <svg width="9" height="5" viewBox="0 0 10 6" fill="none" style={{ marginLeft: 4, transition: 'transform 0.2s', transform: productOpen ? 'rotate(180deg)' : 'none' }}>
+                  <svg width="9" height="5" viewBox="0 0 10 6" fill="none" className={`nav-chevron ${productOpen ? 'open' : ''}`}>
                     <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
@@ -227,20 +222,20 @@ export default function FrontNav() {
               <Link href="/subscribe" className={`hn-link ${isActive('/subscribe') && !isActive('/subscribe/') ? 'active' : ''}`}>Subscribe</Link>
 
               {/* Sector dropdown */}
-              <div ref={sectorRef} style={{ position: 'relative' }}>
+              <div ref={sectorRef} className="position-relative">
                 <button
                   className={`hn-link hn-drop ${isActive('/sectors') ? 'active' : ''}`}
                   onClick={() => { setSectorOpen(o => !o); setProductOpen(false); }}
                 >
                   Sector
-                  <svg width="9" height="5" viewBox="0 0 10 6" fill="none" style={{ marginLeft: 4, transition: 'transform 0.2s', transform: sectorOpen ? 'rotate(180deg)' : 'none' }}>
+                  <svg width="9" height="5" viewBox="0 0 10 6" fill="none" className={`nav-chevron ${sectorOpen ? 'open' : ''}`}>
                     <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
                 {sectorOpen && (
-                  <div className="hn-dropdown" style={{ minWidth: 220 }}>
+                  <div className="hn-dropdown hn-dropdown-wide">
                     {sectors.length === 0 ? (
-                      <div className="hn-dd-item" style={{ color: '#94a3b8', cursor: 'default' }}>No sectors yet</div>
+                      <div className="hn-dd-item hn-dd-disabled">No sectors yet</div>
                     ) : sectors.map(s => (
                       <Link
                         key={s._id}
@@ -248,11 +243,9 @@ export default function FrontNav() {
                         className={`hn-dd-item ${isActive(`/sectors/${s.slug}`) ? 'active' : ''}`}
                         onClick={() => setSectorOpen(false)}
                       >
-                        {s.featuredImage && (
-                          <img src={s.featuredImage} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover', marginRight: 8 }} />
-                        )}
+                        {s.featuredImage && <img src={s.featuredImage} alt="" className="nav-sector-img" />}
                         {s.name}
-                        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8', background: '#f1f5f9', padding: '1px 7px', borderRadius: 20 }}>{s.reportCount}</span>
+                        <span className="nav-count-badge">{s.reportCount}</span>
                       </Link>
                     ))}
                   </div>
@@ -261,7 +254,6 @@ export default function FrontNav() {
 
               <Link href="/videos" className={`hn-link ${isActive('/videos') ? 'active' : ''}`}>Videos</Link>
 
-              {/* Dynamic blog categories with showInNav */}
               {blogTypes.map(bt => (
                 <Link
                   key={bt._id}
@@ -269,7 +261,7 @@ export default function FrontNav() {
                   className={`hn-link ${isActive(`/${bt._id}`) ? 'active' : ''} ${bt.navHighlight ? 'hn-link-highlight' : ''}`}
                 >
                   {bt.label || (bt._id ?? '').replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                  {bt.navHighlight && <span style={{ marginLeft: 4, fontSize: 9, verticalAlign: 'super', background: '#f59e0b', color: '#000', padding: '1px 5px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.3px' }}>HOT</span>}
+                  {bt.navHighlight && <span className="hn-hot-badge">HOT</span>}
                 </Link>
               ))}
             </div>
@@ -289,9 +281,9 @@ export default function FrontNav() {
 
           {sectors.length > 0 && (
             <>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.3)', margin: '1rem 0 0.5rem' }}>Sectors</div>
+              <div className="mobile-section-label">Sectors</div>
               {sectors.map(s => (
-                <Link key={s._id} href={`/sectors/${s.slug}`} className="mobile-nav-link" onClick={() => setMobileOpen(false)} style={{ fontSize: 14, paddingLeft: 8 }}>
+                <Link key={s._id} href={`/sectors/${s.slug}`} className="mobile-nav-link mobile-nav-sub" onClick={() => setMobileOpen(false)}>
                   {s.name}
                 </Link>
               ))}
@@ -304,18 +296,18 @@ export default function FrontNav() {
           {blogTypes.map(bt => (
             <Link key={bt._id} href={`/${bt._id}`} className={`mobile-nav-link ${bt.navHighlight ? 'hn-link-highlight' : ''}`} onClick={() => setMobileOpen(false)}>
               {bt.label || bt._id.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
-              {bt.navHighlight && <span style={{ marginLeft: 6, fontSize: 9, background: '#f59e0b', color: '#000', padding: '1px 5px', borderRadius: 4, fontWeight: 800 }}>HOT</span>}
+              {bt.navHighlight && <span className="mobile-hot-badge">HOT</span>}
             </Link>
           ))}
 
-          <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="mobile-auth-section">
             {sub ? (
               <>
-                <Link href="/user/dashboard" className="header-account-btn" style={{ textAlign: 'center', display: 'block' }} onClick={() => setMobileOpen(false)}>My Dashboard</Link>
-                <button onClick={logout} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', padding: '10px', borderRadius: 10, cursor: 'pointer', fontSize: 14 }}>Sign Out</button>
+                <Link href="/user/dashboard" className="header-account-btn d-block text-center" onClick={() => setMobileOpen(false)}>My Dashboard</Link>
+                <button onClick={logout} className="mobile-signout-btn">Sign Out</button>
               </>
             ) : (
-              <Link href="/auth/login" className="header-account-btn" style={{ textAlign: 'center', display: 'block' }} onClick={() => setMobileOpen(false)}>Login / My Account</Link>
+              <Link href="/auth/login" className="header-account-btn d-block text-center" onClick={() => setMobileOpen(false)}>Login / My Account</Link>
             )}
           </div>
         </div>

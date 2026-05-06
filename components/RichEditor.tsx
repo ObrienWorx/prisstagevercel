@@ -16,27 +16,27 @@ type ToolItem =
 const FONT_SIZES = ['10px','11px','12px','14px','16px','18px','20px','24px','28px','32px','36px'];
 
 const TOOLS: ToolItem[] = [
-  { cmd: 'bold', icon: '<b>B</b>', title: 'Bold' },
-  { cmd: 'italic', icon: '<i>I</i>', title: 'Italic' },
-  { cmd: 'underline', icon: '<u>U</u>', title: 'Underline' },
-  { cmd: 'strikeThrough', icon: '<s>S</s>', title: 'Strikethrough' },
+  { cmd: 'bold',                icon: '<b>B</b>',            title: 'Bold' },
+  { cmd: 'italic',              icon: '<i>I</i>',            title: 'Italic' },
+  { cmd: 'underline',           icon: '<u>U</u>',            title: 'Underline' },
+  { cmd: 'strikeThrough',       icon: '<s>S</s>',            title: 'Strikethrough' },
   { sep: true },
-  { cmd: 'h2', icon: 'H2', title: 'Heading 2' },
-  { cmd: 'h3', icon: 'H3', title: 'Heading 3' },
+  { cmd: 'h2',                  icon: 'H2',                  title: 'Heading 2' },
+  { cmd: 'h3',                  icon: 'H3',                  title: 'Heading 3' },
   { sep: true },
-  { cmd: 'insertUnorderedList', icon: '&#8226; List', title: 'Bullet List' },
-  { cmd: 'insertOrderedList', icon: '1. List', title: 'Ordered List' },
+  { cmd: 'insertUnorderedList', icon: '&#8226; List',        title: 'Bullet List' },
+  { cmd: 'insertOrderedList',   icon: '1. List',             title: 'Ordered List' },
   { sep: true },
-  { cmd: 'blockquote', icon: '&#8220;Quote&#8221;', title: 'Blockquote' },
-  { cmd: 'link', icon: '🔗 Link', title: 'Insert Link' },
+  { cmd: 'blockquote',          icon: '&#8220;Quote&#8221;', title: 'Blockquote' },
+  { cmd: 'link',                icon: '🔗 Link',             title: 'Insert Link' },
   { sep: true },
-  { cmd: 'removeFormat', icon: '&#10006; Clear', title: 'Clear Formatting' },
+  { cmd: 'removeFormat',        icon: '&#10006; Clear',      title: 'Clear Formatting' },
 ];
 
 export default function RichEditor({ value, onChange, label = 'Content', minHeight = 280 }: Props) {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const skipUpdate = useRef(false);
-  const savedRange = useRef<Range | null>(null);
+  const editorRef   = useRef<HTMLDivElement>(null);
+  const skipUpdate  = useRef(false);
+  const savedRange  = useRef<Range | null>(null);
 
   useEffect(() => {
     if (editorRef.current && !skipUpdate.current) {
@@ -49,7 +49,6 @@ export default function RichEditor({ value, onChange, label = 'Content', minHeig
     const editor = editorRef.current;
     if (!editor) return;
     editor.focus();
-
     if (cmd === 'h2' || cmd === 'h3') {
       document.execCommand('formatBlock', false, `<${cmd}>`);
     } else if (cmd === 'blockquote') {
@@ -81,8 +80,8 @@ export default function RichEditor({ value, onChange, label = 'Content', minHeig
     if (savedRange.current) { sel?.removeAllRanges(); sel?.addRange(savedRange.current); }
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
     const range = sel.getRangeAt(0);
-    const frag = range.extractContents();
-    const span = document.createElement('span');
+    const frag  = range.extractContents();
+    const span  = document.createElement('span');
     span.style.fontSize = size;
     span.appendChild(frag);
     range.insertNode(span);
@@ -92,34 +91,26 @@ export default function RichEditor({ value, onChange, label = 'Content', minHeig
   return (
     <div>
       {label && <label className="form-label">{label}</label>}
-      <div className="border rounded overflow-hidden" style={{ borderColor: '#e2e8f0' }}>
-        {/* Toolbar */}
+      <div className="border rounded overflow-hidden">
         <div className="rich-editor-toolbar">
           {TOOLS.map((t, i) =>
             t.sep ? (
-              <div key={i} style={{ width: 1, background: '#e2e8f0', margin: '0 4px', alignSelf: 'stretch' }} />
+              <div key={i} className="re-sep" />
             ) : (
               <button
                 key={t.cmd}
                 type="button"
                 title={t.title}
-                className="btn btn-sm"
-                style={{
-                  fontSize: 12, padding: '2px 8px', border: '1px solid #e2e8f0',
-                  background: '#fff', borderRadius: 6, lineHeight: 1.6,
-                }}
+                className="re-btn"
                 onMouseDown={(e) => { e.preventDefault(); exec(t.cmd!); }}
                 dangerouslySetInnerHTML={{ __html: t.icon }}
               />
             )
           )}
-          <div style={{ width: 1, background: '#e2e8f0', margin: '0 4px', alignSelf: 'stretch' }} />
+          <div className="re-sep" />
           <select
             title="Font size"
-            style={{
-              fontSize: 12, height: 28, border: '1px solid #e2e8f0',
-              borderRadius: 6, padding: '0 4px', background: '#fff', cursor: 'pointer',
-            }}
+            className="re-size"
             defaultValue=""
             onMouseDown={captureSelection}
             onChange={e => { applyFontSize(e.target.value); e.target.value = ''; }}
@@ -130,7 +121,6 @@ export default function RichEditor({ value, onChange, label = 'Content', minHeig
             ))}
           </select>
         </div>
-        {/* Content */}
         <div
           ref={editorRef}
           contentEditable

@@ -35,10 +35,10 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   }, [router]);
 
   if (checking) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>🔭</div>
-        <div style={{ fontSize: 14, color: '#64748b' }}>Loading your account...</div>
+    <div className="portal-checking">
+      <div className="portal-checking-body">
+        <div className="portal-checking-icon">🔭</div>
+        <div className="portal-checking-text">Loading your account...</div>
       </div>
     </div>
   );
@@ -51,7 +51,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       <div className="portal-header">
         <div className="container">
           <div className="portal-header-top">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className="portal-header-user">
               <div className="user-avatar-sm">{initials}</div>
               <div>
                 <div className="portal-header-label">Subscriber Portal</div>

@@ -161,9 +161,7 @@ export default function PortfolioPage() {
   const pageStocks = stocks.slice((page - 1) * PER_PAGE, page * PER_PAGE);
   useEffect(() => setPage(1), [activeId]);
 
-  if (loading) return (
-    <div style={{ textAlign: 'center', padding: '4rem', color: '#64748b' }}>Loading portfolios…</div>
-  );
+  if (loading) return <div className="pf-loading">Loading portfolios…</div>;
 
   return (
     <div className="pf-page">
@@ -180,9 +178,9 @@ export default function PortfolioPage() {
       {/* ── Portfolio tabs ── */}
       {portfolios.length === 0 ? (
         <div className="pf-empty">
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📈</div>
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>No portfolios yet</div>
-          <div style={{ color: '#64748b', fontSize: 14 }}>Click &quot;+ New Portfolio&quot; to get started.</div>
+          <div className="pf-empty-icon">📈</div>
+          <div className="pf-empty-title">No portfolios yet</div>
+          <div className="pf-empty-sub">Click &quot;+ New Portfolio&quot; to get started.</div>
         </div>
       ) : (
         <>
@@ -203,7 +201,7 @@ export default function PortfolioPage() {
               {/* ── Add Stock ── */}
               <div className="pf-add-section">
                 <button className="pf-add-toggle" onClick={() => setAddOpen(o => !o)}>
-                  <span style={{ fontSize: 18, fontWeight: 700 }}>⊕</span> Add Stock to Portfolio
+                  <span className="pf-add-icon">⊕</span> Add Stock to Portfolio
                   <span className="pf-add-chevron">{addOpen ? '∧' : '∨'}</span>
                 </button>
                 {addOpen && (
@@ -279,7 +277,7 @@ export default function PortfolioPage() {
               <div className="pf-holdings">
                 <div className="pf-holdings-title">☰ My Holdings</div>
                 {stocks.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2.5rem', color: '#94a3b8' }}>
+                  <div className="pf-no-holdings">
                     No stocks yet. Use &quot;Add Stock to Portfolio&quot; above.
                   </div>
                 ) : (
