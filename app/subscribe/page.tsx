@@ -67,7 +67,7 @@ export default async function SubscribePage() {
                         <div className="product-card-price">
                           <div className={`amount ${sale ? 'amount-sale' : ''}`}>${fmtPrice(p)}</div>
                           {sale && p.regularPrice && <div className="was">${p.regularPrice.toFixed(2)} regular</div>}
-                          {p.compareAtPrice && !sale && <div className="was" style={{ fontSize: 12 }}>Was ${p.compareAtPrice.toFixed(2)}</div>}
+                          {p.plans?.length > 1 && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{p.plans.length} plans available</div>}
                         </div>
 
                         {rc && (

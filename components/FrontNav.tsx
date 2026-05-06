@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 
 interface SubUser { name: string; email: string; }
 interface Sector { _id: string; name: string; slug: string; reportCount: number; featuredImage?: string; }
-interface BlogType { _id: string; label: string; count: number; }
+interface BlogType { _id: string; label: string; count: number; navHighlight?: boolean; }
 
 export default function FrontNav() {
   const pathname = usePathname();
@@ -68,6 +68,17 @@ export default function FrontNav() {
 
   return (
     <>
+      <style>{`
+        @keyframes navPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.45; }
+        }
+        .hn-link-highlight {
+          color: #f59e0b !important;
+          animation: navPulse 1.4s ease-in-out infinite;
+        }
+        .hn-link-highlight:hover { opacity: 1 !important; }
+      `}</style>
       <header className="site-header">
         {/* ── TOP UTILITY BAR ── */}
         <div className="header-topbar">
@@ -196,7 +207,7 @@ export default function FrontNav() {
                   className={`hn-link hn-drop ${isActive('/subscribe') ? 'active' : ''}`}
                   onClick={() => { setProductOpen(o => !o); setSectorOpen(false); }}
                 >
-                  Our Product
+                  Product
                   <svg width="9" height="5" viewBox="0 0 10 6" fill="none" style={{ marginLeft: 4, transition: 'transform 0.2s', transform: productOpen ? 'rotate(180deg)' : 'none' }}>
                     <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -243,17 +254,17 @@ export default function FrontNav() {
                 )}
               </div>
 
-              <Link href="/editorial" className={`hn-link ${isActive('/editorial') ? 'active' : ''}`}>Editorial</Link>
               <Link href="/videos" className={`hn-link ${isActive('/videos') ? 'active' : ''}`}>Videos</Link>
 
-              {/* Dynamic blog types */}
+              {/* Dynamic blog categories with showInNav */}
               {blogTypes.map(bt => (
                 <Link
                   key={bt._id}
                   href={`/${bt._id}`}
-                  className={`hn-link ${isActive(`/${bt._id}`) ? 'active' : ''} ${bt._id === 'trending-stock-market-news' ? 'hn-link-accent' : ''}`}
+                  className={`hn-link ${isActive(`/${bt._id}`) ? 'active' : ''} ${bt.navHighlight ? 'hn-link-highlight' : ''}`}
                 >
                   {bt.label || (bt._id ?? '').replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  {bt.navHighlight && <span style={{ marginLeft: 4, fontSize: 9, verticalAlign: 'super', background: '#f59e0b', color: '#000', padding: '1px 5px', borderRadius: 4, fontWeight: 800, letterSpacing: '0.3px' }}>HOT</span>}
                 </Link>
               ))}
             </div>
@@ -286,8 +297,9 @@ export default function FrontNav() {
           <Link href="/videos" className={`mobile-nav-link ${isActive('/videos') ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Videos</Link>
 
           {blogTypes.map(bt => (
-            <Link key={bt._id} href={`/${bt._id}`} className={`mobile-nav-link ${bt._id === 'trending-stock-market-news' ? 'hn-link-accent' : ''}`} onClick={() => setMobileOpen(false)}>
+            <Link key={bt._id} href={`/${bt._id}`} className={`mobile-nav-link ${bt.navHighlight ? 'hn-link-highlight' : ''}`} onClick={() => setMobileOpen(false)}>
               {bt.label || bt._id.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+              {bt.navHighlight && <span style={{ marginLeft: 6, fontSize: 9, background: '#f59e0b', color: '#000', padding: '1px 5px', borderRadius: 4, fontWeight: 800 }}>HOT</span>}
             </Link>
           ))}
 

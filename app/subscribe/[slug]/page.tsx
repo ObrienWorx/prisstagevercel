@@ -2,7 +2,7 @@ import connectDB from '@/lib/mongoose';
 import Product from '@/models/Product';
 import SiteLayout from '@/components/SiteLayout';
 import PurchaseCard from '@/components/PurchaseCard';
-import Link from 'next/link';
+import SaleCountdownBanner from '@/components/SaleCountdownBanner';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -23,16 +23,39 @@ export default async function ProductDetailPage({ params }: P) {
   const p = await Product.findOne({ slug, status: 'published', isActive: true }).lean() as any;
   if (!p) notFound();
 
+  // Build plans array — fall back to legacy top-level fields if no plans saved yet
   const now = new Date();
-  const isSaleActive = (() => {
-    if (p.salePrice == null) return false;
-    if (p.saleStartDate && new Date(p.saleStartDate) > now) return false;
-    if (p.saleEndDate && new Date(p.saleEndDate) < now) return false;
+  const isSaleActive = (sp: number | null, sd?: Date, ed?: Date) => {
+    if (sp == null) return false;
+    if (sd && new Date(sd) > now) return false;
+    if (ed && new Date(ed) < now) return false;
     return true;
-  })();
-  const activeSalePrice = isSaleActive ? p.salePrice : null;
-  const displayPrice = (activeSalePrice ?? p.regularPrice ?? 0).toFixed(2);
-  const fmtDur = p.durationValue ? `${p.durationValue} ${p.durationType}` : '';
+  };
+
+  // Determine if any plan has an active sale and there's an end date for the countdown
+  const anySaleActive = p.plans?.length > 0
+    ? p.plans.some((pl: any) => isSaleActive(pl.salePrice, p.saleStartDate, p.saleEndDate))
+    : isSaleActive(p.salePrice, p.saleStartDate, p.saleEndDate);
+  const saleEndDate = anySaleActive && p.saleEndDate
+    ? new Date(p.saleEndDate).toISOString()
+    : undefined;
+
+  const plans: { name: string; regularPrice: number; salePrice: number | null; durationValue: number; durationType: string }[] =
+    p.plans?.length > 0
+      ? p.plans.map((pl: any) => ({
+          name: pl.name ?? '',
+          regularPrice: pl.regularPrice ?? 0,
+          salePrice: isSaleActive(pl.salePrice, p.saleStartDate, p.saleEndDate) ? pl.salePrice : null,
+          durationValue: pl.durationValue ?? 1,
+          durationType: pl.durationType ?? 'months',
+        }))
+      : [{
+          name: '',
+          regularPrice: p.regularPrice ?? 0,
+          salePrice: isSaleActive(p.salePrice, p.saleStartDate, p.saleEndDate) ? p.salePrice : null,
+          durationValue: p.durationValue ?? 1,
+          durationType: p.durationType ?? 'months',
+        }];
 
   const RISK_COLORS: Record<string, { bg: string; text: string; border: string }> = {
     Low: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
@@ -53,6 +76,22 @@ export default async function ProductDetailPage({ params }: P) {
           </div>
         </div>
       </div>
+
+      {/* Full-width countdown bar — only when sale has an end date */}
+      {saleEndDate && (
+        <SaleCountdownBanner endDate={saleEndDate} />
+      )}
+
+      {/* Sale Banner — shown just after hero */}
+      {p.saleBanner && (
+        <div className="container" style={{ marginTop: '2rem' }}>
+          <img
+            src={p.saleBanner}
+            alt={`${p.name} promotion`}
+            style={{ width: '100%', borderRadius: 14, maxHeight: 220, objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      )}
 
       {/* Content */}
       <div className="site-section">
@@ -96,6 +135,14 @@ export default async function ProductDetailPage({ params }: P) {
 
             <div className="col-lg-4 offset-lg-1 d-none d-lg-block">
               <div style={{ position: 'sticky', top: 80 }}>
+                {p.riskRating && (() => {
+                  const rc = RISK_COLORS[p.riskRating];
+                  return (
+                    <div style={{ background: rc.bg, border: `1px solid ${rc.border}`, borderRadius: 10, padding: '10px 16px', marginBottom: '1rem', fontSize: 13, fontWeight: 600, color: rc.text }}>
+                      Risk Rating: {p.riskRating}
+                    </div>
+                  );
+                })()}
                 <div style={{ background: '#f8fafc', borderRadius: 14, padding: '1.5rem', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
                   <h4 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Why PristineGaze?</h4>
                   {[
@@ -108,13 +155,7 @@ export default async function ProductDetailPage({ params }: P) {
                     <div key={t} style={{ fontSize: 13, color: '#374151', padding: '6px 0', borderBottom: '1px solid #f1f5f9', lineHeight: 1.5 }}>{t}</div>
                   ))}
                 </div>
-                <PurchaseCard
-                  slug={p.slug}
-                  price={displayPrice}
-                  duration={fmtDur}
-                  regularPrice={p.regularPrice}
-                  salePrice={activeSalePrice}
-                />
+                <PurchaseCard slug={p.slug} plans={plans} saleEndDate={saleEndDate} />
               </div>
             </div>
           </div>

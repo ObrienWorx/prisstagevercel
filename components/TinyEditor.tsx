@@ -37,6 +37,7 @@ import {
   Alignment,
   FindAndReplace,
   SourceEditing,
+  FontSize,
 } from 'ckeditor5';
 import 'ckeditor5/ckeditor5.css';
 
@@ -71,7 +72,7 @@ const EDITOR_CONFIG = {
   licenseKey: 'GPL',
   plugins: [
     Essentials, Autoformat, Bold, Italic, Underline, Strikethrough, Code,
-    Heading, Paragraph, Alignment, BlockQuote, CodeBlock, HorizontalLine,
+    Heading, Paragraph, Alignment, BlockQuote, CodeBlock, HorizontalLine, FontSize,
     List, ListProperties, Indent, IndentBlock,
     Link, AutoLink,
     Image, ImageCaption, ImageStyle, ImageToolbar, ImageUpload, ImageResize, FileRepository,
@@ -82,7 +83,7 @@ const EDITOR_CONFIG = {
   toolbar: {
     items: [
       'undo', 'redo', '|', 'findAndReplace', 'sourceEditing', '|',
-      'heading', '|',
+      'heading', 'fontSize', '|',
       'bold', 'italic', 'underline', 'strikethrough', 'code', '|',
       'alignment', '|',
       'link', '|',
@@ -90,6 +91,10 @@ const EDITOR_CONFIG = {
       'blockQuote', 'insertTable', 'uploadImage', 'mediaEmbed', 'horizontalLine', 'codeBlock',
     ],
     shouldNotGroupWhenFull: true,
+  },
+  fontSize: {
+    options: [10, 11, 12, 14, 'default', 18, 20, 24, 28, 32, 36],
+    supportAllValues: true,
   },
   heading: {
     options: [

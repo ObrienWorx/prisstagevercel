@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Report from '@/models/Report';
+import { deleteUploadedFile } from '@/lib/deleteUploadedFile';
 import '@/models/ReportCategory';
 import '@/models/Sector';
 import '@/models/Product';
@@ -73,6 +74,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   const report = await Report.findById(id);
   if (!report) return errorResponse('Report not found', 404);
 
+  await deleteUploadedFile(report.featuredImage);
   await report.deleteOne();
   return successResponse(null, 'Report deleted successfully');
 }

@@ -5,6 +5,8 @@ export interface IBlogCategory extends Document {
   slug: string;
   description: string;
   status: 'active' | 'inactive';
+  showInNav: boolean;
+  navHighlight: boolean;
   metaTitle: string;
   metaDescription: string;
   metaImage: string;
@@ -18,6 +20,8 @@ const BlogCategorySchema = new Schema<IBlogCategory>(
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     description: { type: String, default: '' },
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+    showInNav: { type: Boolean, default: false },
+    navHighlight: { type: Boolean, default: false },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },
     metaImage: { type: String, default: '' },
@@ -25,7 +29,7 @@ const BlogCategorySchema = new Schema<IBlogCategory>(
   { timestamps: true }
 );
 
-const BlogCategory: Model<IBlogCategory> =
-  mongoose.models.BlogCategory || mongoose.model<IBlogCategory>('BlogCategory', BlogCategorySchema);
+delete (mongoose.models as any).BlogCategory;
+const BlogCategory: Model<IBlogCategory> = mongoose.model<IBlogCategory>('BlogCategory', BlogCategorySchema);
 
 export default BlogCategory;

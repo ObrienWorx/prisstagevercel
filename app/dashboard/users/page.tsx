@@ -2,7 +2,19 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-const ALL_MODULES = ['reports', 'blogs', 'categories', 'sectors', 'products', 'users'];
+const ALL_MODULES: { key: string; label: string; group: string }[] = [
+  { key: 'blogs',            label: 'Blogs',             group: 'Blog' },
+  { key: 'blog-categories',  label: 'Blog Categories',   group: 'Blog' },
+  { key: 'reports',          label: 'Reports',           group: 'Research' },
+  { key: 'report-categories',label: 'Report Categories', group: 'Research' },
+  { key: 'sectors',          label: 'Sectors',           group: 'Research' },
+  { key: 'products',         label: 'Products',          group: 'Research' },
+  { key: 'videos',           label: 'Videos',            group: 'Media' },
+  { key: 'orders',           label: 'Orders',            group: 'Commerce' },
+  { key: 'transactions',     label: 'Transactions',      group: 'Commerce' },
+  { key: 'subscribers',      label: 'Subscribers',       group: 'Users' },
+  { key: 'users',            label: 'Admin Users',       group: 'Users' },
+];
 
 interface User {
   _id: string;
@@ -90,7 +102,7 @@ export default function UsersPage() {
         name: form.name,
         email: form.email,
         role: form.role,
-        permissions: form.role === 'admin' ? ALL_MODULES : form.permissions,
+        permissions: form.role === 'admin' ? ALL_MODULES.map(m => m.key) : form.permissions,
         isActive: form.isActive,
       };
       if (form.password) payload.password = form.password;
@@ -297,20 +309,42 @@ export default function UsersPage() {
                   {/* Permissions — only for sub-admin */}
                   {form.role === 'sub-admin' && (
                     <div className="col-12">
-                      <label className="form-label fw-semibold">Module Permissions</label>
-                      <div className="d-flex flex-wrap gap-3 p-3 bg-light rounded">
-                        {ALL_MODULES.map((mod) => (
-                          <div key={mod} className="form-check">
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              id={`perm-${mod}`}
-                              checked={form.permissions.includes(mod)}
-                              onChange={() => togglePermission(mod)}
-                            />
-                            <label className="form-check-label text-capitalize" htmlFor={`perm-${mod}`}>
-                              {mod}
-                            </label>
+                      <div className="d-flex align-items-center justify-content-between mb-1">
+                        <label className="form-label fw-semibold mb-0">Module Permissions</label>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          style={{ fontSize: 11 }}
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            permissions: f.permissions.length === ALL_MODULES.length ? [] : ALL_MODULES.map(m => m.key),
+                          }))}
+                        >
+                          {form.permissions.length === ALL_MODULES.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
+                      <div className="p-3 bg-light rounded" style={{ border: '1px solid #e2e8f0' }}>
+                        {Array.from(new Set(ALL_MODULES.map(m => m.group))).map(group => (
+                          <div key={group} className="mb-3">
+                            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#94a3b8', marginBottom: 8 }}>
+                              {group}
+                            </div>
+                            <div className="d-flex flex-wrap gap-3">
+                              {ALL_MODULES.filter(m => m.group === group).map(mod => (
+                                <div key={mod.key} className="form-check">
+                                  <input
+                                    type="checkbox"
+                                    className="form-check-input"
+                                    id={`perm-${mod.key}`}
+                                    checked={form.permissions.includes(mod.key)}
+                                    onChange={() => togglePermission(mod.key)}
+                                  />
+                                  <label className="form-check-label" htmlFor={`perm-${mod.key}`} style={{ fontSize: 13 }}>
+                                    {mod.label}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>

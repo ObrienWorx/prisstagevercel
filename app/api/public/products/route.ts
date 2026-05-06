@@ -6,7 +6,7 @@ export async function GET() {
   try {
     await connectDB();
     const products = await Product.find({ status: 'published', isActive: true })
-      .select('name slug regularPrice salePrice compareAtPrice saleStartDate saleEndDate riskRating durationType durationValue shortDescription features featuredImage')
+      .select('name slug regularPrice salePrice saleStartDate saleEndDate riskRating durationType durationValue plans shortDescription features featuredImage saleBanner')
       .sort({ regularPrice: 1 });
     return NextResponse.json({ success: true, data: products });
   } catch (e) {

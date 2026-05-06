@@ -28,6 +28,8 @@ export async function PUT(req: NextRequest, { params }: P) {
   }
   if (body.description !== undefined) item.description = body.description;
   if (body.status) item.status = body.status;
+  if (body.showInNav !== undefined) item.showInNav = !!body.showInNav;
+  if (body.navHighlight !== undefined) item.navHighlight = !!body.navHighlight;
   if (body.metaTitle !== undefined) item.metaTitle = body.metaTitle;
   if (body.metaDescription !== undefined) item.metaDescription = body.metaDescription;
   if (body.metaImage !== undefined) item.metaImage = body.metaImage;

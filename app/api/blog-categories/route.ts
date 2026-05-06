@@ -17,10 +17,15 @@ export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'blog-categories');
   if (error) return error;
   await connectDB();
-  const { name, slug, description, status, metaTitle, metaDescription, metaImage } = await req.json();
+  const body = await req.json();
+  const { name, slug, description, status, showInNav, navHighlight, metaTitle, metaDescription, metaImage } = body;
   if (!name) return errorResponse('Name is required');
   const finalSlug = slug ? slugify(slug) : slugify(name);
   if (await BlogCategory.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
-  const item = await BlogCategory.create({ name, slug: finalSlug, description, status, metaTitle, metaDescription, metaImage });
+  const item = await BlogCategory.create({
+    name, slug: finalSlug, description, status,
+    showInNav: !!showInNav, navHighlight: !!navHighlight,
+    metaTitle, metaDescription, metaImage,
+  });
   return successResponse(item, 'Blog category created', 201);
 }

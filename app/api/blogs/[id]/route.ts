@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Blog from '@/models/Blog';
+import { deleteUploadedFiles } from '@/lib/deleteUploadedFile';
 import '@/models/BlogCategory';
 import { authenticate, requirePermission } from '@/middleware/authMiddleware';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
@@ -60,6 +61,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   const blog = await Blog.findById(id);
   if (!blog) return errorResponse('Blog not found', 404);
 
+  await deleteUploadedFiles(blog.featuredImage, (blog as any).metaImage);
   await blog.deleteOne();
   return successResponse(null, 'Blog deleted successfully');
 }

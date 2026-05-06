@@ -5,6 +5,7 @@ import '@/models/Product';
 import '@/models/ReportCategory';
 import UserProduct from '@/models/UserProduct';
 import SiteLayout from '@/components/SiteLayout';
+import SidebarLoginForm from '@/components/SidebarLoginForm';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
@@ -28,15 +29,12 @@ export default async function ReportDetailPage({ params }: P) {
 
   const report = await Report.findOne({ slug, publishStatus: 'published' })
     .populate('sector', 'name slug')
-    .populate('product', 'name slug regularPrice salePrice')
+    .populate('product', 'name slug regularPrice salePrice shortDescription features featuredImage saleBanner riskRating durationValue durationType plans')
     .populate('category', 'name slug')
     .lean() as any;
 
   if (!report) notFound();
 
-  // ── Access control ────────────────────────────────────────────────────────
-  // All reports require a subscription. If report.product is set → need that
-  // specific product. If report.product is null → any active subscription works.
   let hasAccess = false;
   let isLoggedIn = false;
 
@@ -186,31 +184,110 @@ export default async function ReportDetailPage({ params }: P) {
                 )}
 
                 {!hasAccess && (
-                  <div style={{ background: 'linear-gradient(135deg, #1e3a5f, #0f4c81)', borderRadius: 14, padding: '1.5rem', color: '#fff' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#93c5fd', marginBottom: 8 }}>
-                      {isLoggedIn ? 'Upgrade to access' : 'Subscribe to read'}
-                    </div>
+                  <>
+                    {/* Login form — only shown when not logged in */}
+                    {!isLoggedIn && (
+                      <div style={{ marginBottom: 16 }}>
+                        <SidebarLoginForm redirectPath={`/reports/${report.slug}`} />
+                      </div>
+                    )}
+
+                    {/* Sale banner image */}
+                    {report.product?.saleBanner && (
+                      <div style={{ marginBottom: 16 }}>
+                        <img
+                          src={report.product.saleBanner}
+                          alt={`${report.product.name} promotion`}
+                          style={{ width: '100%', borderRadius: 12, display: 'block' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Product sales banner */}
                     {report.product ? (
-                      <>
-                        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{report.product.name}</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>
-                          A${((report.product.salePrice ?? report.product.regularPrice) || 0).toFixed(2)}
+                      <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', borderRadius: 14, padding: '1.5rem', color: '#fff', border: '1px solid rgba(59,130,246,0.2)' }}>
+                        {report.product.featuredImage && (
+                          <img
+                            src={report.product.featuredImage}
+                            alt={report.product.name}
+                            style={{ width: '100%', borderRadius: 9, marginBottom: 12, maxHeight: 120, objectFit: 'cover' }}
+                          />
+                        )}
+                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#93c5fd', marginBottom: 6 }}>
+                          {isLoggedIn ? 'Upgrade to access' : 'Required subscription'}
                         </div>
-                        <Link href={`/subscribe/${report.product.slug}`} style={{ display: 'block', background: '#3b82f6', color: '#fff', padding: '0.65rem', borderRadius: 9, fontWeight: 700, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}>
-                          Subscribe Now
+                        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{report.product.name}</div>
+
+                        {report.product.shortDescription && (
+                          <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)', marginBottom: 12, lineHeight: 1.5 }}>
+                            {report.product.shortDescription}
+                          </div>
+                        )}
+
+                        {report.product.features?.length > 0 && (
+                          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            {report.product.features.slice(0, 4).map((f: string, i: number) => (
+                              <li key={i} style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', display: 'flex', gap: 7, alignItems: 'flex-start' }}>
+                                <span style={{ color: '#4ade80', flexShrink: 0 }}>✓</span> {f}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 14 }}>
+                          {report.product.salePrice != null && report.product.salePrice < report.product.regularPrice ? (
+                            <>
+                              <span style={{ fontSize: 24, fontWeight: 800, color: '#4ade80' }}>
+                                A${report.product.salePrice.toFixed(2)}
+                              </span>
+                              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>
+                                A${report.product.regularPrice.toFixed(2)}
+                              </span>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: 24, fontWeight: 800, color: '#93c5fd' }}>
+                              A${(report.product.regularPrice || 0).toFixed(2)}
+                            </span>
+                          )}
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                            / {report.product.durationValue} {report.product.durationType}
+                          </span>
+                        </div>
+
+                        {report.product.riskRating && (
+                          <div style={{ fontSize: 11, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ color: 'rgba(255,255,255,0.4)' }}>Risk:</span>
+                            <span style={{
+                              padding: '2px 8px', borderRadius: 100, fontWeight: 700,
+                              background: report.product.riskRating === 'Low' ? 'rgba(74,222,128,0.15)' : report.product.riskRating === 'Medium' ? 'rgba(251,191,36,0.15)' : 'rgba(248,113,113,0.15)',
+                              color: report.product.riskRating === 'Low' ? '#4ade80' : report.product.riskRating === 'Medium' ? '#fbbf24' : '#f87171',
+                            }}>
+                              {report.product.riskRating}
+                            </span>
+                          </div>
+                        )}
+
+                        <Link
+                          href={`/subscribe/${report.product.slug}`}
+                          style={{ display: 'block', background: '#3b82f6', color: '#fff', padding: '0.7rem', borderRadius: 9, fontWeight: 700, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}
+                        >
+                          Subscribe Now →
                         </Link>
-                      </>
+                      </div>
                     ) : (
-                      <>
+                      <div style={{ background: 'linear-gradient(135deg, #1e3a5f, #0f4c81)', borderRadius: 14, padding: '1.5rem', color: '#fff' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#93c5fd', marginBottom: 8 }}>
+                          {isLoggedIn ? 'Upgrade to access' : 'Subscribe to read'}
+                        </div>
                         <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.7)', marginBottom: 16 }}>
                           Get access to all research reports with any PristineGaze subscription.
                         </div>
                         <Link href="/subscribe" style={{ display: 'block', background: '#3b82f6', color: '#fff', padding: '0.65rem', borderRadius: 9, fontWeight: 700, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}>
-                          View Plans
+                          View Plans →
                         </Link>
-                      </>
+                      </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             </div>

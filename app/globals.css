@@ -1046,12 +1046,18 @@ body {
 }
 
 .footer-contact-item a {
-  color: #000;
+  color: rgba(255,255,255,0.85);
   text-decoration: none;
   transition: color 0.15s;
 }
 
-.footer-contact-item a:hover { color: #000; }
+.footer-contact-item a:hover { color: #fff; }
+
+.footer-contact-label {
+  display: block;
+  margin-bottom: 2px;
+  color: rgba(255,255,255,0.9);
+}
 
 /* Footer disclaimer */
 .footer-disclaimer {
@@ -1663,4 +1669,9 @@ body {
 @media (max-width: 767px) {
   .cl-grid { grid-template-columns: 1fr; }
   .cl-hero { padding: 3.5rem 0 3rem; }
+}
+
+.site-section img {
+  width: 100%!important;
+  height: auto;
 }

@@ -14,13 +14,20 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'products'); if (error) return error;
-  await connectDB();
-  const body = await req.json();
-  if (!body.name) return errorResponse('Name is required');
-  if (body.regularPrice === undefined) return errorResponse('Regular price is required');
-  if (!body.durationValue) return errorResponse('Duration is required');
-  const finalSlug = body.slug ? slugify(body.slug) : slugify(body.name);
-  if (await Product.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
-  const product = await Product.create({ ...body, slug: finalSlug });
-  return successResponse(product, 'Product created', 201);
+  try {
+    await connectDB();
+    const body = await req.json();
+    if (!body.name) return errorResponse('Name is required');
+    if (!body.plans?.length) return errorResponse('At least one plan is required');
+    const finalSlug = body.slug ? slugify(body.slug) : slugify(body.name);
+    if (await Product.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
+    const product = await Product.create({ ...body, slug: finalSlug });
+    return successResponse(product, 'Product created', 201);
+  } catch (err: any) {
+    console.error('[POST /api/products]', err);
+    const msg = err?.errors
+      ? Object.values(err.errors).map((e: any) => e.message).join(', ')
+      : (err?.message || 'Save failed');
+    return errorResponse(msg, 500);
+  }
 }

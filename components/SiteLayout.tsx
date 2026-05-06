@@ -2,18 +2,18 @@
 
 import FrontNav from './FrontNav';
 import Link from 'next/link';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 
 interface StaticPageLink { _id: string; title: string; slug: string; footerColumn: string; }
+type SlugLink   = { title: string; slug: string };
+type DirectLink = { title: string; href: string };
+type FooterLink = SlugLink | DirectLink;
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   const [footerPages, setFooterPages] = useState<StaticPageLink[]>([]);
   const [showTop, setShowTop] = useState(false);
-  const footerRef = useRef(false);
 
   useEffect(() => {
-    if (footerRef.current) return;
-    footerRef.current = true;
     fetch('/api/public/static-pages')
       .then(r => r.json())
       .then(d => { if (d.success) setFooterPages(d.data); })
@@ -25,35 +25,30 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   const policyPages = footerPages.filter(p => p.footerColumn === 'policies');
-  const quickPages = footerPages.filter(p => p.footerColumn === 'quick-links');
+  const quickPages  = footerPages.filter(p => p.footerColumn === 'quick-links');
 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  const staticPolicyLinks = [
-    { title: 'Privacy Policy', slug: 'privacy-policy' },
-    { title: 'Terms Of Use', slug: 'terms-of-use' },
-    { title: 'Financial Service Guide', slug: 'financial-service-guide' },
-    { title: 'Cancellation & Refund Policy', slug: 'cancellation-refund-policy' },
-    { title: 'Terms and Conditions of Free Trial Use', slug: 'terms-free-trial' },
-    { title: 'Disclaimer', slug: 'disclaimer' },
-    { title: 'Account Deletion Request', slug: 'account-deletion-request' },
+  const staticPolicyLinks: SlugLink[] = [
+    { title: 'Privacy Policy',                          slug: 'privacy-policy' },
+    { title: 'Terms Of Use',                            slug: 'terms-of-use' },
+    { title: 'Financial Service Guide',                 slug: 'financial-service-guide' },
+    { title: 'Cancellation & Refund Policy',            slug: 'cancellation-refund-policy' },
+    { title: 'Terms and Conditions of Free Trial Use',  slug: 'terms-free-trial' },
+    { title: 'Disclaimer',                              slug: 'disclaimer' },
+    { title: 'Account Deletion Request',                slug: 'account-deletion-request' },
     ...policyPages,
   ];
 
-  const staticQuickLinks = [
-    { title: 'About Us', slug: 'about-us' },
-    { title: 'Past Recommendations', slug: 'past-recommendations' },
-    { title: 'Editorial', slug: 'editorial' },
-    { title: 'Subscriptions', href: '/subscribe' },
-    { title: 'Videos', href: '/videos' },
-    { title: 'Terminology', slug: 'terminology' },
-    { title: 'Free Trial', slug: 'free-trial' },
-    { title: 'Contact Us', slug: 'contact-us' },
+  const staticQuickLinks: FooterLink[] = [
+    { title: 'About Us',              slug: 'about-us' },
+    { title: 'Past Recommendations',  slug: 'past-recommendations' },
+    { title: 'Subscriptions',         href: '/subscribe' },
+    { title: 'Videos',                href: '/videos' },
+    { title: 'Terminology',           slug: 'terminology' },
+    { title: 'Free Trial',            slug: 'free-trial' },
+    { title: 'Contact Us',            slug: 'contact-us' },
     ...quickPages,
-  ];
-
-  const sectors = [
-    'Technology', 'Health Care', 'Financial Services', 'Energy', 'Consumer Discretionary',
   ];
 
   return (
@@ -69,11 +64,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <div className="container">
             <div className="row g-5">
 
-              {/* Brand column */}
+              {/* Brand */}
               <div className="col-lg-3 col-md-6">
                 <div className="footer-logo">
                   <div className="footer-logo-text">
-                    <div className="name"><img src="/logo.png" alt="" className='w-100' /></div>
+                    <div className="name"><img src="/logo.png" alt="" className="w-100" /></div>
                   </div>
                 </div>
                 <p className="footer-tagline">
@@ -82,36 +77,24 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               </div>
 
               {/* Quick Links */}
-              <div className="col-lg-2 col-md-6">
+              <div className="col-lg-3 col-md-6">
                 <div className="footer-col-title">Quick Links</div>
                 <ul className="footer-links">
                   {staticQuickLinks.map((l, i) => (
                     <li key={i}>
-                      <Link href={'href' in l ? (l as any).href : `/${(l as any).slug}`}>{l.title}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Sectors */}
-              <div className="col-lg-2 col-md-6">
-                <div className="footer-col-title">Sectors</div>
-                <ul className="footer-links">
-                  {sectors.map(s => (
-                    <li key={s}>
-                      <Link href={`/sectors/${s.toLowerCase().replace(/\s+/g, '-')}`}>{s}</Link>
+                      <Link href={'href' in l ? l.href : `/${l.slug}`}>{l.title}</Link>
                     </li>
                   ))}
                 </ul>
               </div>
 
               {/* Policies */}
-              <div className="col-lg-2 col-md-6">
+              <div className="col-lg-3 col-md-6">
                 <div className="footer-col-title">Policies</div>
                 <ul className="footer-links">
                   {staticPolicyLinks.map((l, i) => (
                     <li key={i}>
-                      <Link href={`/${(l as any).slug}`}>{l.title}</Link>
+                      <Link href={`/${l.slug}`}>{l.title}</Link>
                     </li>
                   ))}
                 </ul>
@@ -123,22 +106,18 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
 
                 <div className="footer-contact-item">
                   <div className="footer-contact-icon">📞</div>
-                  <div>
-                    <a href="tel:0489990844">0489 990 844</a>
-                  </div>
+                  <div><a href="tel:0489990844">0489 990 844</a></div>
                 </div>
 
                 <div className="footer-contact-item">
                   <div className="footer-contact-icon">✉️</div>
-                  <div>
-                    <a href="mailto:info@pristinegaze.com.au">info@pristinegaze.com.au</a>
-                  </div>
+                  <div><a href="mailto:info@pristinegaze.com.au">info@pristinegaze.com.au</a></div>
                 </div>
 
                 <div className="footer-contact-item">
                   <div className="footer-contact-icon">📍</div>
                   <div>
-                    <strong style={{ color: '#000', display: 'block', marginBottom: 2 }}>Headquarters:</strong>
+                    <strong className="footer-contact-label">Headquarters:</strong>
                     Ground Floor/470 St Kilda Rd, Melbourne VIC 3004
                   </div>
                 </div>
@@ -146,7 +125,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 <div className="footer-contact-item">
                   <div className="footer-contact-icon">📍</div>
                   <div>
-                    <strong style={{ color: '#000', display: 'block', marginBottom: 2 }}>Registered Office:</strong>
+                    <strong className="footer-contact-label">Registered Office:</strong>
                     6 Hunt Club Rd Narre Warren South VIC 3805
                   </div>
                 </div>
@@ -176,11 +155,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               </div>
               <div className="footer-social">
                 {[
-                  { icon: 'f', label: 'Facebook', href: '#' },
-                  { icon: '𝕏', label: 'Twitter', href: '#' },
+                  { icon: 'f', label: 'Facebook',  href: '#' },
+                  { icon: '𝕏', label: 'Twitter',   href: '#' },
                   { icon: '▣', label: 'Instagram', href: '#' },
-                  { icon: '▶', label: 'YouTube', href: '#' },
-                  { icon: '●', label: 'Reddit', href: '#' },
+                  { icon: '▶', label: 'YouTube',   href: '#' },
+                  { icon: '●', label: 'Reddit',    href: '#' },
                 ].map(s => (
                   <a key={s.label} href={s.href} className="social-btn" aria-label={s.label} title={s.label}>
                     {s.icon}
@@ -194,9 +173,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
 
       {/* Back to top */}
       {showTop && (
-        <button className="back-to-top" onClick={scrollTop} aria-label="Back to top">
-          ↑
-        </button>
+        <button className="back-to-top" onClick={scrollTop} aria-label="Back to top">↑</button>
       )}
     </div>
   );

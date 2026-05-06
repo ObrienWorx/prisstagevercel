@@ -7,14 +7,23 @@ import ImageUpload from '@/components/ImageUpload';
 
 const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false });
 
+interface Plan {
+  name: string;
+  regularPrice: string;
+  salePrice: string;
+  durationValue: string;
+  durationType: 'days' | 'months' | 'years';
+}
+
 interface Product {
   _id: string; name: string; slug: string;
-  regularPrice: number; salePrice: number | null; compareAtPrice: number | null;
+  regularPrice: number; salePrice: number | null;
   saleStartDate: string | null; saleEndDate: string | null;
   riskRating: string | null;
   durationType: 'days' | 'months' | 'years'; durationValue: number;
+  plans: { name: string; regularPrice: number; salePrice: number | null; durationValue: number; durationType: string }[];
   shortDescription: string; fullDescription: string;
-  featuredImage: string; gallery: string[];
+  featuredImage: string; saleBanner: string;
   status: 'draft' | 'published'; isActive: boolean;
   metaTitle: string; metaDescription: string; metaImage: string;
 }
@@ -26,15 +35,16 @@ const RISK_COLORS: Record<string, { bg: string; color: string }> = {
   'Very High': { bg: '#fef2f2', color: '#dc2626' },
 };
 
+const emptyPlan: Plan = { name: '', regularPrice: '', salePrice: '', durationValue: '1', durationType: 'months' };
+
 const empty = {
   name: '', slug: '',
-  regularPrice: '', salePrice: '', compareAtPrice: '',
+  plans: [{ ...emptyPlan }] as Plan[],
   saleStartDate: '', saleEndDate: '',
   riskRating: '',
-  durationType: 'months' as 'days' | 'months' | 'years', durationValue: '1',
   shortDescription: '', fullDescription: '',
   features: [] as string[],
-  featuredImage: '', gallery: [] as string[],
+  featuredImage: '', saleBanner: '',
   status: 'published' as 'draft' | 'published', isActive: true,
   metaTitle: '', metaDescription: '', metaImage: '',
 };
@@ -42,6 +52,26 @@ const empty = {
 function toDateInput(d: string | null | undefined) {
   if (!d) return '';
   return new Date(d).toISOString().slice(0, 10);
+}
+
+function plansFromItem(item: Product): Plan[] {
+  if (item.plans?.length > 0) {
+    return item.plans.map(pl => ({
+      name: pl.name ?? '',
+      regularPrice: pl.regularPrice != null ? String(pl.regularPrice) : '',
+      salePrice: pl.salePrice != null ? String(pl.salePrice) : '',
+      durationValue: pl.durationValue != null ? String(pl.durationValue) : '1',
+      durationType: (pl.durationType as 'days' | 'months' | 'years') ?? 'months',
+    }));
+  }
+  // Migrate legacy single-plan data
+  return [{
+    name: '',
+    regularPrice: item.regularPrice != null ? String(item.regularPrice) : '',
+    salePrice: item.salePrice != null ? String(item.salePrice) : '',
+    durationValue: item.durationValue != null ? String(item.durationValue) : '1',
+    durationType: (item.durationType as 'days' | 'months' | 'years') ?? 'months',
+  }];
 }
 
 export default function ProductsPage() {
@@ -76,44 +106,59 @@ export default function ProductsPage() {
     setEditing(item);
     setForm({
       name: item.name ?? '', slug: item.slug ?? '',
-      regularPrice: item.regularPrice != null ? String(item.regularPrice) : '',
-      salePrice: item.salePrice != null ? String(item.salePrice) : '',
-      compareAtPrice: item.compareAtPrice != null ? String(item.compareAtPrice) : '',
+      plans: plansFromItem(item),
       saleStartDate: toDateInput(item.saleStartDate),
       saleEndDate: toDateInput(item.saleEndDate),
       riskRating: item.riskRating ?? '',
-      durationType: (item.durationType as any) ?? 'months',
-      durationValue: item.durationValue != null ? String(item.durationValue) : '1',
       shortDescription: item.shortDescription ?? '', fullDescription: item.fullDescription ?? '',
       features: (item as any).features ?? [],
-      featuredImage: item.featuredImage ?? '', gallery: item.gallery ?? [],
+      featuredImage: item.featuredImage ?? '', saleBanner: (item as any).saleBanner ?? '',
       status: item.status ?? 'published', isActive: item.isActive ?? true,
       metaTitle: item.metaTitle ?? '', metaDescription: item.metaDescription ?? '', metaImage: item.metaImage ?? '',
     });
     setErr(''); setShowModal(true);
   };
 
+  const updatePlan = (idx: number, field: keyof Plan, value: string) => {
+    setForm(f => {
+      const plans = [...f.plans];
+      plans[idx] = { ...plans[idx], [field]: value };
+      return { ...f, plans };
+    });
+  };
+  const addPlan = () => setForm(f => ({ ...f, plans: [...f.plans, { ...emptyPlan }] }));
+  const removePlan = (idx: number) => setForm(f => ({ ...f, plans: f.plans.filter((_, i) => i !== idx) }));
+
   const save = async () => {
     if (!form.name.trim()) { setErr('Name is required'); return; }
-    if (!form.regularPrice) { setErr('Regular price is required'); return; }
-    if (!form.durationValue) { setErr('Duration is required'); return; }
+    if (form.plans.length === 0) { setErr('At least one plan is required'); return; }
+    for (let i = 0; i < form.plans.length; i++) {
+      if (!form.plans[i].regularPrice) { setErr(`Plan ${i + 1}: Regular price is required`); return; }
+      if (!form.plans[i].durationValue) { setErr(`Plan ${i + 1}: Duration is required`); return; }
+    }
     setErr(''); setSaving(true);
     try {
       const payload = {
         ...form,
-        regularPrice: Number(form.regularPrice),
-        salePrice: form.salePrice !== '' ? Number(form.salePrice) : null,
-        compareAtPrice: form.compareAtPrice !== '' ? Number(form.compareAtPrice) : null,
+        plans: form.plans.map(pl => ({
+          name: pl.name,
+          regularPrice: Number(pl.regularPrice),
+          salePrice: pl.salePrice !== '' ? Number(pl.salePrice) : null,
+          durationValue: Number(pl.durationValue),
+          durationType: pl.durationType,
+        })),
         saleStartDate: form.saleStartDate || null,
         saleEndDate: form.saleEndDate || null,
         riskRating: form.riskRating || null,
-        durationValue: Number(form.durationValue),
       };
       const url = editing ? `/api/products/${editing._id}` : '/api/products';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
-      const d = await r.json();
+      const text = await r.text();
+      const d = text ? JSON.parse(text) : {};
       if (d.success) { flash(d.message); setShowModal(false); load(); }
-      else setErr(d.error || 'Something went wrong');
+      else setErr(d.error || `Server error (${r.status})`);
+    } catch (e: any) {
+      setErr(e?.message || 'Unexpected error — check console');
     } finally { setSaving(false); }
   };
 
@@ -127,10 +172,6 @@ export default function ProductsPage() {
     } finally { setSaving(false); }
   };
 
-  const addGalleryImage = (url: string) => setForm(f => ({ ...f, gallery: [...f.gallery, url] }));
-  const removeGalleryImage = (idx: number) => setForm(f => ({ ...f, gallery: f.gallery.filter((_, i) => i !== idx) }));
-
-  // Is sale currently active for a product?
   const isSaleActive = (item: Product) => {
     if (item.salePrice == null) return false;
     const now = new Date();
@@ -162,14 +203,15 @@ export default function ProductsPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Name</th><th>Price</th><th>Sale Period</th>
-                  <th>Risk</th><th>Duration</th><th>Publish</th><th>Active</th>
+                  <th>Name</th><th>Price</th><th>Plans</th><th>Sale Period</th>
+                  <th>Risk</th><th>Publish</th><th>Active</th>
                   <th style={{ width: 120 }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item) => {
                   const onSale = isSaleActive(item);
+                  const planCount = item.plans?.length ?? 0;
                   return (
                     <tr key={item._id}>
                       <td>
@@ -183,6 +225,13 @@ export default function ProductsPage() {
                         {onSale && (
                           <s style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>${(item.regularPrice ?? 0).toFixed(2)}</s>
                         )}
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        {planCount > 0 ? (
+                          <span style={{ background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600 }}>
+                            {planCount} plan{planCount > 1 ? 's' : ''}
+                          </span>
+                        ) : <span style={{ color: '#94a3b8' }}>—</span>}
                       </td>
                       <td style={{ fontSize: 12 }}>
                         {item.salePrice != null ? (
@@ -206,7 +255,6 @@ export default function ProductsPage() {
                           }}>{item.riskRating}</span>
                         ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
                       </td>
-                      <td style={{ color: 'var(--muted)' }}>{item.durationValue ?? '—'} {item.durationType ?? ''}</td>
                       <td><span className={`badge ${item.status === 'published' ? 'bg-success' : 'bg-secondary'}`}>{item.status ?? 'draft'}</span></td>
                       <td><span className={`badge ${item.isActive ? 'bg-success' : 'bg-danger'}`}>{item.isActive ? 'Yes' : 'No'}</span></td>
                       <td>
@@ -246,31 +294,76 @@ export default function ProductsPage() {
                     <input className="form-control" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
                   </div>
 
-                  {/* Pricing */}
-                  <div className="col-12"><hr className="my-1" /><div className="form-section-title">Pricing</div></div>
-                  <div className="col-md-4">
-                    <label className="form-label">Regular Price ($) <span className="text-danger">*</span></label>
-                    <div className="input-group">
-                      <span className="input-group-text">$</span>
-                      <input type="number" min="0" step="0.01" className="form-control" value={form.regularPrice}
-                        onChange={(e) => setForm({ ...form, regularPrice: e.target.value })} placeholder="0.00" />
+                  {/* Plans */}
+                  <div className="col-12"><hr className="my-1" /><div className="form-section-title">Plans <span className="text-muted fw-normal" style={{ fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>— add multiple pricing options</span></div></div>
+                  <div className="col-12">
+                    <div className="d-flex flex-column gap-2">
+                      {form.plans.map((pl, idx) => (
+                        <div key={idx} className="p-3 rounded" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                          <div className="row g-2 align-items-end">
+                            <div className="col-md-3">
+                              <label className="form-label" style={{ fontSize: 12 }}>Plan Name <span className="text-muted">(optional)</span></label>
+                              <input className="form-control form-control-sm" value={pl.name}
+                                onChange={e => updatePlan(idx, 'name', e.target.value)}
+                                placeholder={`e.g. Monthly, Annual…`} />
+                            </div>
+                            <div className="col-md-2">
+                              <label className="form-label" style={{ fontSize: 12 }}>Regular Price <span className="text-danger">*</span></label>
+                              <div className="input-group input-group-sm">
+                                <span className="input-group-text">$</span>
+                                <input type="number" min="0" step="0.01" className="form-control" value={pl.regularPrice}
+                                  onChange={e => updatePlan(idx, 'regularPrice', e.target.value)} placeholder="0.00" />
+                              </div>
+                            </div>
+                            <div className="col-md-2">
+                              <label className="form-label" style={{ fontSize: 12 }}>Sale Price <span className="text-muted">(optional)</span></label>
+                              <div className="input-group input-group-sm">
+                                <span className="input-group-text">$</span>
+                                <input type="number" min="0" step="0.01" className="form-control" value={pl.salePrice}
+                                  onChange={e => updatePlan(idx, 'salePrice', e.target.value)} placeholder="blank = no sale" />
+                              </div>
+                              {pl.salePrice && pl.regularPrice && Number(pl.salePrice) < Number(pl.regularPrice) && (
+                                <div style={{ fontSize: 11, color: '#16a34a', marginTop: 2 }}>
+                                  Save ${(Number(pl.regularPrice) - Number(pl.salePrice)).toFixed(2)}
+                                </div>
+                              )}
+                            </div>
+                            <div className="col-md-2">
+                              <label className="form-label" style={{ fontSize: 12 }}>Duration <span className="text-danger">*</span></label>
+                              <input type="number" min="1" className="form-control form-control-sm" value={pl.durationValue}
+                                onChange={e => updatePlan(idx, 'durationValue', e.target.value)} placeholder="1" />
+                            </div>
+                            <div className="col-md-2">
+                              <label className="form-label" style={{ fontSize: 12 }}>Type</label>
+                              <select className="form-select form-select-sm" value={pl.durationType}
+                                onChange={e => updatePlan(idx, 'durationType', e.target.value)}>
+                                <option value="days">Days</option>
+                                <option value="months">Months</option>
+                                <option value="years">Years</option>
+                              </select>
+                            </div>
+                            <div className="col-md-1 d-flex align-items-end">
+                              {form.plans.length > 1 && (
+                                <button type="button" className="btn btn-sm btn-outline-danger w-100"
+                                  onClick={() => removePlan(idx)}>✕</button>
+                              )}
+                            </div>
+                          </div>
+                          {pl.regularPrice && pl.durationValue && (
+                            <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 8 }}>
+                              {pl.name && <strong>{pl.name} — </strong>}
+                              {pl.salePrice && Number(pl.salePrice) < Number(pl.regularPrice)
+                                ? <><span style={{ color: '#16a34a', fontWeight: 700 }}>${pl.salePrice}</span> <s style={{ color: '#94a3b8' }}>${pl.regularPrice}</s></>
+                                : <span style={{ fontWeight: 700 }}>${pl.regularPrice}</span>
+                              }
+                              {' '}/ {pl.durationValue} {pl.durationType}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  <div className="col-md-4">
-                    <label className="form-label">Sale Price ($) <span className="text-muted" style={{ fontSize: 11 }}>(optional)</span></label>
-                    <div className="input-group">
-                      <span className="input-group-text">$</span>
-                      <input type="number" min="0" step="0.01" className="form-control" value={form.salePrice}
-                        onChange={(e) => setForm({ ...form, salePrice: e.target.value })} placeholder="Leave blank for no sale" />
-                    </div>
-                  </div>
-                  <div className="col-md-4">
-                    <label className="form-label">Compare At Price ($) <span className="text-muted" style={{ fontSize: 11 }}>(strikethrough)</span></label>
-                    <div className="input-group">
-                      <span className="input-group-text">$</span>
-                      <input type="number" min="0" step="0.01" className="form-control" value={form.compareAtPrice}
-                        onChange={(e) => setForm({ ...form, compareAtPrice: e.target.value })} placeholder="e.g. 199.00" />
-                    </div>
+                    <button type="button" className="btn btn-sm btn-outline-primary mt-2"
+                      onClick={addPlan}>+ Add Plan</button>
                   </div>
 
                   {/* Sale Period */}
@@ -293,13 +386,6 @@ export default function ProductsPage() {
                           <div className="form-text">Sale expires after this date</div>
                         </div>
                       </div>
-                      {form.salePrice && (form.saleStartDate || form.saleEndDate) && (
-                        <div className="mt-2" style={{ fontSize: 12.5, color: '#3b82f6' }}>
-                          ℹ️ Sale price of ${form.salePrice} will only apply
-                          {form.saleStartDate ? ` from ${form.saleStartDate}` : ''}
-                          {form.saleEndDate ? ` until ${form.saleEndDate}` : ''}.
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -330,28 +416,6 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* Duration */}
-                  <div className="col-12"><hr className="my-1" /><div className="form-section-title">Access Duration</div></div>
-                  <div className="col-md-4">
-                    <label className="form-label">Duration Value <span className="text-danger">*</span></label>
-                    <input type="number" min="1" className="form-control" value={form.durationValue}
-                      onChange={(e) => setForm({ ...form, durationValue: e.target.value })} placeholder="1" />
-                  </div>
-                  <div className="col-md-4">
-                    <label className="form-label">Duration Type</label>
-                    <select className="form-select" value={form.durationType}
-                      onChange={(e) => setForm({ ...form, durationType: e.target.value as 'days' | 'months' | 'years' })}>
-                      <option value="days">Days</option>
-                      <option value="months">Months</option>
-                      <option value="years">Years</option>
-                    </select>
-                  </div>
-                  <div className="col-md-4 d-flex align-items-end">
-                    <div className="p-3 rounded w-100" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: 13 }}>
-                      Access for: <strong>{form.durationValue || '?'} {form.durationType}</strong>
-                    </div>
-                  </div>
 
                   {/* Descriptions */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">Description</div></div>
@@ -391,17 +455,8 @@ export default function ProductsPage() {
                     <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label">Gallery Images</label>
-                    <div className="d-flex flex-wrap gap-2 mb-2">
-                      {form.gallery.map((url, idx) => (
-                        <div key={idx} style={{ position: 'relative', width: 72, height: 72 }}>
-                          <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, border: '1px solid #e2e8f0' }} />
-                          <button type="button" onClick={() => removeGalleryImage(idx)}
-                            style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#ef4444', color: '#fff', border: 'none', fontSize: 12, lineHeight: 1, cursor: 'pointer' }}>×</button>
-                        </div>
-                      ))}
-                    </div>
-                    <ImageUpload label="Add Gallery Image" value="" onChange={addGalleryImage} />
+                    <ImageUpload label="Sale Banner" value={form.saleBanner} onChange={(url) => setForm({ ...form, saleBanner: url })} />
+                    <div className="form-text">Shown in the report sidebar and on the product page to promote this plan.</div>
                   </div>
 
                   {/* Status */}

@@ -24,8 +24,12 @@ export default function TransactionsPage() {
     setLoading(true);
     try {
       const r = await fetch('/api/transactions', { headers: h });
-      const d = await r.json();
+      const text = await r.text();
+      if (!text) return;
+      const d = JSON.parse(text);
       if (d.success) setItems(d.data);
+    } catch (err) {
+      console.error('Failed to load transactions', err);
     } finally { setLoading(false); }
   }, []);
 
