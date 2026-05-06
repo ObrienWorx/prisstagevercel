@@ -44,7 +44,7 @@ export async function POST(req: NextRequest, { params }: P) {
     const start = l.startDate ? new Date(l.startDate) : new Date();
     const dv = l.durationValue ? Number(l.durationValue) : prod.durationValue;
     const dt = l.durationType || prod.durationType;
-    const expiry = calculateExpiryDate(start, dt, dv);
+    const expiry = calculateExpiryDate(start, dt as 'years' | 'months' | 'days', dv);
     const price = l.pricePaid !== undefined ? Number(l.pricePaid) : (prod.salePrice ?? prod.regularPrice);
     return { prod, productId: l.productId, start, expiry, price, dv, dt };
   });
