@@ -32,37 +32,41 @@ export async function PUT(req: NextRequest, { params }: Params) {
   await connectDB();
   const { id } = await params;
   const body = await req.json();
-  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, publishStatus, metaTitle, metaDescription } = body;
+  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, price, recommendation, publishStatus, metaTitle, metaDescription, metaImage } = body;
 
-  const report = await Report.findById(id);
-  if (!report) return errorResponse('Report not found', 404);
+  const existing = await Report.findById(id);
+  if (!existing) return errorResponse('Report not found', 404);
 
-  if (title) report.title = title;
+  let finalSlug = existing.slug;
   if (slug) {
-    const finalSlug = slugify(slug);
-    const existing = await Report.findOne({ slug: finalSlug, _id: { $ne: id } });
-    if (existing) return errorResponse('A report with this slug already exists');
-    report.slug = finalSlug;
+    finalSlug = slugify(slug);
+    const clash = await Report.findOne({ slug: finalSlug, _id: { $ne: id } });
+    if (clash) return errorResponse('A report with this slug already exists');
   }
-  if (content !== undefined) report.content = content;
-  if (featuredImage !== undefined) report.featuredImage = featuredImage;
-  if (category !== undefined) report.category = category || null;
-  if (sector !== undefined) report.sector = sector || null;
-  if (product !== undefined) report.product = product || null;
-  if (upsellTicker !== undefined) report.upsellTicker = upsellTicker;
-  if (publishStatus) report.publishStatus = publishStatus;
-  if (metaTitle !== undefined) report.metaTitle = metaTitle;
-  if (metaDescription !== undefined) report.metaDescription = metaDescription;
 
-  await report.save();
+  const update: Record<string, unknown> = {
+    slug: finalSlug,
+    ...(title               !== undefined && { title }),
+    ...(content             !== undefined && { content }),
+    ...(featuredImage       !== undefined && { featuredImage }),
+    ...(category            !== undefined && { category: category || null }),
+    ...(sector              !== undefined && { sector: sector || null }),
+    ...(product             !== undefined && { product: product || null }),
+    ...(upsellTicker        !== undefined && { upsellTicker }),
+    ...(price               !== undefined && { price: Number(price) || 0 }),
+    ...(recommendation      !== undefined && { recommendation: recommendation ?? '' }),
+    ...(publishStatus       !== undefined && { publishStatus }),
+    ...(metaTitle           !== undefined && { metaTitle }),
+    ...(metaDescription     !== undefined && { metaDescription }),
+    ...(metaImage           !== undefined && { metaImage }),
+  };
 
-  const populated = await report.populate([
-    { path: 'category', select: 'name slug' },
-    { path: 'sector', select: 'name slug' },
-    { path: 'product', select: 'name price' },
-  ]);
+  const updated = await Report.findByIdAndUpdate(id, { $set: update }, { new: true, runValidators: true })
+    .populate('category', 'name slug')
+    .populate('sector', 'name slug')
+    .populate('product', 'name');
 
-  return successResponse(populated, 'Report updated successfully');
+  return successResponse(updated, 'Report updated successfully');
 }
 
 export async function DELETE(req: NextRequest, { params }: Params) {

@@ -46,6 +46,12 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    label: 'Marketing',
+    items: [
+      { label: 'Leads', href: '/dashboard/leads', icon: '📋', module: null },
+    ],
+  },
+  {
     label: 'Users',
     items: [
       { label: 'Admin Users', href: '/dashboard/users', icon: '⭐', module: 'users' },

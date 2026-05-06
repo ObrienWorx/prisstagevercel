@@ -4,6 +4,8 @@
 
 import mongoose from 'mongoose';
 
+mongoose.set('strictPopulate', false);
+
 declare global {
   var mongoose: {
     conn: typeof import('mongoose') | null;

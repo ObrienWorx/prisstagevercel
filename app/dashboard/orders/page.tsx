@@ -1,23 +1,44 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface Sub { _id: string; name: string; email: string; }
-interface Prod { _id: string; name: string; regularPrice: number; salePrice: number | null; }
+interface Prod { _id: string; name: string; regularPrice: number; salePrice: number | null; durationValue: number; durationType: string; }
+interface LineItem { productId: string; pricePaid: string; startDate: string; durationValue: string; durationType: string; }
 interface Order {
-  _id: string; orderNumber: string; subscriber: Sub; product: Prod;
+  _id: string; orderNumber: string; subscriber: Sub | null; product: Prod;
   pricePaid: number; paymentStatus: string; orderStatus: string;
   purchaseDate: string; expiryDate: string;
+  items?: { product: Prod; pricePaid: number }[];
 }
 
-const STATUS_COLORS: Record<string, string> = { completed: 'bg-success', pending: 'bg-warning text-dark', cancelled: 'bg-danger', refunded: 'bg-secondary', failed: 'bg-danger' };
+const STATUS_COLORS: Record<string, string> = {
+  completed: 'bg-success', pending: 'bg-warning text-dark',
+  cancelled: 'bg-danger', refunded: 'bg-secondary', failed: 'bg-danger',
+};
+
+const TODAY = new Date().toISOString().slice(0, 10);
+
+function defaultLine(): LineItem {
+  return { productId: '', pricePaid: '', startDate: TODAY, durationValue: '12', durationType: 'months' };
+}
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]); const [subscribers, setSubscribers] = useState<Sub[]>([]); const [products, setProducts] = useState<Prod[]>([]);
-  const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState(''); const [ok, setOk] = useState('');
-  const [showCreate, setShowCreate] = useState(false); const [editOrder, setEditOrder] = useState<Order | null>(null);
-  const [form, setForm] = useState({ subscriberId: '', productId: '', pricePaid: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', startDate: '', notes: '' });
+  const router = useRouter();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [subscribers, setSubscribers] = useState<Sub[]>([]);
+  const [products, setProducts] = useState<Prod[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const [ok, setOk] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [editOrder, setEditOrder] = useState<Order | null>(null);
+
+  const [cForm, setCForm] = useState({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '' });
+  const [lines, setLines] = useState<LineItem[]>([defaultLine()]);
+  const [eForm, setEForm] = useState({ paymentStatus: 'completed', orderStatus: 'completed', notes: '' });
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -25,99 +46,354 @@ export default function OrdersPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [oR, sR, pR] = await Promise.all([fetch('/api/orders', { headers: h }), fetch('/api/subscribers', { headers: h }), fetch('/api/products', { headers: h })]);
+      const [oR, sR, pR] = await Promise.all([
+        fetch('/api/orders', { headers: h }),
+        fetch('/api/subscribers', { headers: h }),
+        fetch('/api/products', { headers: h }),
+      ]);
       const [o, s, p] = await Promise.all([oR.json(), sR.json(), pR.json()]);
-      if (o.success) setOrders(o.data); if (s.success) setSubscribers(s.data); if (p.success) setProducts(p.data);
+      if (o.success) setOrders(o.data);
+      if (s.success) setSubscribers(s.data);
+      if (p.success) setProducts(p.data);
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const addLine = () => setLines(ls => [...ls, defaultLine()]);
+  const removeLine = (i: number) => setLines(ls => ls.filter((_, idx) => idx !== i));
+  const setLine = (i: number, patch: Partial<LineItem>) =>
+    setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l));
+
+  const onProductSelect = (i: number, productId: string) => {
+    const p = products.find(x => x._id === productId);
+    setLine(i, {
+      productId,
+      pricePaid: p ? String(p.salePrice ?? p.regularPrice) : '',
+      durationValue: p ? String(p.durationValue) : '12',
+      durationType: p ? p.durationType : 'months',
+    });
+  };
+
+  const totalPrice = lines.reduce((s, l) => s + (parseFloat(l.pricePaid) || 0), 0);
+
+  const openCreate = () => {
+    setShowCreate(true); setErr('');
+    setCForm({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '' });
+    setLines([defaultLine()]);
+  };
 
   const createOrder = async () => {
-    if (!form.subscriberId || !form.productId) { setErr('Subscriber and product required'); return; }
+    if (!cForm.subscriberId) { setErr('Subscriber is required'); return; }
+    if (lines.some(l => !l.productId)) { setErr('All product rows need a product selected'); return; }
     setErr(''); setSaving(true);
     try {
-      const r = await fetch('/api/orders', { method: 'POST', headers: h, body: JSON.stringify({ ...form, pricePaid: Number(form.pricePaid) || 0 }) });
+      const r = await fetch('/api/orders', {
+        method: 'POST', headers: h,
+        body: JSON.stringify({
+          ...cForm,
+          products: lines.map(l => ({
+            productId: l.productId,
+            pricePaid: parseFloat(l.pricePaid) || 0,
+            startDate: l.startDate,
+            durationValue: parseInt(l.durationValue) || undefined,
+            durationType: l.durationType,
+          })),
+        }),
+      });
       const d = await r.json();
-      if (d.success) { flash('Order created'); setShowCreate(false); loadAll(); } else setErr(d.error || 'Error');
+      if (d.success) { flash('Order created'); setShowCreate(false); loadAll(); }
+      else setErr(d.error || 'Error');
     } finally { setSaving(false); }
   };
 
   const updateOrder = async () => {
-    if (!editOrder) return; setErr(''); setSaving(true);
+    if (!editOrder) return;
+    setErr(''); setSaving(true);
     try {
-      const r = await fetch(`/api/orders/${editOrder._id}`, { method: 'PUT', headers: h, body: JSON.stringify({ paymentStatus: form.paymentStatus, orderStatus: form.orderStatus, notes: form.notes }) });
+      const r = await fetch(`/api/orders/${editOrder._id}`, {
+        method: 'PUT', headers: h, body: JSON.stringify(eForm),
+      });
       const d = await r.json();
-      if (d.success) { flash('Order updated'); setEditOrder(null); loadAll(); } else setErr(d.error || 'Error');
+      if (d.success) { flash('Order updated'); setEditOrder(null); loadAll(); }
+      else setErr(d.error || 'Error');
     } finally { setSaving(false); }
   };
 
   const isExpired = (d: string) => new Date() > new Date(d);
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  const productCount = (o: Order) => o.items?.length ? o.items.length : 1;
 
   return (
     <div>
       <div className="page-header">
-        <div className="page-header-text"><h4>Orders</h4><p>All subscriber product orders and access records</p></div>
-        <button className="btn btn-primary" onClick={() => { setShowCreate(true); setErr(''); setForm({ subscriberId: '', productId: '', pricePaid: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', startDate: '', notes: '' }); }}>+ New Order</button>
+        <div className="page-header-text">
+          <h4>Orders</h4>
+          <p>All subscriber product orders and access records</p>
+        </div>
+        <button className="btn btn-primary" onClick={openCreate}>+ New Order</button>
       </div>
 
       {ok && <div className="alert alert-success mb-4">✓ {ok}</div>}
       {err && !showCreate && !editOrder && <div className="alert alert-danger mb-4">{err}</div>}
 
       <div className="card">
-        {loading ? <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
-          : orders.length === 0 ? <div className="empty-state"><div className="empty-icon">🛍️</div><p>No orders yet.</p></div>
-          : <div className="table-responsive"><table className="table"><thead><tr><th>Order #</th><th>Subscriber</th><th>Product</th><th>Price</th><th>Payment</th><th>Status</th><th>Expiry</th><th>Actions</th></tr></thead><tbody>
-            {orders.map((o) => (<tr key={o._id}>
-              <td><span className="fw-semibold" style={{ color: 'var(--primary)' }}>{o.orderNumber}</span></td>
-              <td><div className="fw-semibold" style={{ fontSize: 13 }}>{o.subscriber.name}</div><div style={{ fontSize: 11, color: 'var(--muted)' }}>{o.subscriber.email}</div></td>
-              <td>{o.product.name}</td>
-              <td className="fw-semibold" style={{ color: '#059669' }}>${o.pricePaid.toFixed(2)}</td>
-              <td><span className={`badge ${STATUS_COLORS[o.paymentStatus] || 'bg-secondary'}`}>{o.paymentStatus}</span></td>
-              <td><span className={`badge ${STATUS_COLORS[o.orderStatus] || 'bg-secondary'}`}>{o.orderStatus}</span></td>
-              <td style={{ fontSize: 12, color: isExpired(o.expiryDate) ? '#ef4444' : '#16a34a' }}>{fmtDate(o.expiryDate)}</td>
-              <td><button className="btn btn-sm btn-outline-primary" onClick={() => { setEditOrder(o); setForm({ ...form, paymentStatus: o.paymentStatus, orderStatus: o.orderStatus, notes: '' }); setErr(''); }}>Edit</button></td>
-            </tr>))}
-          </tbody></table></div>}
+        {loading
+          ? <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
+          : orders.length === 0
+            ? <div className="empty-state"><div className="empty-icon">🛍️</div><p>No orders yet.</p></div>
+            : (
+              <div className="table-responsive">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Order #</th>
+                      <th>Subscriber</th>
+                      <th>Products</th>
+                      <th>Total</th>
+                      <th>Payment</th>
+                      <th>Status</th>
+                      <th>Expiry</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((o) => (
+                      <tr key={o._id}>
+                        <td>
+                          <span className="fw-semibold" style={{ color: 'var(--primary)' }}>{o.orderNumber}</span>
+                        </td>
+                        <td>
+                          <div className="fw-semibold" style={{ fontSize: 13 }}>{o.subscriber?.name ?? '—'}</div>
+                          <div style={{ fontSize: 11, color: 'var(--muted)' }}>{o.subscriber?.email ?? ''}</div>
+                        </td>
+                        <td>
+                          <div style={{ fontSize: 13 }}>{o.product?.name ?? '—'}</div>
+                          {productCount(o) > 1 && (
+                            <div style={{ fontSize: 11, color: 'var(--muted)' }}>+{productCount(o) - 1} more</div>
+                          )}
+                        </td>
+                        <td className="fw-semibold" style={{ color: '#059669' }}>A${o.pricePaid.toFixed(2)}</td>
+                        <td>
+                          <span className={`badge ${STATUS_COLORS[o.paymentStatus] || 'bg-secondary'}`}>{o.paymentStatus}</span>
+                        </td>
+                        <td>
+                          <span className={`badge ${STATUS_COLORS[o.orderStatus] || 'bg-secondary'}`}>{o.orderStatus}</span>
+                        </td>
+                        <td style={{ fontSize: 12, color: isExpired(o.expiryDate) ? '#ef4444' : '#16a34a' }}>
+                          {fmtDate(o.expiryDate)}
+                        </td>
+                        <td>
+                          <div className="d-flex gap-1">
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => router.push(`/dashboard/orders/${o._id}`)}
+                            >View</button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() => { setEditOrder(o); setEForm({ paymentStatus: o.paymentStatus, orderStatus: o.orderStatus, notes: '' }); setErr(''); }}
+                            >Edit</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
       </div>
 
+      {/* ── Create Order Modal ─────────────────────────────── */}
       {showCreate && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
-          <div className="modal-dialog modal-lg"><div className="modal-content">
-            <div className="modal-header"><h5 className="modal-title">New Order</h5><button className="btn-close" onClick={() => setShowCreate(false)} /></div>
-            <div className="modal-body">
-              {err && <div className="alert alert-danger">{err}</div>}
-              <div className="row g-3">
-                <div className="col-md-6"><label className="form-label">Subscriber *</label><select className="form-select" value={form.subscriberId} onChange={(e) => setForm({ ...form, subscriberId: e.target.value })}><option value="">— Select Subscriber —</option>{subscribers.map(s => <option key={s._id} value={s._id}>{s.name} ({s.email})</option>)}</select></div>
-                <div className="col-md-6"><label className="form-label">Product *</label><select className="form-select" value={form.productId} onChange={(e) => { const p = products.find(x => x._id === e.target.value); setForm({ ...form, productId: e.target.value, pricePaid: p ? String(p.salePrice ?? p.regularPrice) : '' }); }}><option value="">— Select Product —</option>{products.map(p => <option key={p._id} value={p._id}>{p.name} (${p.salePrice ?? p.regularPrice})</option>)}</select></div>
-                <div className="col-md-4"><label className="form-label">Price Paid ($)</label><input type="number" min="0" className="form-control" value={form.pricePaid} onChange={(e) => setForm({ ...form, pricePaid: e.target.value })} /></div>
-                <div className="col-md-4"><label className="form-label">Payment Status</label><select className="form-select" value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}><option value="completed">Completed</option><option value="pending">Pending</option><option value="failed">Failed</option></select></div>
-                <div className="col-md-4"><label className="form-label">Gateway</label><select className="form-select" value={form.paymentGateway} onChange={(e) => setForm({ ...form, paymentGateway: e.target.value })}><option>Manual</option><option>Stripe</option><option>PayPal</option><option>Bank Transfer</option></select></div>
-                <div className="col-md-6"><label className="form-label">Start Date (default: today)</label><input type="date" className="form-control" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></div>
-                <div className="col-md-6"><label className="form-label">Notes</label><input className="form-control" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          <div className="modal-dialog modal-xl">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">New Order</h5>
+                <button className="btn-close" onClick={() => setShowCreate(false)} />
+              </div>
+              <div className="modal-body">
+                {err && <div className="alert alert-danger">{err}</div>}
+
+                <div className="row g-3 mb-3">
+                  <div className="col-md-5">
+                    <label className="form-label fw-semibold">Subscriber *</label>
+                    <select className="form-select" value={cForm.subscriberId} onChange={e => setCForm({ ...cForm, subscriberId: e.target.value })}>
+                      <option value="">— Select Subscriber —</option>
+                      {subscribers.map(s => <option key={s._id} value={s._id}>{s.name} ({s.email})</option>)}
+                    </select>
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label fw-semibold">Payment Status</label>
+                    <select className="form-select" value={cForm.paymentStatus} onChange={e => setCForm({ ...cForm, paymentStatus: e.target.value })}>
+                      <option value="completed">Completed</option>
+                      <option value="pending">Pending</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  </div>
+                  <div className="col-md-2">
+                    <label className="form-label fw-semibold">Gateway</label>
+                    <select className="form-select" value={cForm.paymentGateway} onChange={e => setCForm({ ...cForm, paymentGateway: e.target.value })}>
+                      <option>Manual</option>
+                      <option>Stripe</option>
+                      <option>PayPal</option>
+                      <option>Bank Transfer</option>
+                    </select>
+                  </div>
+                  <div className="col-md-2">
+                    <label className="form-label fw-semibold">Notes</label>
+                    <input className="form-control" value={cForm.notes} onChange={e => setCForm({ ...cForm, notes: e.target.value })} />
+                  </div>
+                </div>
+
+                {/* Product Lines */}
+                <div className="mb-2 d-flex align-items-center justify-content-between">
+                  <span className="fw-semibold" style={{ fontSize: 14 }}>Products</span>
+                  <button className="btn btn-sm btn-outline-primary" onClick={addLine}>+ Add Product</button>
+                </div>
+
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+                  <table className="table table-sm mb-0">
+                    <thead style={{ background: '#f8fafc' }}>
+                      <tr>
+                        <th style={{ minWidth: 200 }}>Product *</th>
+                        <th style={{ minWidth: 100 }}>Price (A$)</th>
+                        <th style={{ minWidth: 120 }}>Start Date</th>
+                        <th style={{ minWidth: 120 }}>Duration</th>
+                        <th style={{ width: 40 }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lines.map((line, i) => (
+                        <tr key={i}>
+                          <td>
+                            <select
+                              className="form-select form-select-sm"
+                              value={line.productId}
+                              onChange={e => onProductSelect(i, e.target.value)}
+                            >
+                              <option value="">— Select —</option>
+                              {products.map(p => (
+                                <option key={p._id} value={p._id}>
+                                  {p.name} (A${p.salePrice ?? p.regularPrice})
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              type="number" min="0" step="0.01"
+                              className="form-control form-control-sm"
+                              value={line.pricePaid}
+                              onChange={e => setLine(i, { pricePaid: e.target.value })}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="date" className="form-control form-control-sm"
+                              value={line.startDate}
+                              onChange={e => setLine(i, { startDate: e.target.value })}
+                            />
+                          </td>
+                          <td>
+                            <div className="input-group input-group-sm">
+                              <input
+                                type="number" min="1"
+                                className="form-control"
+                                value={line.durationValue}
+                                onChange={e => setLine(i, { durationValue: e.target.value })}
+                                style={{ maxWidth: 60 }}
+                              />
+                              <select
+                                className="form-select"
+                                value={line.durationType}
+                                onChange={e => setLine(i, { durationType: e.target.value })}
+                                style={{ maxWidth: 90 }}
+                              >
+                                <option value="days">Days</option>
+                                <option value="months">Months</option>
+                                <option value="years">Years</option>
+                              </select>
+                            </div>
+                          </td>
+                          <td>
+                            {lines.length > 1 && (
+                              <button className="btn btn-sm btn-outline-danger" onClick={() => removeLine(i)}>✕</button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot style={{ background: '#f8fafc' }}>
+                      <tr>
+                        <td colSpan={4} className="text-end fw-bold py-2 pe-3" style={{ fontSize: 14 }}>
+                          Total: A${totalPrice.toFixed(2)}
+                        </td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={createOrder} disabled={saving}>
+                  {saving && <span className="spinner-border spinner-border-sm me-2" />}
+                  Create Order
+                </button>
               </div>
             </div>
-            <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button><button className="btn btn-primary" onClick={createOrder} disabled={saving}>{saving && <span className="spinner-border spinner-border-sm me-2" />}Create Order</button></div>
-          </div></div>
+          </div>
         </div>
       )}
 
+      {/* ── Edit Status Modal ─────────────────────────────── */}
       {editOrder && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
-          <div className="modal-dialog"><div className="modal-content">
-            <div className="modal-header"><h5 className="modal-title">Update Order {editOrder.orderNumber}</h5><button className="btn-close" onClick={() => setEditOrder(null)} /></div>
-            <div className="modal-body">
-              {err && <div className="alert alert-danger">{err}</div>}
-              <div className="row g-3">
-                <div className="col-md-6"><label className="form-label">Payment Status</label><select className="form-select" value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })}><option value="pending">Pending</option><option value="completed">Completed</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select></div>
-                <div className="col-md-6"><label className="form-label">Order Status</label><select className="form-select" value={form.orderStatus} onChange={(e) => setForm({ ...form, orderStatus: e.target.value })}><option value="pending">Pending</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="refunded">Refunded</option></select></div>
-                <div className="col-12"><label className="form-label">Notes</label><input className="form-control" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Update {editOrder.orderNumber}</h5>
+                <button className="btn-close" onClick={() => setEditOrder(null)} />
+              </div>
+              <div className="modal-body">
+                {err && <div className="alert alert-danger">{err}</div>}
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Payment Status</label>
+                    <select className="form-select" value={eForm.paymentStatus} onChange={e => setEForm({ ...eForm, paymentStatus: e.target.value })}>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                      <option value="failed">Failed</option>
+                      <option value="refunded">Refunded</option>
+                    </select>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Order Status</label>
+                    <select className="form-select" value={eForm.orderStatus} onChange={e => setEForm({ ...eForm, orderStatus: e.target.value })}>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="refunded">Refunded</option>
+                    </select>
+                  </div>
+                  <div className="col-12">
+                    <label className="form-label">Notes</label>
+                    <input className="form-control" value={eForm.notes} onChange={e => setEForm({ ...eForm, notes: e.target.value })} />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setEditOrder(null)}>Cancel</button>
+                <button className="btn btn-primary" onClick={updateOrder} disabled={saving}>
+                  {saving && <span className="spinner-border spinner-border-sm me-2" />}Update
+                </button>
               </div>
             </div>
-            <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setEditOrder(null)}>Cancel</button><button className="btn btn-primary" onClick={updateOrder} disabled={saving}>{saving && <span className="spinner-border spinner-border-sm me-2" />}Update</button></div>
-          </div></div>
+          </div>
         </div>
       )}
     </div>

@@ -3,9 +3,10 @@
 import FrontNav from './FrontNav';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { SOCIAL_LINKS } from '@/lib/socialLinks';
 
 interface StaticPageLink { _id: string; title: string; slug: string; footerColumn: string; }
-type SlugLink   = { title: string; slug: string };
+type SlugLink = { title: string; slug: string };
 type DirectLink = { title: string; href: string };
 type FooterLink = SlugLink | DirectLink;
 
@@ -17,7 +18,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     fetch('/api/public/static-pages')
       .then(r => r.json())
       .then(d => { if (d.success) setFooterPages(d.data); })
-      .catch(() => {});
+      .catch(() => { });
 
     const onScroll = () => setShowTop(window.scrollY > 400);
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -25,29 +26,29 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   const policyPages = footerPages.filter(p => p.footerColumn === 'policies');
-  const quickPages  = footerPages.filter(p => p.footerColumn === 'quick-links');
+  const quickPages = footerPages.filter(p => p.footerColumn === 'quick-links');
 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   const staticPolicyLinks: SlugLink[] = [
-    { title: 'Privacy Policy',                          slug: 'privacy-policy' },
-    { title: 'Terms Of Use',                            slug: 'terms-of-use' },
-    { title: 'Financial Service Guide',                 slug: 'financial-service-guide' },
-    { title: 'Cancellation & Refund Policy',            slug: 'cancellation-refund-policy' },
-    { title: 'Terms and Conditions of Free Trial Use',  slug: 'terms-free-trial' },
-    { title: 'Disclaimer',                              slug: 'disclaimer' },
-    { title: 'Account Deletion Request',                slug: 'account-deletion-request' },
+    { title: 'Privacy Policy', slug: 'privacy-policy' },
+    { title: 'Terms Of Use', slug: 'terms-of-use' },
+    { title: 'Financial Service Guide', slug: 'financial-service-guide' },
+    { title: 'Cancellation & Refund Policy', slug: 'cancellation-refund-policy' },
+    { title: 'Terms and Conditions of Free Trial Use', slug: 'terms-free-trial' },
+    { title: 'Disclaimer', slug: 'disclaimer' },
+    { title: 'Account Deletion Request', slug: 'account-deletion-request' },
     ...policyPages,
   ];
 
   const staticQuickLinks: FooterLink[] = [
-    { title: 'About Us',              slug: 'about-us' },
-    { title: 'Past Recommendations',  slug: 'past-recommendations' },
-    { title: 'Subscriptions',         href: '/subscribe' },
-    { title: 'Videos',                href: '/videos' },
-    { title: 'Terminology',           slug: 'terminology' },
-    { title: 'Free Trial',            slug: 'free-trial' },
-    { title: 'Contact Us',            slug: 'contact-us' },
+    { title: 'About Us', slug: 'about-us' },
+    { title: 'Past Recommendations', slug: 'past-recommendations' },
+    { title: 'Subscriptions', href: '/subscribe' },
+    { title: 'Videos', href: '/videos' },
+    { title: 'Terminology', slug: 'terminology' },
+    { title: 'Free Trial', slug: 'free-trial' },
+    { title: 'Contact Us', href: '/contact-us' },
     ...quickPages,
   ];
 
@@ -154,15 +155,18 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 © 2026, <strong>Pristine Gaze Pty. Ltd.</strong> All Rights Reserved
               </div>
               <div className="footer-social">
-                {[
-                  { icon: 'f', label: 'Facebook',  href: '#' },
-                  { icon: '𝕏', label: 'Twitter',   href: '#' },
-                  { icon: '▣', label: 'Instagram', href: '#' },
-                  { icon: '▶', label: 'YouTube',   href: '#' },
-                  { icon: '●', label: 'Reddit',    href: '#' },
-                ].map(s => (
-                  <a key={s.label} href={s.href} className="social-btn" aria-label={s.label} title={s.label}>
-                    {s.icon}
+                {SOCIAL_LINKS.map(s => (
+                  <a
+                    key={s.label}
+                    href={s.href}
+                    className="social-btn"
+                    aria-label={s.label}
+                    title={s.label}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor"
+                         dangerouslySetInnerHTML={{ __html: s.svg }} />
                   </a>
                 ))}
               </div>

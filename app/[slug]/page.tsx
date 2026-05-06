@@ -132,7 +132,7 @@ export default async function CatchAllPage({ params }: P) {
     const [reports, latestReports, allSectors, allReportCats] = await Promise.all([
       Report.find({ category: reportCat._id, publishStatus: 'published' })
         .populate('sector', 'name slug')
-        .select('title slug featuredImage createdAt sector')
+        .select('title slug featuredImage createdAt sector recommendation')
         .sort({ createdAt: -1 })
         .lean() as Promise<any[]>,
       Report.find({ publishStatus: 'published' })
@@ -152,6 +152,7 @@ export default async function CatchAllPage({ params }: P) {
       date: fmtDate(r.createdAt),
       href: `/reports/${r.slug}`,
       cta: 'Read Report »',
+      recommendation: r.recommendation || '',
     }));
 
     const latestItems = latestReports.map((r: any) => ({

@@ -26,11 +26,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'reports'); if (error) return error;
   await connectDB();
-  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, publishStatus, metaTitle, metaDescription, metaImage } = await req.json();
+  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, price, recommendation, publishStatus, metaTitle, metaDescription, metaImage } = await req.json();
   if (!title) return errorResponse('Title is required');
   const finalSlug = slug ? slugify(slug) : slugify(title);
   if (await Report.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
-  const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, upsellTicker, publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
+  const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, upsellTicker, price: price ?? 0, recommendation: recommendation || '', publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
   await report.populate([{ path: 'category', select: 'name slug' }, { path: 'sector', select: 'name slug' }, { path: 'product', select: 'name' }]);
   return successResponse(report, 'Report created', 201);
 }

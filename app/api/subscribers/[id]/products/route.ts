@@ -21,48 +21,74 @@ export async function GET(req: NextRequest, { params }: P) {
   return successResponse(products);
 }
 
-// POST assign product to subscriber (creates Order + Transaction + UserProduct)
+// POST — assign one or more products, always creates a single Order
 export async function POST(req: NextRequest, { params }: P) {
   const { error } = await requireAdmin(req); if (error) return error;
-  await connectDB(); const { id } = await params;
+  await connectDB();
+  const { id } = await params;
+  const body = await req.json();
 
-  const { productId, pricePaid, paymentGateway, paymentStatus, orderStatus, startDate, notes } = await req.json();
+  const { paymentGateway, paymentStatus, orderStatus, notes } = body;
 
-  if (!productId) return errorResponse('Product is required');
+  type RawLine = { productId: string; pricePaid?: number | string; startDate?: string; durationValue?: number | string; durationType?: string };
+  const rawLines: RawLine[] = Array.isArray(body.products) ? body.products : [body as RawLine];
 
-  const product = await Product.findById(productId);
-  if (!product) return errorResponse('Product not found', 404);
+  if (rawLines.some(l => !l.productId)) return errorResponse('Product is required for each line');
 
-  const start = startDate ? new Date(startDate) : new Date();
-  const expiry = calculateExpiryDate(start, product.durationType, product.durationValue);
+  const productDocs = await Product.find({ _id: { $in: rawLines.map(l => l.productId) } });
+  const pMap = new Map(productDocs.map(p => [p._id.toString(), p]));
 
-  // Create Order
+  const resolved = rawLines.map(l => {
+    const prod = pMap.get(l.productId);
+    if (!prod) throw new Error(`Product ${l.productId} not found`);
+    const start = l.startDate ? new Date(l.startDate) : new Date();
+    const dv = l.durationValue ? Number(l.durationValue) : prod.durationValue;
+    const dt = l.durationType || prod.durationType;
+    const expiry = calculateExpiryDate(start, dt, dv);
+    const price = l.pricePaid !== undefined ? Number(l.pricePaid) : (prod.salePrice ?? prod.regularPrice);
+    return { prod, productId: l.productId, start, expiry, price, dv, dt };
+  });
+
+  const totalPrice = resolved.reduce((s, r) => s + r.price, 0);
+  const first = resolved[0];
+
   const order = await Order.create({
-    subscriber: id, product: productId,
-    pricePaid: pricePaid ?? product.salePrice ?? product.regularPrice,
+    subscriber: id,
+    product: first.productId,
+    pricePaid: totalPrice,
     paymentStatus: paymentStatus || 'completed',
     orderStatus: orderStatus || 'completed',
-    purchaseDate: start,
-    expiryDate: expiry,
+    purchaseDate: first.start,
+    expiryDate: first.expiry,
     notes: notes || '',
+    items: resolved.map(r => ({
+      product: r.productId,
+      pricePaid: r.price,
+      startDate: r.start,
+      expiryDate: r.expiry,
+      durationValue: r.dv,
+      durationType: r.dt,
+    })),
   });
 
-  // Create Transaction
-  await Transaction.create({
-    order: order._id, subscriber: id, product: productId,
-    amount: order.pricePaid,
-    paymentGateway: paymentGateway || 'Manual',
-    paymentStatus: order.paymentStatus,
-    paymentDate: start,
-    notes: notes || '',
-  });
+  for (const r of resolved) {
+    await UserProduct.create({
+      subscriber: id, product: r.productId,
+      order: order._id, startDate: r.start, expiryDate: r.expiry,
+      isActive: order.orderStatus === 'completed',
+    });
+    await Transaction.create({
+      order: order._id, subscriber: id, product: r.productId,
+      amount: r.price,
+      paymentGateway: paymentGateway || 'Manual',
+      paymentStatus: order.paymentStatus,
+      paymentDate: r.start,
+    });
+  }
 
-  // Create UserProduct access
-  const access = await UserProduct.create({
-    subscriber: id, product: productId,
-    order: order._id, startDate: start, expiryDate: expiry, isActive: true,
-  });
-
-  const populated = await access.populate('product', 'name durationType durationValue');
-  return successResponse(populated, 'Product assigned successfully', 201);
+  return successResponse(
+    { orderId: order._id, orderNumber: order.orderNumber, count: resolved.length },
+    `${resolved.length} product(s) assigned`,
+    201
+  );
 }

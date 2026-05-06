@@ -43,11 +43,15 @@ export default function PortfolioPage() {
   const [adding, setAdding] = useState(false);
   const [addErr, setAddErr] = useState('');
 
-  const tokenRef = useRef('');
+  /* ── New Portfolio modal ── */
+  const [npModal, setNpModal] = useState({ open: false, name: '', err: '', saving: false });
 
+  /* ── Delete Portfolio modal ── */
+  const [delModal, setDelModal] = useState<{ portfolio: Portfolio | null; saving: boolean }>({ portfolio: null, saving: false });
+
+  const tokenRef = useRef('');
   const activePortfolio = portfolios.find(p => p._id === activeId) ?? null;
 
-  /* ── auth header ── */
   const authHeaders = () => ({
     'Content-Type': 'application/json',
     Authorization: `Bearer ${tokenRef.current}`,
@@ -81,30 +85,49 @@ export default function PortfolioPage() {
 
   /* ── summary calculations ── */
   const stocks = activePortfolio?.stocks ?? [];
-  const totalInvested   = stocks.reduce((s, h) => s + h.quantity * h.buyPrice, 0);
-  const currentValue    = stocks.reduce((s, h) => s + h.quantity * (prices[h.symbol]?.price ?? h.buyPrice), 0);
-  const overallPL       = currentValue - totalInvested;
-  const plPct           = totalInvested > 0 ? (overallPL / totalInvested) * 100 : 0;
+  const totalInvested = stocks.reduce((s, h) => s + h.quantity * h.buyPrice, 0);
+  const currentValue  = stocks.reduce((s, h) => s + h.quantity * (prices[h.symbol]?.price ?? h.buyPrice), 0);
+  const overallPL     = currentValue - totalInvested;
+  const plPct         = totalInvested > 0 ? (overallPL / totalInvested) * 100 : 0;
 
-  /* ── new portfolio ── */
-  const createPortfolio = async () => {
-    const name = prompt('Portfolio name:')?.trim();
-    if (!name) return;
+  /* ── new portfolio (opens modal) ── */
+  const createPortfolio = () => setNpModal({ open: true, name: '', err: '', saving: false });
+
+  const handleCreatePortfolio = async () => {
+    const name = npModal.name.trim();
+    if (!name) { setNpModal(m => ({ ...m, err: 'Portfolio name is required' })); return; }
+    setNpModal(m => ({ ...m, saving: true, err: '' }));
     const r = await fetch('/api/subscriber/portfolios', {
       method: 'POST', headers: authHeaders(), body: JSON.stringify({ name }),
     });
     const d = await r.json();
-    if (d.success) { setPortfolios(p => [...p, d.data]); setActiveId(d.data._id); }
+    if (d.success) {
+      setPortfolios(p => [...p, d.data]);
+      setActiveId(d.data._id);
+      setNpModal({ open: false, name: '', err: '', saving: false });
+    } else {
+      setNpModal(m => ({ ...m, saving: false, err: d.error || 'Failed to create portfolio' }));
+    }
   };
 
-  /* ── delete portfolio ── */
-  const deletePortfolio = async (id: string) => {
-    if (!confirm('Delete this portfolio and all its holdings?')) return;
+  /* ── delete portfolio (opens modal) ── */
+  const deletePortfolio = (id: string) => {
+    const p = portfolios.find(x => x._id === id);
+    if (p) setDelModal({ portfolio: p, saving: false });
+  };
+
+  const handleDeletePortfolio = async () => {
+    if (!delModal.portfolio) return;
+    setDelModal(m => ({ ...m, saving: true }));
+    const id = delModal.portfolio._id;
     const r = await fetch(`/api/subscriber/portfolios/${id}`, { method: 'DELETE', headers: authHeaders() });
     const d = await r.json();
     if (d.success) {
       setPortfolios(p => p.filter(x => x._id !== id));
       setActiveId(prev => (prev === id ? (portfolios.find(x => x._id !== id)?._id ?? null) : prev));
+      setDelModal({ portfolio: null, saving: false });
+    } else {
+      setDelModal(m => ({ ...m, saving: false }));
     }
   };
 
@@ -209,35 +232,23 @@ export default function PortfolioPage() {
                     <div className="pf-add-fields">
                       <div className="pf-field">
                         <label>Company Code</label>
-                        <input
-                          type="text" placeholder="e.g. BHP or BHP.AX" required
-                          value={form.symbol}
-                          onChange={e => setForm(f => ({ ...f, symbol: e.target.value }))}
-                        />
+                        <input type="text" placeholder="e.g. BHP or BHP.AX" required
+                          value={form.symbol} onChange={e => setForm(f => ({ ...f, symbol: e.target.value }))} />
                       </div>
                       <div className="pf-field">
                         <label>Quantity</label>
-                        <input
-                          type="number" placeholder="100" min="1" step="any" required
-                          value={form.quantity}
-                          onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
-                        />
+                        <input type="number" placeholder="100" min="1" step="any" required
+                          value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} />
                       </div>
                       <div className="pf-field">
                         <label>Buy Price</label>
-                        <input
-                          type="number" placeholder="$0.00" min="0" step="0.01" required
-                          value={form.buyPrice}
-                          onChange={e => setForm(f => ({ ...f, buyPrice: e.target.value }))}
-                        />
+                        <input type="number" placeholder="$0.00" min="0" step="0.01" required
+                          value={form.buyPrice} onChange={e => setForm(f => ({ ...f, buyPrice: e.target.value }))} />
                       </div>
                       <div className="pf-field">
                         <label>Buy Date</label>
-                        <input
-                          type="date" required
-                          value={form.buyDate}
-                          onChange={e => setForm(f => ({ ...f, buyDate: e.target.value }))}
-                        />
+                        <input type="date" required
+                          value={form.buyDate} onChange={e => setForm(f => ({ ...f, buyDate: e.target.value }))} />
                       </div>
                       <button type="submit" className="pf-add-btn" disabled={adding}>
                         {adding ? '…' : 'Add'}
@@ -277,9 +288,7 @@ export default function PortfolioPage() {
               <div className="pf-holdings">
                 <div className="pf-holdings-title">☰ My Holdings</div>
                 {stocks.length === 0 ? (
-                  <div className="pf-no-holdings">
-                    No stocks yet. Use &quot;Add Stock to Portfolio&quot; above.
-                  </div>
+                  <div className="pf-no-holdings">No stocks yet. Use &quot;Add Stock to Portfolio&quot; above.</div>
                 ) : (
                   <>
                     <div className="pf-table-wrap">
@@ -299,9 +308,9 @@ export default function PortfolioPage() {
                         </thead>
                         <tbody>
                           {pageStocks.map((h, i) => {
-                            const curPrice  = prices[h.symbol]?.price ?? null;
-                            const totalVal  = h.quantity * (curPrice ?? h.buyPrice);
-                            const gl        = curPrice !== null ? ((curPrice - h.buyPrice) / h.buyPrice) * 100 : null;
+                            const curPrice = prices[h.symbol]?.price ?? null;
+                            const totalVal = h.quantity * (curPrice ?? h.buyPrice);
+                            const gl       = curPrice !== null ? ((curPrice - h.buyPrice) / h.buyPrice) * 100 : null;
                             return (
                               <tr key={h._id}>
                                 <td>{(page - 1) * PER_PAGE + i + 1}</td>
@@ -330,7 +339,7 @@ export default function PortfolioPage() {
                         Showing {(page - 1) * PER_PAGE + 1} to {Math.min(page * PER_PAGE, stocks.length)} of {stocks.length} entr{stocks.length === 1 ? 'y' : 'ies'}
                       </div>
                       <div className="pf-pag-btns">
-                        {['«','‹', ...Array.from({ length: totalPages }, (_, i) => i + 1), '›','»'].map((btn, i) => {
+                        {['«', '‹', ...Array.from({ length: totalPages }, (_, i) => i + 1), '›', '»'].map((btn, i) => {
                           let target: number | null = null;
                           if (btn === '«') target = 1;
                           else if (btn === '‹') target = Math.max(1, page - 1);
@@ -343,8 +352,8 @@ export default function PortfolioPage() {
                               className={`pf-pag-btn ${target === page && typeof btn === 'number' ? 'active' : ''}`}
                               onClick={() => setPage(target!)}
                               disabled={
-                                (btn === '«' || btn === '‹') && page === 1 ||
-                                (btn === '›' || btn === '»') && page === totalPages
+                                ((btn === '«' || btn === '‹') && page === 1) ||
+                                ((btn === '›' || btn === '»') && page === totalPages)
                               }
                             >{btn}</button>
                           );
@@ -357,6 +366,60 @@ export default function PortfolioPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── New Portfolio Modal ── */}
+      {npModal.open && (
+        <div className="pf-modal-overlay" onClick={() => setNpModal({ open: false, name: '', err: '', saving: false })}>
+          <div className="pf-modal" onClick={e => e.stopPropagation()}>
+            <div className="pf-modal-header">
+              <span className="pf-modal-title">New Portfolio</span>
+              <button className="pf-modal-close" onClick={() => setNpModal({ open: false, name: '', err: '', saving: false })}>×</button>
+            </div>
+            <div className="pf-modal-body">
+              <label className="pf-modal-label">Portfolio Name</label>
+              <input
+                className="pf-modal-input"
+                placeholder="e.g. My ASX Portfolio"
+                value={npModal.name}
+                autoFocus
+                onChange={e => setNpModal(m => ({ ...m, name: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreatePortfolio(); }}
+              />
+              {npModal.err && <div className="pf-modal-err">{npModal.err}</div>}
+            </div>
+            <div className="pf-modal-footer">
+              <button className="pf-modal-cancel" onClick={() => setNpModal({ open: false, name: '', err: '', saving: false })}>Cancel</button>
+              <button className="pf-modal-confirm" onClick={handleCreatePortfolio} disabled={npModal.saving}>
+                {npModal.saving ? 'Creating…' : 'Create'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Portfolio Modal ── */}
+      {delModal.portfolio && (
+        <div className="pf-modal-overlay" onClick={() => setDelModal({ portfolio: null, saving: false })}>
+          <div className="pf-modal" onClick={e => e.stopPropagation()}>
+            <div className="pf-modal-header">
+              <span className="pf-modal-title">Delete Portfolio</span>
+              <button className="pf-modal-close" onClick={() => setDelModal({ portfolio: null, saving: false })}>×</button>
+            </div>
+            <div className="pf-modal-body">
+              <p className="pf-modal-text">
+                Are you sure you want to delete <strong>&quot;{delModal.portfolio.name}&quot;</strong>?
+                All holdings in this portfolio will be permanently removed.
+              </p>
+            </div>
+            <div className="pf-modal-footer">
+              <button className="pf-modal-cancel" onClick={() => setDelModal({ portfolio: null, saving: false })}>Cancel</button>
+              <button className="pf-modal-del" onClick={handleDeletePortfolio} disabled={delModal.saving}>
+                {delModal.saving ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

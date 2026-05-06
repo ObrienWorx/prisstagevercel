@@ -9,6 +9,8 @@ export interface IReport extends Document {
   sector: Types.ObjectId | null;
   product: Types.ObjectId | null;
   upsellTicker: string;
+  price: number;
+  recommendation: string;
   publishStatus: 'draft' | 'published';
   metaTitle: string;
   metaDescription: string;
@@ -27,6 +29,8 @@ const ReportSchema = new Schema<IReport>(
     sector: { type: Schema.Types.ObjectId, ref: 'Sector', default: null },
     product: { type: Schema.Types.ObjectId, ref: 'Product', default: null },
     upsellTicker: { type: String, default: '' },
+    price: { type: Number, default: 0 },
+    recommendation: { type: String, enum: ['', 'BUY', 'HOLD', 'SELL', 'SPECULATIVE BUY', 'REFRAIN', 'Security Under Review'], default: '' },
     publishStatus: { type: String, enum: ['draft', 'published'], default: 'draft' },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },

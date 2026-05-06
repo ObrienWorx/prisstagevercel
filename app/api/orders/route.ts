@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { Types } from 'mongoose';
 import connectDB from '@/lib/mongoose';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
@@ -15,7 +16,9 @@ export async function GET(req: NextRequest) {
   const orders = await Order.find({})
     .populate('subscriber', 'name email')
     .populate('product', 'name regularPrice salePrice durationType durationValue')
-    .sort({ createdAt: -1 });
+    .populate('items.product', 'name')
+    .sort({ createdAt: -1 })
+    .lean();
   return successResponse(orders);
 }
 
@@ -24,44 +27,77 @@ export async function POST(req: NextRequest) {
   if (error) return error;
   await connectDB();
 
-  const { subscriberId, productId, pricePaid, paymentStatus, orderStatus, paymentGateway, startDate, notes } = await req.json();
+  const body = await req.json();
+  const { subscriberId, paymentStatus, orderStatus, paymentGateway, notes } = body;
 
-  if (!subscriberId || !productId) return errorResponse('Subscriber and product are required');
+  if (!subscriberId) return errorResponse('Subscriber is required');
 
-  const product = await Product.findById(productId);
-  if (!product) return errorResponse('Product not found');
+  type RawLine = { productId: string; pricePaid?: number | string; startDate?: string; durationValue?: number | string; durationType?: string };
+  const rawLines: RawLine[] = Array.isArray(body.products)
+    ? body.products
+    : [{ productId: body.productId, pricePaid: body.pricePaid, startDate: body.startDate, durationValue: body.durationValue, durationType: body.durationType }];
 
-  const start = startDate ? new Date(startDate) : new Date();
-  const expiry = calculateExpiryDate(start, product.durationType, product.durationValue);
+  if (rawLines.some(l => !l.productId)) return errorResponse('Product is required');
+
+  const productDocs = await Product.find({ _id: { $in: rawLines.map(l => l.productId) } });
+  const pMap = new Map(productDocs.map(p => [p._id.toString(), p]));
+
+  const resolved = rawLines.map(l => {
+    const prod = pMap.get(l.productId);
+    if (!prod) throw new Error(`Product ${l.productId} not found`);
+    const start = l.startDate ? new Date(l.startDate) : new Date();
+    const dv = l.durationValue ? Number(l.durationValue) : prod.durationValue;
+    const dt = l.durationType || prod.durationType;
+    const expiry = calculateExpiryDate(start, dt, dv);
+    const price = l.pricePaid !== undefined ? Number(l.pricePaid) : (prod.salePrice ?? prod.regularPrice);
+    return { prod, productId: l.productId, start, expiry, price, dv, dt };
+  });
+
+  const totalPrice = resolved.reduce((s, r) => s + r.price, 0);
+  const first = resolved[0];
 
   const order = await Order.create({
-    subscriber: subscriberId, product: productId,
-    pricePaid: pricePaid ?? product.salePrice ?? product.regularPrice,
+    subscriber: subscriberId,
+    product: first.productId,
+    pricePaid: totalPrice,
     paymentStatus: paymentStatus || 'completed',
     orderStatus: orderStatus || 'completed',
-    purchaseDate: start, expiryDate: expiry,
+    purchaseDate: first.start,
+    expiryDate: first.expiry,
     notes: notes || '',
   });
 
-  await Transaction.create({
-    order: order._id, subscriber: subscriberId, product: productId,
-    amount: order.pricePaid,
-    paymentGateway: paymentGateway || 'Manual',
-    paymentStatus: order.paymentStatus,
-    paymentDate: start,
-  });
+  // Set items via raw update — avoids Mongoose 9 subdocument-array cast quirks in create()
+  // product must be cast to ObjectId manually since we bypass Mongoose here
+  const itemsPayload = resolved.map(r => ({
+    product: new Types.ObjectId(r.productId),
+    pricePaid: r.price,
+    startDate: r.start,
+    expiryDate: r.expiry,
+    durationValue: r.dv,
+    durationType: r.dt,
+  }));
+  await Order.collection.updateOne({ _id: order._id }, { $set: { items: itemsPayload } });
 
-  await UserProduct.create({
-    subscriber: subscriberId, product: productId,
-    order: order._id, startDate: start, expiryDate: expiry,
-    // Active only when order is completed — pending orders activate when admin marks complete
-    isActive: (order.orderStatus === 'completed'),
-  });
+  for (const r of resolved) {
+    await Transaction.create({
+      order: order._id, subscriber: subscriberId, product: r.productId,
+      amount: r.price,
+      paymentGateway: paymentGateway || 'Manual',
+      paymentStatus: order.paymentStatus,
+      paymentDate: r.start,
+    });
+    await UserProduct.create({
+      subscriber: subscriberId, product: r.productId,
+      order: order._id, startDate: r.start, expiryDate: r.expiry,
+      isActive: order.orderStatus === 'completed',
+    });
+  }
 
-  const populated = await order.populate([
-    { path: 'subscriber', select: 'name email' },
-    { path: 'product', select: 'name' },
-  ]);
+  const populated = await Order.findById(order._id)
+    .populate('subscriber', 'name email')
+    .populate('product', 'name')
+    .populate('items.product', 'name');
 
   return successResponse(populated, 'Order created', 201);
 }

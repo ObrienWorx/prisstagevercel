@@ -31,7 +31,7 @@ export default async function SectorPage({ params }: P) {
 
   const [reports, latestReports, allSectors, allReportCats] = await Promise.all([
     Report.find({ sector: sector._id, publishStatus: 'published' })
-      .select('title slug featuredImage createdAt')
+      .select('title slug featuredImage createdAt recommendation')
       .sort({ createdAt: -1 })
       .lean() as Promise<any[]>,
     Report.find({ publishStatus: 'published' })
@@ -51,6 +51,7 @@ export default async function SectorPage({ params }: P) {
     date: fmtDate(r.createdAt),
     href: `/reports/${r.slug}`,
     cta: 'Read Report »',
+    recommendation: r.recommendation || '',
   }));
 
   const latestItems = latestReports.map((r: any) => ({

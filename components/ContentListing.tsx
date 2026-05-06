@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import LeadCaptureForm from './LeadCaptureForm';
 
 interface Item {
   _id: string;
@@ -11,6 +12,7 @@ interface Item {
   excerpt?: string;
   href: string;
   cta?: string;
+  recommendation?: string;
 }
 
 interface LatestItem {
@@ -36,6 +38,15 @@ interface Props {
   sectors?: NavLink[];
 }
 
+const RECOM_COLORS: Record<string, string> = {
+  'BUY': '#16a34a',
+  'HOLD': '#d97706',
+  'SELL': '#dc2626',
+  'SPECULATIVE BUY': '#0049AC',
+  'REFRAIN': '#64748b',
+  'Security Under Review': '#9333ea',
+};
+
 const SECTOR_ICONS: Record<string, string> = {
   Technology: '🖥',
   Healthcare: '🏥',
@@ -48,6 +59,7 @@ const SECTOR_ICONS: Record<string, string> = {
 };
 
 function ItemCard({ item }: { item: Item }) {
+  const ribbonColor = item.recommendation ? RECOM_COLORS[item.recommendation] : null;
   return (
     <div className="cl-card">
       <Link href={item.href} className="cl-card-inner">
@@ -55,6 +67,11 @@ function ItemCard({ item }: { item: Item }) {
           {item.featuredImage
             ? <img src={item.featuredImage} alt={item.title} className="cl-card-img" />
             : <div className="cl-card-img cl-card-placeholder" />}
+          {ribbonColor && (
+            <div className="cl-ribbon" style={{ background: ribbonColor }}>
+              {item.recommendation}
+            </div>
+          )}
         </div>
         <div className="cl-card-body">
           <h3 className="cl-card-title">{item.title}</h3>
@@ -66,31 +83,15 @@ function ItemCard({ item }: { item: Item }) {
   );
 }
 
-function BlogSidebar({ latestItems, latestLabel, categories }: {
+function BlogSidebar({ latestItems, latestLabel }: {
   latestItems: LatestItem[];
   latestLabel?: string;
   categories?: NavLink[];
 }) {
   return (
     <div className="cl-sidebar">
-      {/* Newsletter / Free report widget */}
-      <div className="cl-sidebar-widget cl-newsletter-widget">
-        <div className="cl-newsletter-badge">Pristine Gaze</div>
-        <h4 className="cl-newsletter-title">Grab Your FREE Report on Top 5 ASX Stocks to Buy in 2026</h4>
-        <form className="cl-newsletter-form" onSubmit={(e) => e.preventDefault()}>
-          <input type="text" placeholder="Full Name" className="cl-newsletter-input" />
-          <input type="email" placeholder="Email Address" className="cl-newsletter-input" />
-          <input type="tel" placeholder="Phone" className="cl-newsletter-input" />
-          <input type="text" placeholder="Postal Code" className="cl-newsletter-input" />
-          <label className="cl-newsletter-consent">
-            <input type="checkbox" />
-            <span>By submitting my details and clicking on the button, I agree to Pristine Gaze Pty Ltd{' '}
-              <Link href="/terms-of-use">Terms and Conditions</Link> and{' '}
-              <Link href="/privacy-policy">Privacy Policy</Link>. I consent to receive marketing calls from Pristine Gaze Pty. Ltd.</span>
-          </label>
-          <button type="submit" className="cl-newsletter-btn">Grab your free report</button>
-        </form>
-      </div>
+      {/* Lead capture form */}
+      <LeadCaptureForm source="blog-sidebar" />
 
       {/* Latest articles */}
       {latestItems.length > 0 && (

@@ -8,7 +8,7 @@ export default function ProfilePage() {
   const [subscriber, setSubscriber] = useState<Subscriber | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
+  const [profileForm, setProfileForm] = useState({ name: '' });
   const [profileMsg, setProfileMsg] = useState('');
   const [profileErr, setProfileErr] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -26,7 +26,7 @@ export default function ProfilePage() {
       .then(d => {
         if (d.success) {
           setSubscriber(d.data.subscriber);
-          setProfileForm({ name: d.data.subscriber.name, phone: d.data.subscriber.phone ?? '' });
+          setProfileForm({ name: d.data.subscriber.name });
         }
       })
       .finally(() => setLoading(false));
@@ -41,7 +41,7 @@ export default function ProfilePage() {
       const r = await fetch('/api/subscriber/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: profileForm.name, phone: profileForm.phone }),
+        body: JSON.stringify({ name: profileForm.name }),
       });
       const d = await r.json();
       if (d.success) {
@@ -96,7 +96,6 @@ export default function ProfilePage() {
             <div className="user-avatar">{initials}</div>
             <div className="fw-bold mb-1" style={{ fontSize: 18, color: '#0f172a' }}>{subscriber?.name}</div>
             <div className="text-muted" style={{ fontSize: 13.5 }}>{subscriber?.email}</div>
-            {subscriber?.phone && <div className="small mt-1" style={{ color: '#94a3b8' }}>{subscriber.phone}</div>}
             {memberSince && (
               <div className="mt-3 pt-3 border-top">
                 <div className="meta-label">Member since</div>
@@ -126,15 +125,9 @@ export default function ProfilePage() {
             <form onSubmit={saveProfile} className="panel-body">
               {profileMsg && <div className="alert-inline alert-inline-success">✓ {profileMsg}</div>}
               {profileErr && <div className="alert-inline alert-inline-danger">{profileErr}</div>}
-              <div className="row g-3 mb-3">
-                <div className="col-sm-6">
-                  <label className="form-label">Full Name <span className="text-danger">*</span></label>
-                  <input className="form-control" value={profileForm.name} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} placeholder="John Smith" />
-                </div>
-                <div className="col-sm-6">
-                  <label className="form-label">Phone Number</label>
-                  <input type="tel" className="form-control" value={profileForm.phone} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })} placeholder="+61 4xx xxx xxx" />
-                </div>
+              <div className="mb-3">
+                <label className="form-label">Full Name <span className="text-danger">*</span></label>
+                <input className="form-control" value={profileForm.name} onChange={e => setProfileForm({ name: e.target.value })} placeholder="John Smith" />
               </div>
               <div className="mb-3">
                 <label className="form-label">Email Address</label>

@@ -1,8 +1,6 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongoose';
-import Transaction from '@/models/Transaction';
-import '@/models/Product';
-import '@/models/Order';
+import Order from '@/models/Order';
 import { verifySubscriberToken } from '@/lib/subscriberJwt';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 
@@ -12,17 +10,17 @@ function getToken(req: NextRequest) {
   return req.cookies.get('subscriber_token')?.value ?? null;
 }
 
-export async function GET(req: NextRequest) {
+type P = { params: Promise<{ id: string }> };
+
+export async function GET(req: NextRequest, { params }: P) {
   const token = getToken(req);
   if (!token) return errorResponse('Not authenticated', 401);
   const payload = verifySubscriberToken(token);
   if (!payload) return errorResponse('Invalid token', 401);
-
   await connectDB();
-  const transactions = await Transaction.find({ subscriber: payload.subscriberId })
-    .populate('product', 'name slug featuredImage durationValue durationType')
-    .populate('order', 'orderNumber orderStatus expiryDate purchaseDate pricePaid')
-    .sort({ paymentDate: -1 });
-
-  return successResponse(transactions);
+  const { id } = await params;
+  const order = await Order.findOne({ _id: id, subscriber: payload.subscriberId })
+    .populate('items.product', 'name durationValue durationType');
+  if (!order) return errorResponse('Order not found', 404);
+  return successResponse(order);
 }
