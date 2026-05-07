@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { Types } from 'mongoose';
 import connectDB from '@/lib/mongoose';
 import Subscriber from '@/models/Subscriber';
 import UserProduct from '@/models/UserProduct';
@@ -32,13 +33,13 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const activeProductIds = products
     .filter(up => up.isActive && new Date(up.expiryDate) > now)
-    .map(up => (up.product as unknown as { _id: unknown })?._id)
-    .filter(Boolean);
+    .map(up => (up.product as unknown as { _id: Types.ObjectId })?._id)
+    .filter((id): id is Types.ObjectId => id != null);
 
   const reportCount = await Report.countDocuments({
     publishStatus: 'published',
     $or: [{ product: null }, { product: { $in: activeProductIds } }],
-  });
+  } as Record<string, unknown>);
 
   return successResponse({ subscriber, products, reportCount });
 }
