@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 interface Product { _id: string; name: string; slug: string; featuredImage?: string; durationType: string; durationValue: number; }
 interface Order { _id: string; orderNumber: string; pricePaid: number; paymentStatus: string; paymentGateway: string; }
 interface UserProduct { _id: string; product: Product; order: Order; startDate: string; expiryDate: string; isActive: boolean; createdAt: string; }
-interface DashData { subscriber: { _id: string; name: string; email: string; createdAt: string }; products: UserProduct[]; }
+interface DashData { subscriber: { _id: string; name: string; email: string; createdAt: string }; products: UserProduct[]; reportCount: number; }
 
 function getDaysLeft(d: string) { return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000); }
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }); }
@@ -31,7 +31,7 @@ function DashboardContent() {
   if (loading) return <div className="page-loading">Loading...</div>;
 
   const activeProducts = data?.products.filter(p => p.isActive && getDaysLeft(p.expiryDate) > 0) ?? [];
-  const totalSpent = data?.products.reduce((s, p) => s + (p.order?.pricePaid ?? 0), 0) ?? 0;
+  const reportCount = data?.reportCount ?? 0;
   const nearestExpiry = activeProducts.length
     ? activeProducts.reduce((m, p) => getDaysLeft(p.expiryDate) < getDaysLeft(m.expiryDate) ? p : m).expiryDate
     : null;
@@ -42,7 +42,7 @@ function DashboardContent() {
 
   const stats = [
     { icon: '📦', label: 'Active Subscriptions', value: activeProducts.length.toString(), bg: '#eff6ff' },
-    { icon: '💰', label: 'Total Invested', value: `A$${totalSpent.toFixed(2)}`, bg: '#f0fdf4' },
+    { icon: '📄', label: 'Reports Available', value: reportCount.toString(), bg: '#f0fdf4' },
     { icon: '📅', label: 'Next Expiry', value: nearestExpiry ? `${getDaysLeft(nearestExpiry)}d` : '—', bg: '#fefce8' },
   ];
 

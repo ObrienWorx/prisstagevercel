@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Subscriber from '@/models/Subscriber';
 import UserProduct from '@/models/UserProduct';
+import Report from '@/models/Report';
 import '@/models/Order';
 import '@/models/Product';
 import { verifySubscriberToken } from '@/lib/subscriberJwt';
@@ -28,7 +29,18 @@ export async function GET(req: NextRequest) {
     .populate('order', 'orderNumber pricePaid paymentStatus paymentGateway')
     .sort({ createdAt: -1 });
 
-  return successResponse({ subscriber, products });
+  const now = new Date();
+  const activeProductIds = products
+    .filter(up => up.isActive && new Date(up.expiryDate) > now)
+    .map(up => (up.product as unknown as { _id: unknown })?._id)
+    .filter(Boolean);
+
+  const reportCount = await Report.countDocuments({
+    publishStatus: 'published',
+    $or: [{ product: null }, { product: { $in: activeProductIds } }],
+  });
+
+  return successResponse({ subscriber, products, reportCount });
 }
 
 export async function PUT(req: NextRequest) {

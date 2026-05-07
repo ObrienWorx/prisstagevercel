@@ -9,6 +9,7 @@ interface UserData { name: string; email: string; }
 
 const navItems = [
   { href: '/user/dashboard', icon: '📊', label: 'Dashboard' },
+  { href: '/user/plans', icon: '🔓', label: 'My Plans' },
   { href: '/user/subscriptions', icon: '📦', label: 'My Subscriptions' },
   { href: '/user/transactions', icon: '💳', label: 'Transactions' },
   { href: '/user/portfolio', icon: '📈', label: 'My Portfolio' },
