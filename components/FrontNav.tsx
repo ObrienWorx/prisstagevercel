@@ -3,22 +3,23 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { SOCIAL_LINKS } from '@/lib/socialLinks';
 
 interface SubUser { name: string; email: string; }
 interface Sector { _id: string; name: string; slug: string; reportCount: number; featuredImage?: string; }
+interface Product { _id: string; name: string; slug: string; featuredImage?: string; durationValue?: number; durationType?: string; }
 interface BlogType { _id: string; label: string; count: number; navHighlight?: boolean; }
 
 export default function FrontNav() {
   const pathname = usePathname();
   const [sub, setSub] = useState<SubUser | null>(null);
   const [sectors, setSectors] = useState<Sector[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [blogTypes, setBlogTypes] = useState<BlogType[]>([]);
   const [sectorOpen, setSectorOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const sectorRef  = useRef<HTMLDivElement>(null);
+  const sectorRef = useRef<HTMLDivElement>(null);
   const productRef = useRef<HTMLDivElement>(null);
   const tickerRef  = useRef<HTMLDivElement>(null);
 
@@ -33,6 +34,10 @@ export default function FrontNav() {
     fetch('/api/public/sectors')
       .then(r => r.json())
       .then(d => { if (d.success) setSectors(d.data); })
+      .catch(() => {});
+    fetch('/api/public/products')
+      .then(r => r.json())
+      .then(d => { if (d.success) setProducts(d.data); })
       .catch(() => {});
     fetch('/api/public/blog-types')
       .then(r => r.json())
@@ -98,6 +103,12 @@ export default function FrontNav() {
     if (searchQuery.trim()) window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
   };
 
+  const goLogin = () => {
+    window.location.href = '/auth/login';
+  };
+
+  const navProducts = products.slice(0, 5);
+
   return (
     <>
       <style>{`
@@ -106,80 +117,55 @@ export default function FrontNav() {
           50% { opacity: 0.45; }
         }
         .hn-link-highlight {
-          color: #f59e0b !important;
+          color: #ff6464 !important;
           animation: navPulse 1.4s ease-in-out infinite;
+          font-style: italic;
         }
         .hn-link-highlight:hover { opacity: 1 !important; }
       `}</style>
       <header className="site-header">
-        {/* ── TOP UTILITY BAR ── */}
-        <div className="header-topbar">
-          <div className="container">
-            <div className="header-topbar-inner">
-              <div className="header-social">
-                {SOCIAL_LINKS.map(s => (
-                  <a key={s.label} href={s.href} aria-label={s.label} className="htb-social"
-                     target="_blank" rel="noopener noreferrer">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
-                         dangerouslySetInnerHTML={{ __html: s.svg }} />
-                  </a>
-                ))}
-              </div>
-              <div className="header-contact">
-                <a href="tel:0489990844" className="htb-contact">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 8.32 8.32l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 18.92z"/></svg>
-                  0489 990 844
-                </a>
-                <span className="htb-divider">|</span>
-                <a href="mailto:info@pristinegaze.com.au" className="htb-contact">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                  info@pristinegaze.com.au
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── MAIN HEADER ── */}
         <div className="header-main">
-          <div className="container-fluid px-5">
-            <div className="header-main-inner">
-              <Link href="/" className="header-logo">
-                <img src="/logo.png" alt="Pristine Gaze" className="w-100" />
+          <div className="container">
+            <div className="header-main-inner d-flex align-items-center flex-wrap flex-lg-nowrap gap-3 gap-xl-4 py-3">
+              <Link href="/" className="header-logo flex-shrink-0">
+                <img src="/logo.png" alt="Pristine Gaze" />
               </Link>
-              <form className="header-search" onSubmit={handleSearch}>
+
+              <form className="header-search d-flex flex-grow-1 order-3 order-lg-0 w-100" onSubmit={handleSearch}>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search..."
+                  aria-label="Search"
                   className="header-search-input"
                 />
-                <button type="submit" className="header-search-btn">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <button type="submit" className="header-search-btn flex-shrink-0" aria-label="Search">
+                  <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="10.8" cy="10.8" r="6.8"/><line x1="16.1" y1="16.1" x2="22" y2="22"/></svg>
                 </button>
               </form>
-              <div className="header-actions">
+
+              <div className="header-actions d-flex align-items-center gap-3 ms-lg-auto">
                 {sub ? (
-                  <div className="nav-header-actions">
-                    <Link href="/user/dashboard" className="header-account-btn">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      My Account
-                    </Link>
+                  <div className="nav-header-actions d-flex align-items-center gap-2">
+                    <Link href="/user/dashboard" className="header-account-btn">My Account</Link>
                     <button onClick={logout} className="header-signout-btn">Sign out</button>
                   </div>
                 ) : (
-                  <div className="nav-header-actions">
-                    <Link href="/auth/login" className="header-account-btn">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      My Account
-                    </Link>
-                    <Link href="/subscribe" className="header-cart-btn">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-                    </Link>
-                  </div>
+                  <button type="button" onClick={goLogin} className="header-account-btn">Log-in</button>
                 )}
-                <button className="nav-hamburger" onClick={() => setMobileOpen(true)} aria-label="Open menu">
+
+                <div className="header-contact-card d-none d-xl-grid" aria-label="Contact details">
+                  <a href="tel:0489990844" className="header-contact-phone">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11l-.95.95a16 16 0 0 0 8.32 8.32l.95-.95a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <span>0489 990 844</span>
+                  </a>
+                  <a href="mailto:info@pristinegaze.com.au" className="header-contact-mail">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    <span>info@pristinegaze.com.au</span>
+                  </a>
+                </div>
+
+                <button className="nav-hamburger ms-1" onClick={() => setMobileOpen(true)} aria-label="Open menu">
                   <span /><span /><span />
                 </button>
               </div>
@@ -187,49 +173,47 @@ export default function FrontNav() {
           </div>
         </div>
 
-        {/* ── TRADINGVIEW TICKER TAPE ── */}
-        <div className="header-ticker">
-          <div className="tradingview-widget-container w-100" ref={tickerRef} />
-        </div>
-
-        {/* ── NAVIGATION BAR ── */}
         <nav className="header-nav">
           <div className="container">
-            <div className="header-nav-inner">
-
+            <div className="header-nav-inner d-flex align-items-center justify-content-center gap-3 gap-xl-4">
               <Link href="/" className={`hn-link ${pathname === '/' ? 'active' : ''}`}>Home</Link>
               <Link href="/about-us" className={`hn-link ${isActive('/about-us') ? 'active' : ''}`}>About Us</Link>
 
-              {/* Product dropdown */}
               <div ref={productRef} className="position-relative">
                 <button
                   className={`hn-link hn-drop ${isActive('/subscribe') ? 'active' : ''}`}
                   onClick={() => { setProductOpen(o => !o); setSectorOpen(false); }}
                 >
-                  Product
-                  <svg width="9" height="5" viewBox="0 0 10 6" fill="none" className={`nav-chevron ${productOpen ? 'open' : ''}`}>
-                    <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  Product +
                 </button>
                 {productOpen && (
-                  <div className="hn-dropdown">
-                    <Link href="/subscribe" className="hn-dd-item" onClick={() => setProductOpen(false)}>All Plans</Link>
+                  <div className="hn-dropdown hn-dropdown-wide">
+                    {navProducts.length === 0 ? (
+                      <div className="hn-dd-item hn-dd-disabled">No products yet</div>
+                    ) : navProducts.map(p => (
+                      <Link
+                        key={p._id}
+                        href={`/subscribe/${p.slug}`}
+                        className={`hn-dd-item ${isActive(`/subscribe/${p.slug}`) ? 'active' : ''}`}
+                        onClick={() => setProductOpen(false)}
+                      >
+                        {p.featuredImage && <img src={p.featuredImage} alt="" className="nav-sector-img" />}
+                        {p.name}
+                      </Link>
+                    ))}
+                    <Link href="/subscribe" className="hn-dd-item btn btn-primary text-white" onClick={() => setProductOpen(false)}>Explore All Plans</Link>
                   </div>
                 )}
               </div>
 
               <Link href="/subscribe" className={`hn-link ${isActive('/subscribe') && !isActive('/subscribe/') ? 'active' : ''}`}>Subscribe</Link>
 
-              {/* Sector dropdown */}
               <div ref={sectorRef} className="position-relative">
                 <button
                   className={`hn-link hn-drop ${isActive('/sectors') ? 'active' : ''}`}
                   onClick={() => { setSectorOpen(o => !o); setProductOpen(false); }}
                 >
-                  Sector
-                  <svg width="9" height="5" viewBox="0 0 10 6" fill="none" className={`nav-chevron ${sectorOpen ? 'open' : ''}`}>
-                    <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  Sector +
                 </button>
                 {sectorOpen && (
                   <div className="hn-dropdown hn-dropdown-wide">
@@ -251,6 +235,7 @@ export default function FrontNav() {
                 )}
               </div>
 
+              <Link href="/editorial" className={`hn-link ${isActive('/editorial') ? 'active' : ''}`}>Editorial</Link>
               <Link href="/videos" className={`hn-link ${isActive('/videos') ? 'active' : ''}`}>Videos</Link>
 
               {blogTypes.map(bt => (
@@ -267,16 +252,29 @@ export default function FrontNav() {
           </div>
         </nav>
       </header>
+      <div className="header-ticker">
+          <div className="tradingview-widget-container w-100" ref={tickerRef} />
+        </div>
 
-      {/* Mobile nav panel */}
       <div className={`mobile-nav ${mobileOpen ? 'open' : ''}`}>
         <div className="mobile-nav-overlay" onClick={() => setMobileOpen(false)} />
         <div className="mobile-nav-panel">
-          <button className="mobile-nav-close" onClick={() => setMobileOpen(false)}>✕</button>
+          <button className="mobile-nav-close" onClick={() => setMobileOpen(false)}>x</button>
 
           <Link href="/" className={`mobile-nav-link ${pathname === '/' ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Home</Link>
           <Link href="/about-us" className="mobile-nav-link" onClick={() => setMobileOpen(false)}>About Us</Link>
           <Link href="/subscribe" className={`mobile-nav-link ${isActive('/subscribe') ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Subscribe</Link>
+
+          {navProducts.length > 0 && (
+            <>
+              <div className="mobile-section-label">Products</div>
+              {navProducts.map(p => (
+                <Link key={p._id} href={`/subscribe/${p.slug}`} className="mobile-nav-link mobile-nav-sub" onClick={() => setMobileOpen(false)}>
+                  {p.name}
+                </Link>
+              ))}
+            </>
+          )}
 
           {sectors.length > 0 && (
             <>
@@ -306,7 +304,7 @@ export default function FrontNav() {
                 <button onClick={logout} className="mobile-signout-btn">Sign Out</button>
               </>
             ) : (
-              <Link href="/auth/login" className="header-account-btn d-block text-center" onClick={() => setMobileOpen(false)}>Login / My Account</Link>
+              <button type="button" onClick={() => { setMobileOpen(false); goLogin(); }} className="header-account-btn w-100">Login / My Account</button>
             )}
           </div>
         </div>
