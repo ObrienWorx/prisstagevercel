@@ -3297,7 +3297,7 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: 3000;
   flex-direction: column;
 }
 
@@ -5463,6 +5463,11 @@ body {
   height: auto;
 }
 
+.header-logo picture {
+  display: block;
+  width: 100%;
+}
+
 .header-search {
   flex-basis: 24rem;
   border: 2px solid #91621b;
@@ -5618,11 +5623,30 @@ body {
 
 @media (max-width: 991px) {
 
-  .header-search,
   .header-actions>.header-account-btn,
   .header-actions>.nav-header-actions,
   .header-nav {
     display: none !important;
+  }
+
+  .header-main-inner {
+    gap: 0.85rem;
+  }
+
+  .header-logo {
+    width: min(12rem, 52vw);
+  }
+
+  .header-search {
+    display: flex !important;
+    flex: 0 0 100%;
+    width: 100%;
+    order: 3;
+  }
+
+  .header-search-input {
+    min-height: 42px;
+    font-size: 0.95rem;
   }
 
   .mobile-auth-section .header-account-btn {

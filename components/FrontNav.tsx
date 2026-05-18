@@ -128,7 +128,10 @@ export default function FrontNav() {
           <div className="container">
             <div className="header-main-inner d-flex align-items-center flex-wrap flex-lg-nowrap gap-3 gap-xl-4 py-3">
               <Link href="/" className="header-logo flex-shrink-0">
-                <img src="/logo.png" alt="Pristine Gaze" />
+                <picture>
+                  <source media="(max-width: 991px)" srcSet="/logo2.png" />
+                  <img src="/logo.png" alt="Pristine Gaze" />
+                </picture>
               </Link>
 
               <form className="header-search d-flex flex-grow-1 order-3 order-lg-0 w-100" onSubmit={handleSearch}>
