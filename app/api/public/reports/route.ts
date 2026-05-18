@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Report from '@/models/Report';
-import '@/models/Sector';
+import Sector from '@/models/Sector';
 import '@/models/Product';
 import '@/models/ReportCategory';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
@@ -14,8 +14,41 @@ export async function GET(req: NextRequest) {
     const sectorSlug = searchParams.get('sector');
     const categorySlug = searchParams.get('category');
     const productId = searchParams.get('product');
+    const q = searchParams.get('q')?.trim();
 
     await connectDB();
+
+    // Full-text search mode
+    if (q) {
+      const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const matchingSectors = await Sector.find({ name: regex }, '_id');
+      const sectorIds = matchingSectors.map((s) => s._id);
+      const orClauses: object[] = [{ title: regex }, { upsellTicker: regex }];
+      if (sectorIds.length) orClauses.push({ sector: { $in: sectorIds } });
+
+      const reports = await Report.find({ publishStatus: 'published', $or: orClauses })
+        .populate('sector', 'name slug')
+        .populate('product', 'name slug')
+        .populate('category', 'name slug')
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const preview = reports.map((r: any) => ({
+        _id: r._id,
+        title: r.title,
+        slug: r.slug,
+        featuredImage: r.featuredImage,
+        sector: r.sector,
+        product: r.product,
+        category: r.category,
+        upsellTicker: r.upsellTicker,
+        recommendation: r.recommendation,
+        createdAt: r.createdAt,
+        excerpt: r.content ? r.content.replace(/<[^>]+>/g, '').slice(0, 200) + '...' : '',
+      }));
+
+      return successResponse(preview);
+    }
 
     const filter: Record<string, unknown> = { publishStatus: 'published' };
 

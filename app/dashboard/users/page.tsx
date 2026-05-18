@@ -225,7 +225,7 @@ export default function UsersPage() {
                           {u.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td>
+                      <td className="d-flex">
                         <button
                           className="btn btn-sm btn-outline-primary me-2"
                           onClick={() => openEdit(u)}
@@ -236,7 +236,7 @@ export default function UsersPage() {
                           className="btn btn-sm btn-outline-danger"
                           onClick={() => setDeleteTarget(u)}
                         >
-                          Delete
+                          Remove
                         </button>
                       </td>
                     </tr>

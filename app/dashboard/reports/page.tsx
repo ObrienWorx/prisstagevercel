@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
@@ -30,6 +31,7 @@ const empty = {
 };
 
 export default function ReportsPage() {
+  const searchParams = useSearchParams();
   const [items, setItems] = useState<Report[]>([]);
   const [categories, setCategories] = useState<Ref[]>([]);
   const [sectors, setSectors] = useState<Ref[]>([]);
@@ -64,6 +66,24 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Open edit modal when navigated from search with ?edit=<id>
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (!editId || loading || items.length === 0) return;
+    const target = items.find((r) => r._id === editId);
+    if (!target) return;
+    setEditing(target);
+    setForm({
+      title: target.title, slug: target.slug, content: target.content, featuredImage: target.featuredImage,
+      category: target.category?._id || '', sector: target.sector?._id || '', product: target.product?._id || '',
+      upsellTicker: target.upsellTicker, price: String(target.price ?? ''), recommendation: target.recommendation || '',
+      publishStatus: target.publishStatus,
+      metaTitle: target.metaTitle, metaDescription: target.metaDescription, metaImage: target.metaImage,
+    });
+    setErr('');
+    setShowModal(true);
+  }, [searchParams, loading, items]);
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
 
@@ -147,9 +167,9 @@ export default function ReportsPage() {
                         {item.publishStatus}
                       </span>
                     </td>
-                    <td>
+                    <td className="d-flex">
                       <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Del</button>
+                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Remove</button>
                     </td>
                   </tr>
                 ))}

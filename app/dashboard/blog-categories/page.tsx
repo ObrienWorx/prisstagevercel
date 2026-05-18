@@ -50,7 +50,7 @@ export default function BlogCategoriesPage() {
               <td><span className={`badge ${x.status === 'active' ? 'bg-success' : 'bg-secondary'}`}>{x.status}</span></td>
               <td>{x.showInNav ? <span className="badge bg-primary">Yes</span> : <span className="badge bg-light text-muted">No</span>}</td>
               <td>{x.navHighlight ? <span className="badge bg-warning text-dark">🔥 Hot</span> : <span className="badge bg-light text-muted">No</span>}</td>
-              <td><button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(x)}>Edit</button><button className="btn btn-sm btn-outline-danger" onClick={() => setDel(x)}>Del</button></td>
+              <td className="d-flex"><button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(x)}>Edit</button><button className="btn btn-sm btn-outline-danger" onClick={() => setDel(x)}>Remove</button></td>
             </tr>))}
           </tbody></table></div>}
       </div>

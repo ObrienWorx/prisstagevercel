@@ -257,9 +257,9 @@ export default function ProductsPage() {
                       </td>
                       <td><span className={`badge ${item.status === 'published' ? 'bg-success' : 'bg-secondary'}`}>{item.status ?? 'draft'}</span></td>
                       <td><span className={`badge ${item.isActive ? 'bg-success' : 'bg-danger'}`}>{item.isActive ? 'Yes' : 'No'}</span></td>
-                      <td>
+                      <td className="d-flex">
                         <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Del</button>
+                        <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Remove</button>
                       </td>
                     </tr>
                   );

@@ -82,7 +82,7 @@ export default function ContactUsPage() {
 
             {/* Right: lead capture form */}
             <div className="col-lg-5">
-              <LeadCaptureForm source="contact-us" />
+              <LeadCaptureForm source="contact-us" badge='' title='Get In Touch With Us' buttonText='Submit' />
             </div>
 
           </div>

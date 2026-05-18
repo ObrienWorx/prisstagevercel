@@ -77,9 +77,9 @@ export default function VideosPage() {
                   <td className="fw-semibold" style={{ maxWidth: 220 }}><div className="text-truncate">{v.title}</div>{v.description && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }} className="text-truncate">{v.description}</div>}</td>
                   <td><a href={v.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--primary)', wordBreak: 'break-all' }}>{v.youtubeUrl.length > 40 ? v.youtubeUrl.slice(0, 40) + '...' : v.youtubeUrl}</a></td>
                   <td><span className={`badge ${v.isActive ? 'bg-success' : 'bg-secondary'}`}>{v.isActive ? 'Active' : 'Hidden'}</span></td>
-                  <td>
+                  <td className="d-flex">
                     <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(v)}>Edit</button>
-                    <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(v)}>Del</button>
+                    <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(v)}>Remove</button>
                   </td>
                 </tr>
               );

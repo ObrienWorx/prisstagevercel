@@ -1,0 +1,35 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+
+export interface IHomepageSetting extends Document {
+  key: string;
+  heroImage: string;
+  videoSectionTitle: string;
+  videoSectionDescription: string;
+  videoSectionButtonText: string;
+  videoSectionButtonHref: string;
+  videoSectionYoutubeUrl: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const HomepageSettingSchema = new Schema<IHomepageSetting>(
+  {
+    key: { type: String, required: true, unique: true, default: 'homepage' },
+    heroImage: { type: String, default: '' },
+    videoSectionTitle: { type: String, default: 'Watch. Learn. Invest Smarter.' },
+    videoSectionDescription: {
+      type: String,
+      default: 'Don’t miss out on the latest market updates and expert tips! Watch our videos for in-depth ASX stock analysis, daily trends, and strategies to grow your portfolio. Stay informed, stay ahead—click play and take the first step towards smarter investing today!',
+    },
+    videoSectionButtonText: { type: String, default: 'Show All Videos' },
+    videoSectionButtonHref: { type: String, default: '/videos' },
+    videoSectionYoutubeUrl: { type: String, default: '' },
+  },
+  { timestamps: true }
+);
+
+const HomepageSetting: Model<IHomepageSetting> =
+  (mongoose.models.HomepageSetting as Model<IHomepageSetting> | undefined) ||
+  mongoose.model<IHomepageSetting>('HomepageSetting', HomepageSettingSchema);
+
+export default HomepageSetting;

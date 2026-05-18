@@ -125,9 +125,9 @@ export default function BlogsPage() {
                         {item.publishStatus}
                       </span>
                     </td>
-                    <td>
+                    <td className="d-flex">
                       <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Del</button>
+                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Remove</button>
                     </td>
                   </tr>
                 ))}

@@ -36,6 +36,7 @@ interface Props {
   sidebarType: 'blog' | 'report';
   categories?: NavLink[];
   sectors?: NavLink[];
+  emptyMessage?: string;
 }
 
 const RECOM_COLORS: Record<string, string> = {
@@ -172,7 +173,7 @@ function ReportSidebar({ latestItems, latestLabel, sectors, categories }: {
   );
 }
 
-export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors }: Props) {
+export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage }: Props) {
   return (
     <>
       {/* Hero */}
@@ -192,7 +193,7 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
               {items.length === 0 ? (
                 <div className="text-center py-5">
                   <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
-                  <p style={{ color: '#64748b', fontSize: 15 }}>No content published yet. Check back soon.</p>
+                  <p style={{ color: '#64748b', fontSize: 15 }}>{emptyMessage || 'No content published yet. Check back soon.'}</p>
                 </div>
               ) : (
                 <div className="cl-grid">

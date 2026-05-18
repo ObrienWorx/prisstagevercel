@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import GlobalSearch from '@/components/GlobalSearch';
 
 interface User { name: string; email: string; role: string; permissions: string[]; }
 interface NavItem { label: string; href: string; icon: string; module: string | null; }
@@ -34,6 +35,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Media & Pages',
     items: [
+      { label: 'Homepage Settings', href: '/dashboard/homepage-settings', icon: '⚙', module: null },
       { label: 'Videos', href: '/dashboard/videos', icon: '🎥', module: 'videos' },
       { label: 'Static Pages', href: '/dashboard/static-pages', icon: '📄', module: null },
     ],
@@ -110,9 +112,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
         <div className="sidebar-brand">
           <div className="brand-name">
-            <span>🔭</span> PristineGaze
+            <img src="/logo.png" alt="" className='w-100' />
           </div>
-          <div className="brand-sub">Admin Panel</div>
         </div>
 
         <div className="sidebar-nav">
@@ -171,8 +172,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
             <span className="page-title">{activeLabel}</span>
           </div>
-          <div className="topbar-right">
-            <span className="badge bg-primary-subtle text-primary" style={{ borderRadius: 20, padding: '0.35em 0.8em', fontSize: 12 }}>
+          <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <GlobalSearch />
+            <span className="badge bg-primary-subtle text-primary" style={{ borderRadius: 20, padding: '0.35em 0.8em', fontSize: 12, whiteSpace: 'nowrap' }}>
               {user.role === 'admin' ? '⭐ Admin' : '👤 Sub-Admin'}
             </span>
           </div>

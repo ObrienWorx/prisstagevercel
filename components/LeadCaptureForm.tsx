@@ -10,6 +10,13 @@ interface Props {
   source?: string;
 }
 
+const AU_PHONE_RE = /^(?:0[23478]\d{8}|(?:\+?61)[23478]\d{8}|[23478]\d{8})$/;
+const AU_POSTAL_CODE_RE = /^\d{4}$/;
+
+function normalisePhone(value: string) {
+  return value.replace(/[\s()-]/g, '');
+}
+
 export default function LeadCaptureForm({
   badge = 'Pristine Gaze',
   title = 'Grab Your FREE Report on Top 5 ASX Stocks to Buy in 2026',
@@ -25,13 +32,26 @@ export default function LeadCaptureForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!consent) { setError('Please accept the terms to continue.'); return; }
+    const phone = normalisePhone(form.phone);
+    const postalCode = form.postalCode.trim();
+
+    if (!AU_PHONE_RE.test(phone)) {
+      setError('Please enter a valid Australian phone number.');
+      return;
+    }
+
+    if (!AU_POSTAL_CODE_RE.test(postalCode)) {
+      setError('Please enter a valid 4 digit Australian postal code.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
       const res = await fetch('/api/public/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, consent, source }),
+        body: JSON.stringify({ ...form, phone, postalCode, consent, source }),
       });
       const data = await res.json();
       if (data.success) {
@@ -60,7 +80,9 @@ export default function LeadCaptureForm({
 
   return (
     <div className="lcf-card">
-      <div className="lcf-badge">{badge}</div>
+      {badge && (
+        <div className="lcf-badge">{badge}</div>
+      )}
       <h4 className="lcf-title">{title}</h4>
       {error && <div className="lcf-error">{error}</div>}
       <form className="lcf-form" onSubmit={handleSubmit}>
@@ -82,6 +104,9 @@ export default function LeadCaptureForm({
             type="tel" required placeholder="Phone number"
             className="lcf-input lcf-phone-input"
             value={form.phone}
+            inputMode="tel"
+            pattern="[0-9+() -]{9,16}"
+            title="Enter an Australian phone number, for example 0489 990 844 or 489 990 844."
             onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
           />
         </div>
@@ -89,7 +114,11 @@ export default function LeadCaptureForm({
           type="text" required placeholder="Postal Code"
           className="lcf-input"
           value={form.postalCode}
-          onChange={e => setForm(f => ({ ...f, postalCode: e.target.value }))}
+          inputMode="numeric"
+          maxLength={4}
+          pattern="[0-9]{4}"
+          title="Enter a 4-digit Australian postal code."
+          onChange={e => setForm(f => ({ ...f, postalCode: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
         />
         <label className="lcf-consent">
           <input

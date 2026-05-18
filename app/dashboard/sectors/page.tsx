@@ -86,9 +86,9 @@ export default function SectorsPage() {
                     <td style={{ color: 'var(--muted)', width: 40 }}>{i + 1}</td>
                     <td className="fw-semibold">{item.name}</td>
                     <td><code style={{ fontSize: 12, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>{item.slug}</code></td>
-                    <td>
+                    <td className="d-flex">
                       <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
-                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Del</button>
+                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Remove</button>
                     </td>
                   </tr>
                 ))}
