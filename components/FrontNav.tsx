@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 interface SubUser { name: string; email: string; }
 interface Sector { _id: string; name: string; slug: string; reportCount: number; featuredImage?: string; }
 interface Product { _id: string; name: string; slug: string; featuredImage?: string; durationValue?: number; durationType?: string; }
+interface SubProduct { product: { _id: string } | null; expiryDate: string; isActive: boolean; }
 interface BlogType { _id: string; label: string; count: number; navHighlight?: boolean; }
 
 export default function FrontNav() {
@@ -14,6 +15,7 @@ export default function FrontNav() {
   const [sub, setSub] = useState<SubUser | null>(null);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [unlockedProductIds, setUnlockedProductIds] = useState<string[]>([]);
   const [blogTypes, setBlogTypes] = useState<BlogType[]>([]);
   const [sectorOpen, setSectorOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
@@ -28,7 +30,17 @@ export default function FrontNav() {
     if (token) {
       fetch('/api/subscriber/me', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json())
-        .then(d => { if (d.success) setSub(d.data.subscriber); })
+        .then(d => {
+          if (!d.success) return;
+
+          setSub(d.data.subscriber);
+          const now = Date.now();
+          const activeIds = (d.data.products as SubProduct[] | undefined ?? [])
+            .filter(product => product.isActive && new Date(product.expiryDate).getTime() > now)
+            .map(product => product.product?._id)
+            .filter((productId): productId is string => Boolean(productId));
+          setUnlockedProductIds(activeIds);
+        })
         .catch(() => {});
     }
     fetch('/api/public/sectors')
@@ -93,6 +105,7 @@ export default function FrontNav() {
     localStorage.removeItem('subscriber_token');
     localStorage.removeItem('subscriber_user');
     setSub(null);
+    setUnlockedProductIds([]);
     window.location.href = '/';
   };
 
@@ -107,7 +120,18 @@ export default function FrontNav() {
     window.location.href = '/auth/login';
   };
 
-  const navProducts = products.slice(0, 5);
+  const unlockedProducts = new Set(unlockedProductIds);
+
+  const ProductLock = ({ productId }: { productId: string }) => (
+    unlockedProducts.has(productId) ? null : (
+      <span className="nav-product-lock" aria-label="Subscription required" title="Subscription required">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="10" width="14" height="11" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </svg>
+      </span>
+    )
+  );
 
   return (
     <>
@@ -126,7 +150,7 @@ export default function FrontNav() {
       <header className="site-header">
         <div className="header-main">
           <div className="container">
-            <div className="header-main-inner d-flex align-items-center flex-wrap flex-lg-nowrap gap-3 gap-xl-4 py-3">
+            <div className="header-main-inner d-flex align-items-center flex-wrap flex-lg-nowrap gap-3 gap-xl-4 pt-3">
               <Link href="/" className="header-logo flex-shrink-0">
                 <picture>
                   <source media="(max-width: 991px)" srcSet="/logo2.png" />
@@ -190,21 +214,21 @@ export default function FrontNav() {
                   Product +
                 </button>
                 {productOpen && (
-                  <div className="hn-dropdown hn-dropdown-wide">
-                    {navProducts.length === 0 ? (
+                  <div className="hn-dropdown hn-dropdown-wide nav-product-dropdown">
+                    {products.length === 0 ? (
                       <div className="hn-dd-item hn-dd-disabled">No products yet</div>
-                    ) : navProducts.map(p => (
+                    ) : products.map(p => (
                       <Link
                         key={p._id}
                         href={`/subscribe/${p.slug}`}
-                        className={`hn-dd-item ${isActive(`/subscribe/${p.slug}`) ? 'active' : ''}`}
+                        className={`hn-dd-item nav-product-item ${isActive(`/subscribe/${p.slug}`) ? 'active' : ''}`}
                         onClick={() => setProductOpen(false)}
                       >
                         {p.featuredImage && <img src={p.featuredImage} alt="" className="nav-sector-img" />}
-                        {p.name}
+                        <span className="nav-product-name">{p.name}</span>
+                        <ProductLock productId={p._id} />
                       </Link>
                     ))}
-                    <Link href="/subscribe" className="hn-dd-item btn btn-primary text-white" onClick={() => setProductOpen(false)}>Explore All Plans</Link>
                   </div>
                 )}
               </div>
@@ -237,8 +261,6 @@ export default function FrontNav() {
                   </div>
                 )}
               </div>
-
-              <Link href="/editorial" className={`hn-link ${isActive('/editorial') ? 'active' : ''}`}>Editorial</Link>
               <Link href="/videos" className={`hn-link ${isActive('/videos') ? 'active' : ''}`}>Videos</Link>
 
               {blogTypes.map(bt => (
@@ -268,12 +290,13 @@ export default function FrontNav() {
           <Link href="/about-us" className="mobile-nav-link" onClick={() => setMobileOpen(false)}>About Us</Link>
           <Link href="/subscribe" className={`mobile-nav-link ${isActive('/subscribe') ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Subscribe</Link>
 
-          {navProducts.length > 0 && (
+          {products.length > 0 && (
             <>
               <div className="mobile-section-label">Products</div>
-              {navProducts.map(p => (
-                <Link key={p._id} href={`/subscribe/${p.slug}`} className="mobile-nav-link mobile-nav-sub" onClick={() => setMobileOpen(false)}>
-                  {p.name}
+              {products.map(p => (
+                <Link key={p._id} href={`/subscribe/${p.slug}`} className="mobile-nav-link mobile-nav-sub nav-product-item" onClick={() => setMobileOpen(false)}>
+                  <span className="nav-product-name">{p.name}</span>
+                  <ProductLock productId={p._id} />
                 </Link>
               ))}
             </>

@@ -21,7 +21,7 @@ async function getPayPalToken() {
 }
 
 export async function POST(req: NextRequest) {
-  const { paypalOrderId, planSlug } = await req.json();
+  const { paypalOrderId, planSlug, saleOffer } = await req.json();
   if (!paypalOrderId || !planSlug) return errorResponse('paypalOrderId and planSlug required');
 
   await connectDB();
@@ -50,10 +50,15 @@ export async function POST(req: NextRequest) {
 
     const capture = data.purchase_units?.[0]?.payments?.captures?.[0];
     const now = new Date();
-    const isSaleActive = product.salePrice != null &&
+    const isSaleActive = saleOffer === true && product.salePrice != null &&
       (!product.saleStartDate || new Date(product.saleStartDate) <= now) &&
       (!product.saleEndDate || new Date(product.saleEndDate) >= now);
-    const fallbackPrice = isSaleActive ? product.salePrice! : product.regularPrice;
+    const isSaleEnded = saleOffer === true && product.saleEndDate && new Date(product.saleEndDate) < now;
+    const fallbackPrice = isSaleActive
+      ? product.salePrice!
+      : isSaleEnded && product.saleOverPrice != null
+        ? product.saleOverPrice
+        : product.regularPrice;
     const pricePaid = parseFloat(capture?.amount?.value ?? String(fallbackPrice));
 
     // Find or auto-create subscriber

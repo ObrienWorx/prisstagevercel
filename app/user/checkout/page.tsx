@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 interface Product {
   _id: string; name: string; slug: string; regularPrice: number; salePrice?: number;
+  saleOverPrice?: number | null;
   saleStartDate?: string; saleEndDate?: string;
   durationType: string; durationValue: number; shortDescription?: string; featuredImage?: string;
 }
@@ -16,6 +17,7 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planSlug = searchParams.get('plan') ?? '';
+  const saleOffer = searchParams.get('saleOffer') === '1';
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ function CheckoutContent() {
         const res = await fetch('/api/checkout/paypal/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ planSlug }),
+          body: JSON.stringify({ planSlug, saleOffer }),
         });
         const d = await res.json();
         if (!d.success) throw new Error(d.error || 'Failed to create PayPal order');
@@ -82,7 +84,7 @@ function CheckoutContent() {
         const res = await fetch('/api/checkout/paypal/capture', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ paypalOrderId: data.orderID, planSlug }),
+          body: JSON.stringify({ paypalOrderId: data.orderID, planSlug, saleOffer }),
         });
         const d = await res.json();
         if (d.success) { router.push('/user/dashboard?success=1'); }
@@ -99,7 +101,7 @@ function CheckoutContent() {
       const res = await fetch('/api/checkout/cod', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ planSlug }),
+        body: JSON.stringify({ planSlug, saleOffer }),
       });
       const d = await res.json();
       if (d.success) router.push('/user/dashboard?cod=1');
@@ -111,22 +113,28 @@ function CheckoutContent() {
   if (loading) return <div className="page-loading">Loading checkout...</div>;
   if (!product) return null;
 
+  const subscribePath = `/subscribe/${product.slug}${saleOffer ? '-limited-sale-offer' : ''}`;
   const isSaleActive = (() => {
-    if (product.salePrice == null) return false;
+    if (!saleOffer || product.salePrice == null) return false;
     const now = new Date();
     if (product.saleStartDate && new Date(product.saleStartDate) > now) return false;
     if (product.saleEndDate && new Date(product.saleEndDate) < now) return false;
     return true;
   })();
-  const effectivePrice = isSaleActive ? product.salePrice! : product.regularPrice;
+  const isSaleEnded = saleOffer && product.saleEndDate ? new Date(product.saleEndDate) < new Date() : false;
+  const effectivePrice = isSaleActive
+    ? product.salePrice!
+    : isSaleEnded && product.saleOverPrice != null
+      ? product.saleOverPrice
+      : product.regularPrice;
   const price = effectivePrice.toFixed(2);
-  const savings = isSaleActive && product.salePrice != null && product.regularPrice
-    ? (product.regularPrice - product.salePrice).toFixed(2) : null;
+  const savings = saleOffer && effectivePrice < product.regularPrice
+    ? (product.regularPrice - effectivePrice).toFixed(2) : null;
 
   return (
     <div>
       <div className="mb-4">
-        <Link href={`/subscribe/${product.slug}`} className="small text-muted text-decoration-none">← Back to plan</Link>
+        <Link href={subscribePath} className="small text-muted text-decoration-none">← Back to plan</Link>
         <h4 className="fw-bold mt-2 mb-1" style={{ fontSize: 22, color: '#0f172a' }}>Checkout</h4>
         <p className="text-muted small mb-0">Complete your subscription</p>
       </div>
@@ -149,7 +157,7 @@ function CheckoutContent() {
             </div>
 
             <div className="checkout-total-box">
-              {isSaleActive && product.regularPrice && (
+              {saleOffer && effectivePrice < product.regularPrice && (
                 <div className="checkout-summary-line mb-1">
                   <span className="small text-muted">Regular price</span>
                   <span className="small text-muted text-decoration-line-through">A${product.regularPrice.toFixed(2)}</span>

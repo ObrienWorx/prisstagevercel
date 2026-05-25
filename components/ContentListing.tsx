@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import LeadCaptureForm from './LeadCaptureForm';
 
 interface Item {
   _id: string;
@@ -10,6 +9,8 @@ interface Item {
   featuredImage?: string;
   date?: string;
   excerpt?: string;
+  tags?: string[] | string;
+  authorName?: string;
   href: string;
   cta?: string;
   recommendation?: string;
@@ -59,6 +60,18 @@ const SECTOR_ICONS: Record<string, string> = {
   'USA Equity Report': '🇺🇸',
 };
 
+function formatBlogTags(tags?: string[] | string) {
+  const rawTags = Array.isArray(tags)
+    ? tags
+    : typeof tags === 'string'
+      ? tags.split(',')
+      : [];
+
+  return rawTags
+    .map(tag => tag.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+}
+
 function ItemCard({ item }: { item: Item }) {
   const ribbonColor = item.recommendation ? RECOM_COLORS[item.recommendation] : null;
   return (
@@ -84,34 +97,117 @@ function ItemCard({ item }: { item: Item }) {
   );
 }
 
-function BlogSidebar({ latestItems, latestLabel }: {
-  latestItems: LatestItem[];
-  latestLabel?: string;
-  categories?: NavLink[];
-}) {
-  return (
-    <div className="cl-sidebar">
-      {/* Lead capture form */}
-      <LeadCaptureForm source="blog-sidebar" />
+function BlogShareButton({ item }: { item: Item }) {
+  const share = async () => {
+    const url = new URL(item.href, window.location.origin).toString();
 
-      {/* Latest articles */}
-      {latestItems.length > 0 && (
-        <div className="cl-sidebar-widget">
-          <h5 className="cl-sidebar-heading">{latestLabel || 'Latest Articles'}</h5>
-          <div className="cl-sidebar-list">
-            {latestItems.map(item => (
-              <Link key={item._id} href={item.href} className="cl-sidebar-item">
-                <div className="cl-sidebar-thumb">
-                  {item.featuredImage
-                    ? <img src={item.featuredImage} alt={item.title} />
-                    : <div className="cl-sidebar-placeholder" />}
-                </div>
-                <span className="cl-sidebar-title">{item.title}</span>
-              </Link>
-            ))}
+    if (navigator.share) {
+      await navigator.share({ title: item.title, url }).catch(() => { });
+      return;
+    }
+
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url).catch(() => { });
+    }
+  };
+
+  return (
+    <button type="button" className="blog-list-share" onClick={share} aria-label={`Share ${item.title}`}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="18" cy="5" r="2.5" />
+        <circle cx="6" cy="12" r="2.5" />
+        <circle cx="18" cy="19" r="2.5" />
+        <path d="m8.3 10.8 7.2-4.1M8.3 13.2l7.2 4.1" />
+      </svg>
+      <span>Share</span>
+    </button>
+  );
+}
+
+function BlogCategorySidebar({ categories }: Pick<Props, 'categories'>) {
+  if (!categories || categories.length === 0) return null;
+
+  return (
+    <aside className="blog-category-sidebar" aria-labelledby="blog-category-sidebar-title">
+      <h2 id="blog-category-sidebar-title">Browse Articles by Category</h2>
+      <ul>
+        {categories.map(category => (
+          <li key={category.slug}>
+            <Link href={category.href}>{category.name}</Link>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
+function BlogReportPromo() {
+  return (
+    <aside className="blog-report-promo" aria-labelledby="blog-report-promo-title">
+      <h2 id="blog-report-promo-title">Some ASX Opportunities Are Still Flying Under the Radar.</h2>
+      <p className="blog-report-promo-lead">
+        Download our Complimentary Research Report featuring 5 ASX-listed companies poised to grow this year.
+      </p>
+      <div className="blog-report-promo-subtitle">What&apos;s in the Complimentary Report?</div>
+      <ul>
+        <li>5 high-potential ASX stocks selected by our experts</li>
+        <li>Technical and fundamental analysis explained in a simple format</li>
+        <li>General research opinions and market outlook on each company</li>
+        <li>Key business highlights, sector trends, and growth drivers</li>
+        <li>Insights designed to help investors make more informed decisions</li>
+      </ul>
+      <Link href="/contact-us" className="blog-report-promo-btn">
+        Claim your Free Copy
+      </Link>
+    </aside>
+  );
+}
+
+function BlogCategoryListing({ title, items, categories, emptyMessage }: Pick<Props, 'title' | 'items' | 'categories' | 'emptyMessage'>) {
+  return (
+    <div className="blog-list-page">
+      <div className="container blog-list-shell">
+        <div className="blog-list-layout">
+          <div className="blog-list-main">
+            <h1 className="blog-list-heading">{title}</h1>
+            {items.length === 0 ? (
+              <div className="blog-list-empty">{emptyMessage || 'No articles published yet. Check back soon.'}</div>
+            ) : (
+              <div className="blog-list">
+                {items.map(item => (
+                  <article className="blog-list-row" key={item._id}>
+                    <Link href={item.href} className="blog-list-image" aria-label={item.title}>
+                      {item.featuredImage
+                        ? <img src={item.featuredImage} alt="" />
+                        : <span className="blog-list-placeholder" />}
+                    </Link>
+                    <div className="blog-list-copy">
+                      {formatBlogTags(item.tags).length > 0 && (
+                        <div className="blog-list-tags">{formatBlogTags(item.tags).join(' | ')}</div>
+                      )}
+                      <Link href={item.href} className="blog-list-title">{item.title}</Link>
+                      {(item.date || item.authorName) && (
+                        <div className="blog-list-meta">
+                          {item.date}
+                          {item.date && item.authorName && <span aria-hidden="true"> | </span>}
+                          {item.authorName && <span>{item.authorName}</span>}
+                        </div>
+                      )}
+                      {item.excerpt && <p>{item.excerpt}</p>}
+                      <Link href={item.href} className="blog-list-more">Read more <span aria-hidden="true">&raquo;</span></Link>
+                    </div>
+                    <BlogShareButton item={item} />
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="blog-list-aside">
+            <BlogReportPromo />
+            <BlogCategorySidebar categories={categories} />
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -174,6 +270,10 @@ function ReportSidebar({ latestItems, latestLabel, sectors, categories }: {
 }
 
 export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage }: Props) {
+  if (sidebarType === 'blog') {
+    return <BlogCategoryListing title={title} items={items} categories={categories} emptyMessage={emptyMessage} />;
+  }
+
   return (
     <>
       {/* Hero */}
@@ -208,9 +308,7 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
 
             {/* Sidebar */}
             <div className="col-lg-4">
-              {sidebarType === 'blog'
-                ? <BlogSidebar latestItems={latestItems} latestLabel={latestLabel} categories={categories} />
-                : <ReportSidebar latestItems={latestItems} latestLabel={latestLabel} sectors={sectors} categories={categories} />}
+              <ReportSidebar latestItems={latestItems} latestLabel={latestLabel} sectors={sectors} categories={categories} />
             </div>
           </div>
         </div>

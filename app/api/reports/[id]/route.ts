@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   await connectDB();
   const { id } = await params;
   const body = await req.json();
-  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, price, recommendation, publishStatus, metaTitle, metaDescription, metaImage } = body;
+  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, ticker, price, sellPrice, recommendation, publishStatus, metaTitle, metaDescription, metaImage } = body;
 
   const existing = await Report.findById(id);
   if (!existing) return errorResponse('Report not found', 404);
@@ -53,7 +53,9 @@ export async function PUT(req: NextRequest, { params }: Params) {
     ...(sector              !== undefined && { sector: sector || null }),
     ...(product             !== undefined && { product: product || null }),
     ...(upsellTicker        !== undefined && { upsellTicker }),
+    ...(ticker              !== undefined && { ticker }),
     ...(price               !== undefined && { price: Number(price) || 0 }),
+    ...(sellPrice           !== undefined && { sellPrice: Number(sellPrice) || 0 }),
     ...(recommendation      !== undefined && { recommendation: recommendation ?? '' }),
     ...(publishStatus       !== undefined && { publishStatus }),
     ...(metaTitle           !== undefined && { metaTitle }),

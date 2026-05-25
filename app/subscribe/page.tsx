@@ -19,25 +19,18 @@ export default async function SubscribePage() {
     .sort({ regularPrice: 1 })
     .lean() as any[];
 
-  const now = new Date();
-  const isSaleActive = (p: any) => {
-    if (p.salePrice == null) return false;
-    if (p.saleStartDate && new Date(p.saleStartDate) > now) return false;
-    if (p.saleEndDate && new Date(p.saleEndDate) < now) return false;
-    return true;
-  };
-  const fmtPrice = (p: any) => ((isSaleActive(p) ? p.salePrice : p.regularPrice) ?? 0).toFixed(2);
+  const fmtPrice = (p: any) => (p.regularPrice ?? 0).toFixed(2);
   const fmtDur = (p: any) => p.durationValue ? `${p.durationValue} ${p.durationType}` : '';
 
   return (
     <SiteLayout>
-      <div className="subscribe-hero">
+      {/* <div className="subscribe-hero">
         <div className="container">
           <div className="section-label" style={{ color: '#93c5fd', justifyContent: 'center' }}>Subscription Plans</div>
           <h1>Choose Your Plan</h1>
           <p>Get access to Australia&apos;s most comprehensive investment research platform.</p>
         </div>
-      </div>
+      </div> */}
 
       <div className="site-section">
         <div className="container">
@@ -49,7 +42,6 @@ export default async function SubscribePage() {
           ) : (
             <div className="row g-4 justify-content-center">
               {products.map((p, i) => {
-                const sale = isSaleActive(p);
                 const rc = p.riskRating ? RISK_COLORS[p.riskRating] : null;
                 return (
                   <div className="col-md-6 col-lg-4" key={p._id.toString()}>
@@ -65,8 +57,7 @@ export default async function SubscribePage() {
                         <div className="product-card-name">{p.name}</div>
                         <div className="product-card-duration">{fmtDur(p)} access</div>
                         <div className="product-card-price">
-                          <div className={`amount ${sale ? 'amount-sale' : ''}`}>${fmtPrice(p)}</div>
-                          {sale && p.regularPrice && <div className="was">${p.regularPrice.toFixed(2)} regular</div>}
+                          <div className="amount">${fmtPrice(p)}</div>
                           {p.plans?.length > 1 && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{p.plans.length} plans available</div>}
                         </div>
 

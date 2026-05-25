@@ -18,11 +18,11 @@ export async function GET(req: NextRequest) {
       const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       const matchingSectors = await Sector.find({ name: regex }, '_id');
       const sectorIds = matchingSectors.map((s) => s._id);
-      const orClauses: object[] = [{ title: regex }, { upsellTicker: regex }];
+      const orClauses: object[] = [{ title: regex }, { upsellTicker: regex }, { ticker: regex }];
       if (sectorIds.length) orClauses.push({ sector: { $in: sectorIds } });
       const reports = await Report.find({ $or: orClauses })
         .populate('sector', 'name')
-        .select('title slug upsellTicker sector recommendation publishStatus')
+        .select('title slug upsellTicker ticker sector recommendation publishStatus')
         .sort({ createdAt: -1 })
         .limit(8);
       return successResponse(reports);
@@ -42,11 +42,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'reports'); if (error) return error;
   await connectDB();
-  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, price, recommendation, publishStatus, metaTitle, metaDescription, metaImage } = await req.json();
+  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, ticker, price, sellPrice, recommendation, publishStatus, metaTitle, metaDescription, metaImage } = await req.json();
   if (!title) return errorResponse('Title is required');
   const finalSlug = slug ? slugify(slug) : slugify(title);
   if (await Report.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
-  const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, upsellTicker, price: price ?? 0, recommendation: recommendation || '', publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
+  const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, upsellTicker, ticker, price: price ?? 0, sellPrice: sellPrice ?? 0, recommendation: recommendation || '', publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
   await report.populate([{ path: 'category', select: 'name slug' }, { path: 'sector', select: 'name slug' }, { path: 'product', select: 'name' }]);
   return successResponse(report, 'Report created', 201);
 }

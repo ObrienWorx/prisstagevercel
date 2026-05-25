@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import GlobalSearch from '@/components/GlobalSearch';
@@ -68,19 +68,77 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (!stored) { router.push('/login'); return; }
-    setUser(JSON.parse(stored));
+  const clearAdminSession = useCallback(async () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
+    setUser(null);
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    router.replace('/login');
   }, [router]);
 
+  const verifyAdminSession = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      await clearAdminSession();
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        await clearAdminSession();
+        return;
+      }
+
+      const freshUser = data.data as User;
+      localStorage.setItem('user', JSON.stringify(freshUser));
+      setUser(freshUser);
+    } catch {
+      await clearAdminSession();
+    }
+  }, [clearAdminSession]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { void verifyAdminSession(); }, 0);
+    return () => { window.clearTimeout(timeout); };
+  }, [pathname, verifyAdminSession]);
+
+  useEffect(() => {
+    const handleFocus = () => { void verifyAdminSession(); };
+    const handleVisibilityChange = () => {
+      if (!document.hidden) void verifyAdminSession();
+    };
+    const interval = window.setInterval(() => { void verifyAdminSession(); }, 60_000);
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [verifyAdminSession]);
+
   // Close sidebar when route changes (mobile nav)
-  useEffect(() => { setSidebarOpen(false); }, [pathname]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { setSidebarOpen(false); }, 0);
+    return () => { window.clearTimeout(timeout); };
+  }, [pathname]);
 
   const logout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    localStorage.clear();
-    router.push('/login');
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
+    setUser(null);
+    router.replace('/login');
   };
 
   const canSee = (module: string | null) => {

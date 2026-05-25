@@ -79,7 +79,7 @@ export default async function HomePage() {
     .lean() as HomepagePublicSettings | null;
 
   const blogCategories = await BlogCategory.find({
-    slug: { $in: ['trending-stock-market-news', 'daily-analysis', 'sector-stories'] },
+    slug: { $in: ['trending-stock-market-news', 'editorials', 'sector-stories'] },
     status: 'active',
   }).select('_id slug').lean() as { _id: Types.ObjectId; slug: string }[];
 
@@ -88,7 +88,10 @@ export default async function HomePage() {
   async function getBlogsForCategory(slug: string, limit: number) {
     const categoryId = blogCategoryBySlug.get(slug);
     if (!categoryId) return [];
-    const posts = await Blog.find({ category: categoryId, publishStatus: 'published' })
+    const posts = await Blog.find({
+      publishStatus: 'published',
+      $or: [{ category: categoryId }, { categories: categoryId }],
+    })
       .select('title slug featuredImage createdAt')
       .sort({ createdAt: -1 })
       .limit(limit)
@@ -98,7 +101,7 @@ export default async function HomePage() {
 
   const [trendingPosts, dailyAnalysisPosts, sectorStoriesPosts] = await Promise.all([
     getBlogsForCategory('trending-stock-market-news', 5),
-    getBlogsForCategory('daily-analysis', 8),
+    getBlogsForCategory('editorials', 8),
     getBlogsForCategory('sector-stories', 6),
   ]);
 
@@ -123,9 +126,9 @@ export default async function HomePage() {
       {/* HERO */}
       <section className="homepage-hero">
         <div className="container position-relative">
-          <div className="row align-items-center g-5">
+          <div className="row align-items-start g-5">
             <div className="col-lg-6">
-              <h1 className="homepage-hero-title">Invest with<br />Insights.</h1>
+              <h1 className="homepage-hero-title">Invest with Insights.</h1>
               <p className="homepage-hero-lead">Navigate the ASX stock market with confidence.</p>
               <ul className="homepage-hero-list">
                 <li>General Buy, Hold &amp; Sell insights on ASX-listed companies</li>

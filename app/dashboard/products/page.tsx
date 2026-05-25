@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
@@ -18,20 +18,22 @@ interface Plan {
 interface Product {
   _id: string; name: string; slug: string;
   regularPrice: number; salePrice: number | null;
+  saleOverPrice: number | null; saleOverContent: string;
   saleStartDate: string | null; saleEndDate: string | null;
   riskRating: string | null;
   durationType: 'days' | 'months' | 'years'; durationValue: number;
   plans: { name: string; regularPrice: number; salePrice: number | null; durationValue: number; durationType: string }[];
   shortDescription: string; fullDescription: string;
+  features: string[];
   featuredImage: string; saleBanner: string;
   status: 'draft' | 'published'; isActive: boolean;
   metaTitle: string; metaDescription: string; metaImage: string;
 }
 
 const RISK_COLORS: Record<string, { bg: string; color: string }> = {
-  'Low':       { bg: '#f0fdf4', color: '#15803d' },
-  'Medium':    { bg: '#fefce8', color: '#a16207' },
-  'High':      { bg: '#fff7ed', color: '#c2410c' },
+  'Low': { bg: '#f0fdf4', color: '#15803d' },
+  'Medium': { bg: '#fefce8', color: '#a16207' },
+  'High': { bg: '#fff7ed', color: '#c2410c' },
   'Very High': { bg: '#fef2f2', color: '#dc2626' },
 };
 
@@ -41,6 +43,7 @@ const empty = {
   name: '', slug: '',
   plans: [{ ...emptyPlan }] as Plan[],
   saleStartDate: '', saleEndDate: '',
+  saleOverPrice: '', saleOverContent: '',
   riskRating: '',
   shortDescription: '', fullDescription: '',
   features: [] as string[],
@@ -86,7 +89,7 @@ export default function ProductsPage() {
   const [del, setDel] = useState<Product | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-  const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,9 +98,12 @@ export default function ProductsPage() {
       const d = await r.json();
       if (d.success) setItems(d.data);
     } finally { setLoading(false); }
-  }, []);
+  }, [h]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { load(); }, 0);
+    return () => { window.clearTimeout(timeout); };
+  }, [load]);
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
 
@@ -109,10 +115,12 @@ export default function ProductsPage() {
       plans: plansFromItem(item),
       saleStartDate: toDateInput(item.saleStartDate),
       saleEndDate: toDateInput(item.saleEndDate),
+      saleOverPrice: item.saleOverPrice != null ? String(item.saleOverPrice) : '',
+      saleOverContent: item.saleOverContent ?? '',
       riskRating: item.riskRating ?? '',
       shortDescription: item.shortDescription ?? '', fullDescription: item.fullDescription ?? '',
-      features: (item as any).features ?? [],
-      featuredImage: item.featuredImage ?? '', saleBanner: (item as any).saleBanner ?? '',
+      features: item.features ?? [],
+      featuredImage: item.featuredImage ?? '', saleBanner: item.saleBanner ?? '',
       status: item.status ?? 'published', isActive: item.isActive ?? true,
       metaTitle: item.metaTitle ?? '', metaDescription: item.metaDescription ?? '', metaImage: item.metaImage ?? '',
     });
@@ -149,6 +157,7 @@ export default function ProductsPage() {
         })),
         saleStartDate: form.saleStartDate || null,
         saleEndDate: form.saleEndDate || null,
+        saleOverPrice: form.saleOverPrice !== '' ? Number(form.saleOverPrice) : null,
         riskRating: form.riskRating || null,
       };
       const url = editing ? `/api/products/${editing._id}` : '/api/products';
@@ -157,8 +166,8 @@ export default function ProductsPage() {
       const d = text ? JSON.parse(text) : {};
       if (d.success) { flash(d.message); setShowModal(false); load(); }
       else setErr(d.error || `Server error (${r.status})`);
-    } catch (e: any) {
-      setErr(e?.message || 'Unexpected error — check console');
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Unexpected error — check console');
     } finally { setSaving(false); }
   };
 
@@ -178,6 +187,12 @@ export default function ProductsPage() {
     if (item.saleStartDate && now < new Date(item.saleStartDate)) return false;
     if (item.saleEndDate && now > new Date(item.saleEndDate)) return false;
     return true;
+  };
+
+  const saleOfferPath = (slug: string) => `/subscribe/${slug}-limited-sale-offer`;
+  const saleOfferUrl = (slug: string) => {
+    if (typeof window === 'undefined') return saleOfferPath(slug);
+    return `${window.location.origin}${saleOfferPath(slug)}`;
   };
 
   return (
@@ -243,6 +258,22 @@ export default function ProductsPage() {
                               </div>
                             ) : (
                               <span style={{ color: '#15803d', fontSize: 11, fontWeight: 600 }}>Always on sale</span>
+                            )}
+                            {onSale && (
+                              <div style={{ marginTop: 8 }}>
+                                <div style={{ color: '#15803d', fontSize: 11, fontWeight: 700, marginBottom: 3 }}>
+                                  Sale Period Running
+                                </div>
+                                <a
+                                  href={saleOfferPath(item.slug)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{ display: 'block', color: '#2563eb', fontSize: 11, lineHeight: 1.35, wordBreak: 'break-all', textDecoration: 'none' }}
+                                  title={saleOfferUrl(item.slug)}
+                                >
+                                  {saleOfferUrl(item.slug)}
+                                </a>
+                              </div>
                             )}
                           </div>
                         ) : <span style={{ color: '#94a3b8' }}>—</span>}
@@ -386,6 +417,30 @@ export default function ProductsPage() {
                           <div className="form-text">Sale expires after this date</div>
                         </div>
                       </div>
+                      <div className="col-md-12 mt-3">
+                        <ImageUpload label="Sale Banner" value={form.saleBanner} onChange={(url) => setForm({ ...form, saleBanner: url })} />
+                        <div className="form-text">Shown in the report sidebar and on the product page to promote this plan.</div>
+                      </div>
+                      <div className="col-md-4 mt-3">
+                        <label className="form-label">Sale Over Price</label>
+                        <div className="input-group">
+                          <span className="input-group-text">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="form-control"
+                            value={form.saleOverPrice}
+                            onChange={(e) => setForm({ ...form, saleOverPrice: e.target.value })}
+                            placeholder="Shown after sale ends"
+                          />
+                        </div>
+                        <div className="form-text">Used only on the limited sale page after the sale period is over.</div>
+                      </div>
+                      <div className="col-12 mt-3">
+                        <label className="form-label">After Sale Over Content</label>
+                        <TinyEditor value={form.saleOverContent} onChange={(v) => setForm({ ...form, saleOverContent: v })} />
+                      </div>
                     </div>
                   </div>
 
@@ -451,12 +506,8 @@ export default function ProductsPage() {
 
                   {/* Images */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">Images</div></div>
-                  <div className="col-md-6">
+                  <div className="col-md-12">
                     <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
-                  </div>
-                  <div className="col-md-6">
-                    <ImageUpload label="Sale Banner" value={form.saleBanner} onChange={(url) => setForm({ ...form, saleBanner: url })} />
-                    <div className="form-text">Shown in the report sidebar and on the product page to promote this plan.</div>
                   </div>
 
                   {/* Status */}

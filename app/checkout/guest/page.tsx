@@ -7,6 +7,7 @@ import Link from 'next/link';
 
 interface Product {
   _id: string; name: string; slug: string; regularPrice: number; salePrice?: number;
+  saleOverPrice?: number | null;
   saleStartDate?: string; saleEndDate?: string;
   durationType: string; durationValue: number; shortDescription?: string; featuredImage?: string;
 }
@@ -17,6 +18,7 @@ function GuestCheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planSlug = searchParams.get('plan') ?? '';
+  const saleOffer = searchParams.get('saleOffer') === '1';
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ function GuestCheckoutContent() {
         const res = await fetch('/api/checkout/guest/paypal/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planSlug }),
+          body: JSON.stringify({ planSlug, saleOffer }),
         });
         const d = await res.json();
         if (!d.success) throw new Error(d.error || 'Failed to create order');
@@ -81,7 +83,7 @@ function GuestCheckoutContent() {
         const res = await fetch('/api/checkout/guest/paypal/capture', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paypalOrderId: data.orderID, planSlug }),
+          body: JSON.stringify({ paypalOrderId: data.orderID, planSlug, saleOffer }),
         });
         const d = await res.json();
         if (d.success) {
@@ -114,17 +116,23 @@ function GuestCheckoutContent() {
 
   if (!product) return null;
 
+  const subscribePath = `/subscribe/${product.slug}${saleOffer ? '-limited-sale-offer' : ''}`;
   const isSaleActive = (() => {
-    if (product.salePrice == null) return false;
+    if (!saleOffer || product.salePrice == null) return false;
     const now = new Date();
     if (product.saleStartDate && new Date(product.saleStartDate) > now) return false;
     if (product.saleEndDate && new Date(product.saleEndDate) < now) return false;
     return true;
   })();
-  const effectivePrice = isSaleActive ? product.salePrice! : product.regularPrice;
+  const isSaleEnded = saleOffer && product.saleEndDate ? new Date(product.saleEndDate) < new Date() : false;
+  const effectivePrice = isSaleActive
+    ? product.salePrice!
+    : isSaleEnded && product.saleOverPrice != null
+      ? product.saleOverPrice
+      : product.regularPrice;
   const price = effectivePrice.toFixed(2);
-  const savings = isSaleActive && product.salePrice != null && product.regularPrice
-    ? (product.regularPrice - product.salePrice).toFixed(2) : null;
+  const savings = saleOffer && effectivePrice < product.regularPrice
+    ? (product.regularPrice - effectivePrice).toFixed(2) : null;
 
   if (success) {
     return (
@@ -179,7 +187,7 @@ function GuestCheckoutContent() {
         <div className="container">
           <div style={{ maxWidth: 860, margin: '0 auto' }}>
             <div className="mb-4">
-              <Link href={`/subscribe/${product.slug}`} className="small text-muted text-decoration-none">← Back to plan</Link>
+              <Link href={subscribePath} className="small text-muted text-decoration-none">← Back to plan</Link>
               <h2 className="fw-bold mt-2 mb-1" style={{ fontSize: 24, color: '#0f172a' }}>Quick Checkout</h2>
               <p className="text-muted small mb-0">Pay with PayPal — no account needed. We&apos;ll set one up for you automatically.</p>
             </div>
@@ -202,7 +210,7 @@ function GuestCheckoutContent() {
                   </div>
 
                   <div className="checkout-total-box">
-                    {isSaleActive && product.regularPrice && (
+                    {saleOffer && effectivePrice < product.regularPrice && (
                       <div className="checkout-summary-line mb-1">
                         <span className="small text-muted">Regular price</span>
                         <span className="small text-muted text-decoration-line-through">A${product.regularPrice.toFixed(2)}</span>
@@ -244,7 +252,7 @@ function GuestCheckoutContent() {
 
                   <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: 8, fontSize: 12.5, color: '#64748b', lineHeight: 1.6 }}>
                     Already have an account?{' '}
-                    <Link href={`/auth/login?plan=${product.slug}`} style={{ color: '#3b82f6' }}>Sign in here</Link>
+                    <Link href={`/auth/login?plan=${product.slug}${saleOffer ? '-limited-sale-offer' : ''}`} style={{ color: '#3b82f6' }}>Sign in here</Link>
                   </div>
                 </div>
               </div>

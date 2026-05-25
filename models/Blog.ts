@@ -5,7 +5,10 @@ export interface IBlog extends Document {
   slug: string;
   content: string;
   featuredImage: string;
+  tags: string[];
+  authorName: string;
   category: Types.ObjectId | null;
+  categories: Types.ObjectId[];
   publishStatus: 'draft' | 'published';
   metaTitle: string;
   metaDescription: string;
@@ -20,7 +23,10 @@ const BlogSchema = new Schema<IBlog>(
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     content: { type: String, default: '' },
     featuredImage: { type: String, default: '' },
+    tags: [{ type: String, trim: true }],
+    authorName: { type: String, default: '', trim: true },
     category: { type: Schema.Types.ObjectId, ref: 'BlogCategory', default: null },
+    categories: [{ type: Schema.Types.ObjectId, ref: 'BlogCategory' }],
     publishStatus: { type: String, enum: ['draft', 'published'], default: 'draft' },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },

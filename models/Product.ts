@@ -14,6 +14,8 @@ export interface IProduct extends Document {
   // Legacy top-level price/duration — auto-synced from plans[0] on save for sorting/compat
   regularPrice: number;
   salePrice: number | null;
+  saleOverPrice: number | null;
+  saleOverContent: string;
   saleStartDate: Date | null;
   saleEndDate: Date | null;
   riskRating: 'Low' | 'Medium' | 'High' | 'Very High' | null;
@@ -51,6 +53,8 @@ const ProductSchema = new Schema<IProduct>(
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     regularPrice: { type: Number, default: 0, min: 0 },
     salePrice: { type: Number, default: null },
+    saleOverPrice: { type: Number, default: null },
+    saleOverContent: { type: String, default: '' },
     saleStartDate: { type: Date, default: null },
     saleEndDate: { type: Date, default: null },
     riskRating: { type: String, enum: ['Low', 'Medium', 'High', 'Very High', null], default: null },
@@ -85,7 +89,7 @@ ProductSchema.pre('save', function () {
 // Always delete the cached model so schema changes (e.g. new fields like plans/saleBanner)
 // are picked up without needing a full server restart. Safe in production because
 // Node.js module caching means this file only executes once per process.
-delete (mongoose.models as any).Product;
+delete (mongoose.models as Record<string, unknown>).Product;
 const Product: Model<IProduct> = mongoose.model<IProduct>('Product', ProductSchema);
 
 export default Product;

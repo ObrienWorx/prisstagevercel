@@ -9,8 +9,13 @@ export async function POST() {
     { status: 200 }
   );
 
-  // Delete the auth cookie
-  response.cookies.delete('token');
+  response.cookies.set('token', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+  });
 
   return response;
 }

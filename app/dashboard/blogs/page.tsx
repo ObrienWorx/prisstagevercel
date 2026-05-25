@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, type ClipboardEvent, type FocusEvent, type KeyboardEvent } from 'react';
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
@@ -10,13 +10,15 @@ const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false
 interface Ref { _id: string; name: string; }
 interface Blog {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
-  category: Ref | null; publishStatus: 'draft' | 'published';
+  tags: string[]; authorName: string;
+  category: Ref | null; categories?: Ref[]; publishStatus: 'draft' | 'published';
   metaTitle: string; metaDescription: string; metaImage: string;
 }
 
 const empty = {
   title: '', slug: '', content: '', featuredImage: '',
-  category: '', publishStatus: 'draft' as 'draft' | 'published',
+  tags: '', authorName: '',
+  categories: [] as string[], publishStatus: 'draft' as 'draft' | 'published',
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
@@ -31,6 +33,10 @@ export default function BlogsPage() {
   const [editing, setEditing] = useState<Blog | null>(null);
   const [form, setForm] = useState(empty);
   const [del, setDel] = useState<Blog | null>(null);
+  const [categoryQuery, setCategoryQuery] = useState('');
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [tagOpen, setTagOpen] = useState(false);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -38,30 +44,48 @@ export default function BlogsPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
       const [bR, cR] = await Promise.all([
-        fetch('/api/blogs', { headers: h }),
-        fetch('/api/blog-categories', { headers: h }),
+        fetch('/api/blogs', { headers }),
+        fetch('/api/blog-categories', { headers }),
       ]);
       const [b, c] = await Promise.all([bR.json(), cR.json()]);
       if (b.success) setItems(b.data);
       if (c.success) setCategories(c.data);
     } finally { setLoading(false); }
-  }, []);
+  }, [token]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    const initialLoad = window.setTimeout(() => { void loadAll(); }, 0);
+    return () => window.clearTimeout(initialLoad);
+  }, [loadAll]);
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
 
-  const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowModal(true); };
+  const openCreate = () => {
+    setEditing(null);
+    setForm(empty);
+    setCategoryQuery('');
+    setCategoryOpen(false);
+    setTagInput('');
+    setTagOpen(false);
+    setErr('');
+    setShowModal(true);
+  };
   const openEdit = (item: Blog) => {
     setEditing(item);
     setForm({
       title: item.title, slug: item.slug, content: item.content, featuredImage: item.featuredImage,
-      category: item.category?._id || '',
+      tags: item.tags?.join(', ') || '', authorName: item.authorName || '',
+      categories: item.categories?.map(category => category._id) || (item.category?._id ? [item.category._id] : []),
       publishStatus: item.publishStatus,
       metaTitle: item.metaTitle,
       metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
+    setCategoryQuery('');
+    setCategoryOpen(false);
+    setTagInput('');
+    setTagOpen(false);
     setErr(''); setShowModal(true);
   };
 
@@ -69,13 +93,97 @@ export default function BlogsPage() {
     if (!form.title.trim()) { setErr('Title is required'); return; }
     setErr(''); setSaving(true);
     try {
-      const payload = { ...form, category: form.category || null };
+      const payload = { ...form, category: form.categories[0] || null };
       const url = editing ? `/api/blogs/${editing._id}` : '/api/blogs';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
       const d = await r.json();
       if (d.success) { flash(d.message); setShowModal(false); loadAll(); }
       else setErr(d.error || 'Something went wrong');
     } finally { setSaving(false); }
+  };
+
+  const tagPreview = form.tags
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+
+  const selectedCategories = categories.filter(category => form.categories.includes(category._id));
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(categoryQuery.trim().toLowerCase())
+  );
+  const existingTags = [...new Set(
+    items.flatMap(item => item.tags || [])
+      .map(tag => tag.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
+  const suggestedTags = existingTags.filter(tag =>
+    !tagPreview.some(selected => selected.toLocaleLowerCase() === tag.toLocaleLowerCase()) &&
+    tag.toLocaleLowerCase().includes(tagInput.trim().toLocaleLowerCase())
+  ).slice(0, 10);
+
+  const setTags = (tags: string[]) => {
+    const uniqueTags = new Map<string, string>();
+    tags.forEach(tag => {
+      const cleanTag = tag.replace(/\s+/g, ' ').trim();
+      if (!cleanTag) return;
+      const key = cleanTag.toLocaleLowerCase();
+      if (!uniqueTags.has(key)) uniqueTags.set(key, cleanTag);
+    });
+    setForm(current => ({ ...current, tags: [...uniqueTags.values()].slice(0, 12).join(', ') }));
+  };
+
+  const addTags = (value: string) => {
+    const nextTags = value
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(Boolean);
+
+    if (nextTags.length === 0) return;
+    setTags([...tagPreview, ...nextTags]);
+    setTagInput('');
+    setTagOpen(false);
+  };
+
+  const removeTag = (tag: string) => setTags(tagPreview.filter(item => item !== tag));
+
+  const handleTagKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' && event.key !== ',') return;
+    event.preventDefault();
+    addTags(tagInput);
+  };
+
+  const handleTagPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    const text = event.clipboardData.getData('text');
+    if (!text.includes(',')) return;
+    event.preventDefault();
+    addTags(text);
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setForm(current => ({
+      ...current,
+      categories: current.categories.includes(categoryId)
+        ? current.categories.filter(id => id !== categoryId)
+        : [...current.categories, categoryId],
+    }));
+  };
+
+  const removeCategory = (categoryId: string) => {
+    setForm(current => ({
+      ...current,
+      categories: current.categories.filter(id => id !== categoryId),
+    }));
+  };
+
+  const closeCategoryDropdown = (event: FocusEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setCategoryOpen(false);
+  };
+
+  const closeTagDropdown = (event: FocusEvent<HTMLDivElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setTagOpen(false);
   };
 
   const remove = async () => {
@@ -110,7 +218,7 @@ export default function BlogsPage() {
           <div className="table-responsive">
             <table className="table">
               <thead>
-                <tr><th>Title</th><th>Category</th><th>Status</th><th style={{ width: 120 }}>Actions</th></tr>
+                <tr><th>Title</th><th>Tags</th><th>Categories</th><th>Status</th><th style={{ width: 120 }}>Actions</th></tr>
               </thead>
               <tbody>
                 {items.map((item) => (
@@ -119,7 +227,19 @@ export default function BlogsPage() {
                       <div className="text-truncate">{item.title}</div>
                       <code style={{ fontSize: 11, color: 'var(--muted)' }}>{item.slug}</code>
                     </td>
-                    <td style={{ color: 'var(--muted)' }}>{item.category?.name || '—'}</td>
+                    <td style={{ maxWidth: 240 }}>
+                      <div className="blog-admin-tags">
+                        {(item.tags || []).slice(0, 3).map(tag => <span key={tag}>{tag}</span>)}
+                        {(item.tags || []).length > 3 && <span>+{item.tags.length - 3}</span>}
+                        {(item.tags || []).length === 0 && <span className="is-empty">No tags</span>}
+                      </div>
+                    </td>
+                    <td style={{ maxWidth: 260 }}>
+                      <div className="blog-admin-tags">
+                        {(item.categories?.length ? item.categories : item.category ? [item.category] : []).map(category => <span key={category._id}>{category.name}</span>)}
+                        {!item.categories?.length && !item.category && <span className="is-empty">No category</span>}
+                      </div>
+                    </td>
                     <td>
                       <span className={`badge ${item.publishStatus === 'published' ? 'bg-success' : 'bg-secondary'}`}>
                         {item.publishStatus}
@@ -162,11 +282,78 @@ export default function BlogsPage() {
                   </div>
 
                   <div className="col-md-6">
-                    <label className="form-label">Blog Category</label>
-                    <select className="form-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                      <option value="">— Select Category —</option>
-                      {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-                    </select>
+                    <label className="form-label">Blog Categories</label>
+                    <div className={`multi-picker${categoryOpen ? ' is-open' : ''}`} onBlur={closeCategoryDropdown}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="multi-picker-toggle"
+                        onClick={() => setCategoryOpen(open => !open)}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter' && event.key !== ' ') return;
+                          event.preventDefault();
+                          setCategoryOpen(open => !open);
+                        }}
+                        aria-expanded={categoryOpen}
+                      >
+                        {selectedCategories.length > 0 ? (
+                          selectedCategories.map(category => (
+                            <span className="multi-chip" key={category._id}>
+                              {category.name}
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                onClick={(event) => { event.stopPropagation(); removeCategory(category._id); }}
+                                onKeyDown={(event) => {
+                                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  removeCategory(category._id);
+                                }}
+                                aria-label={`Remove ${category.name}`}
+                              >
+                                ×
+                              </span>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="multi-picker-placeholder">Choose blog categories</span>
+                        )}
+                        <span className="multi-picker-caret" aria-hidden="true">⌄</span>
+                      </div>
+                      {categoryOpen && (
+                        <div className="multi-picker-dropdown">
+                          <input
+                            className="multi-picker-search"
+                            value={categoryQuery}
+                            onChange={(e) => setCategoryQuery(e.target.value)}
+                            placeholder="Search categories..."
+                            autoFocus
+                          />
+                          <div className="multi-picker-menu">
+                            {filteredCategories.length > 0 ? (
+                              filteredCategories.map(category => {
+                                const checked = form.categories.includes(category._id);
+                                return (
+                                  <button
+                                    type="button"
+                                    className={`multi-picker-option${checked ? ' selected' : ''}`}
+                                    key={category._id}
+                                    onClick={() => toggleCategory(category._id)}
+                                  >
+                                    <span className="multi-picker-check" aria-hidden="true">{checked ? '✓' : ''}</span>
+                                    <span>{category.name}</span>
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <div className="multi-picker-empty">No categories found</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="form-text">Search and click categories to add or remove them.</div>
                   </div>
                   <div className="col-md-6">
                     <label className="form-label">Publish Status</label>
@@ -175,6 +362,55 @@ export default function BlogsPage() {
                       <option value="draft">Draft</option>
                       <option value="published">Published</option>
                     </select>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label">Author Name</label>
+                    <input
+                      className="form-control"
+                      value={form.authorName}
+                      onChange={(e) => setForm({ ...form, authorName: e.target.value })}
+                      placeholder="Analyst or writer name"
+                    />
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label">Tags</label>
+                    <div className={`tag-picker${tagOpen ? ' is-open' : ''}`} onBlur={closeTagDropdown}>
+                      <div className="tag-input-box">
+                      {tagPreview.map(tag => (
+                        <span className="multi-chip tag-chip" key={tag}>
+                          {tag}
+                          <button type="button" onClick={() => removeTag(tag)} aria-label={`Remove ${tag}`}>×</button>
+                        </span>
+                      ))}
+                      <input
+                        value={tagInput}
+                        onFocus={() => setTagOpen(true)}
+                        onChange={(e) => { setTagInput(e.target.value); setTagOpen(true); }}
+                        onKeyDown={handleTagKeyDown}
+                        onPaste={handleTagPaste}
+                        onBlur={() => addTags(tagInput)}
+                        placeholder={tagPreview.length ? 'Add another tag' : 'Type tag and press Enter'}
+                      />
+                      </div>
+                      {tagOpen && suggestedTags.length > 0 && (
+                        <div className="tag-suggestion-menu">
+                          {suggestedTags.map(tag => (
+                            <button
+                              type="button"
+                              className="tag-suggestion-option"
+                              key={tag}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => addTags(tag)}
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* <div className="form-text">Press Enter after each tag. Pasted comma-separated tags are split automatically.</div> */}
                   </div>
 
                   <div className="col-12">

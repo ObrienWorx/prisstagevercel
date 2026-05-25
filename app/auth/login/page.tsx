@@ -166,7 +166,7 @@ function LoginForm() {
   return (
     <div className="auth-card">
       <div className="auth-logo">
-        <img src="/logo.png" alt="Pristine Gaze" className="w-100" />
+        <img src="/logo2.png" alt="Pristine Gaze" className="w-100" />
       </div>
 
       <h2 className="auth-title">Welcome back</h2>

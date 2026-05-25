@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
@@ -12,7 +12,7 @@ interface Ref { _id: string; name: string; }
 interface Report {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
   category: Ref | null; sector: Ref | null; product: Ref | null;
-  upsellTicker: string; price: number; recommendation: string;
+  upsellTicker: string; ticker: string; price: number; sellPrice: number; recommendation: string;
   publishStatus: 'draft' | 'published';
   metaTitle: string; metaDescription: string; metaImage: string;
 }
@@ -25,7 +25,7 @@ const RECOM_COLOR: Record<string, string> = {
 const empty = {
   title: '', slug: '', content: '', featuredImage: '',
   category: '', sector: '', product: '',
-  upsellTicker: '', price: '', recommendation: '',
+  upsellTicker: '', ticker: '', price: '', sellPrice: '', recommendation: '',
   publishStatus: 'draft' as 'draft' | 'published',
   metaTitle: '', metaDescription: '', metaImage: '',
 };
@@ -46,7 +46,7 @@ export default function ReportsPage() {
   const [del, setDel] = useState<Report | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-  const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -63,9 +63,12 @@ export default function ReportsPage() {
       if (s.success) setSectors(s.data);
       if (p.success) setProducts(p.data);
     } finally { setLoading(false); }
-  }, []);
+  }, [h]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { loadAll(); }, 0);
+    return () => { window.clearTimeout(timeout); };
+  }, [loadAll]);
 
   // Open edit modal when navigated from search with ?edit=<id>
   useEffect(() => {
@@ -73,16 +76,19 @@ export default function ReportsPage() {
     if (!editId || loading || items.length === 0) return;
     const target = items.find((r) => r._id === editId);
     if (!target) return;
-    setEditing(target);
-    setForm({
-      title: target.title, slug: target.slug, content: target.content, featuredImage: target.featuredImage,
-      category: target.category?._id || '', sector: target.sector?._id || '', product: target.product?._id || '',
-      upsellTicker: target.upsellTicker, price: String(target.price ?? ''), recommendation: target.recommendation || '',
-      publishStatus: target.publishStatus,
-      metaTitle: target.metaTitle, metaDescription: target.metaDescription, metaImage: target.metaImage,
-    });
-    setErr('');
-    setShowModal(true);
+    const timeout = window.setTimeout(() => {
+      setEditing(target);
+      setForm({
+        title: target.title, slug: target.slug, content: target.content, featuredImage: target.featuredImage,
+        category: target.category?._id || '', sector: target.sector?._id || '', product: target.product?._id || '',
+        upsellTicker: target.upsellTicker, ticker: target.ticker || '', price: String(target.price ?? ''), sellPrice: String(target.sellPrice ?? ''), recommendation: target.recommendation || '',
+        publishStatus: target.publishStatus,
+        metaTitle: target.metaTitle, metaDescription: target.metaDescription, metaImage: target.metaImage,
+      });
+      setErr('');
+      setShowModal(true);
+    }, 0);
+    return () => { window.clearTimeout(timeout); };
   }, [searchParams, loading, items]);
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
@@ -93,7 +99,7 @@ export default function ReportsPage() {
     setForm({
       title: item.title, slug: item.slug, content: item.content, featuredImage: item.featuredImage,
       category: item.category?._id || '', sector: item.sector?._id || '', product: item.product?._id || '',
-      upsellTicker: item.upsellTicker, price: String(item.price ?? ''), recommendation: item.recommendation || '',
+      upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), sellPrice: String(item.sellPrice ?? ''), recommendation: item.recommendation || '',
       publishStatus: item.publishStatus,
       metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
@@ -104,7 +110,14 @@ export default function ReportsPage() {
     if (!form.title.trim()) { setErr('Title is required'); return; }
     setErr(''); setSaving(true);
     try {
-      const payload = { ...form, category: form.category || null, sector: form.sector || null, product: form.product || null, price: form.price !== '' ? Number(form.price) : 0 };
+      const payload = {
+        ...form,
+        category: form.category || null,
+        sector: form.sector || null,
+        product: form.product || null,
+        price: form.price !== '' ? Number(form.price) : 0,
+        sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : 0,
+      };
       const url = editing ? `/api/reports/${editing._id}` : '/api/reports';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
       const d = await r.json();
@@ -229,8 +242,8 @@ export default function ReportsPage() {
                     <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm(prev => ({ ...prev, featuredImage: url }))} />
                   </div>
 
-                  <div className="col-md-4">
-                    <label className="form-label">Upsell Ticker</label>
+                  <div className="col-md-3">
+                    <label className="form-label">INDEX</label>
                     <select className="form-select" value={form.upsellTicker}
                       onChange={(e) => setForm(prev => ({ ...prev, upsellTicker: e.target.value }))}>
                       <option value="">— Select exchange —</option>
@@ -239,10 +252,22 @@ export default function ReportsPage() {
                       <option value="NYSE">NYSE</option>
                     </select>
                   </div>
-                  <div className="col-md-4">
-                    <label className="form-label">Price ($)</label>
+                  <div className="col-md-3">
+                    <label className="form-label">TICKER</label>
+                    <input className="form-control" value={form.ticker}
+                      onChange={(e) => setForm(prev => ({ ...prev, ticker: e.target.value.toUpperCase() }))}
+                      placeholder="AAPL" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Buy Price ($)</label>
                     <input type="number" min="0" step="0.01" className="form-control" value={form.price}
                       onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
+                      placeholder="0.00" />
+                  </div>
+                  <div className="col-md-3">
+                    <label className="form-label">Sell Price ($)</label>
+                    <input type="number" min="0" step="0.01" className="form-control" value={form.sellPrice}
+                      onChange={(e) => setForm(prev => ({ ...prev, sellPrice: e.target.value }))}
                       placeholder="0.00" />
                   </div>
                   <div className="col-md-4">

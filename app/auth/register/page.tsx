@@ -45,7 +45,7 @@ function RegisterForm() {
   return (
     <div className="auth-card" style={{ maxWidth: 480 }}>
       <div className="auth-logo">
-        <img src="/logo.png" alt="Pristine Gaze" className="w-100" />
+        <img src="/logo2.png" alt="Pristine Gaze" className="w-100" />
       </div>
 
       <h2 className="auth-title">Create your account</h2>

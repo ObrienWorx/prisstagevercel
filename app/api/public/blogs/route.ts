@@ -17,13 +17,14 @@ export async function GET(req: NextRequest) {
     const query: Record<string, unknown> = { publishStatus: 'published' };
     if (categorySlug) {
       const cat = await BlogCategory.findOne({ slug: categorySlug, status: 'active' });
-      if (cat) query.category = cat._id;
+      if (cat) query.$or = [{ category: cat._id }, { categories: cat._id }];
       else return successResponse([]);
     }
 
     const blogs = await Blog.find(query)
       .populate('category', 'name slug')
-      .select('title slug featuredImage category createdAt metaDescription')
+      .populate('categories', 'name slug')
+      .select('title slug featuredImage tags authorName category categories createdAt metaDescription')
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();

@@ -17,7 +17,7 @@ async function getPayPalToken() {
 }
 
 export async function POST(req: NextRequest) {
-  const { planSlug } = await req.json();
+  const { planSlug, saleOffer } = await req.json();
   if (!planSlug) return errorResponse('planSlug required');
 
   await connectDB();
@@ -25,11 +25,18 @@ export async function POST(req: NextRequest) {
   if (!product) return errorResponse('Product not found', 404);
 
   const now = new Date();
-  const isSaleActive = product.salePrice != null &&
+  const isSaleActive = saleOffer === true && product.salePrice != null &&
     (!product.saleStartDate || new Date(product.saleStartDate) <= now) &&
     (!product.saleEndDate || new Date(product.saleEndDate) >= now);
-  const amount = (isSaleActive ? product.salePrice! : product.regularPrice).toFixed(2);
+  const isSaleEnded = saleOffer === true && product.saleEndDate && new Date(product.saleEndDate) < now;
+  const offerPrice = isSaleActive
+    ? product.salePrice!
+    : isSaleEnded && product.saleOverPrice != null
+      ? product.saleOverPrice
+      : product.regularPrice;
+  const amount = offerPrice.toFixed(2);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const cancelUrl = `${appUrl}/checkout/guest?plan=${planSlug}${saleOffer === true ? '&saleOffer=1' : ''}`;
 
   try {
     const { token, base } = await getPayPalToken();
@@ -41,7 +48,7 @@ export async function POST(req: NextRequest) {
         purchase_units: [{ amount: { currency_code: 'AUD', value: amount }, description: product.name }],
         application_context: {
           return_url: `${appUrl}/checkout/guest/success`,
-          cancel_url: `${appUrl}/checkout/guest?plan=${planSlug}`,
+          cancel_url: cancelUrl,
           brand_name: 'PristineGaze',
           shipping_preference: 'NO_SHIPPING',
           user_action: 'PAY_NOW',

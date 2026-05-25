@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const payload = verifySubscriberToken(authToken);
   if (!payload) return errorResponse('Invalid token', 401);
 
-  const { planSlug } = await req.json();
+  const { planSlug, saleOffer } = await req.json();
   if (!planSlug) return errorResponse('planSlug required');
 
   await connectDB();
@@ -30,10 +30,15 @@ export async function POST(req: NextRequest) {
       productId: product._id.toString(),
       pricePaid: (() => {
         const now = new Date();
-        const isSaleActive = product.salePrice != null &&
+        const isSaleActive = saleOffer === true && product.salePrice != null &&
           (!product.saleStartDate || new Date(product.saleStartDate) <= now) &&
           (!product.saleEndDate || new Date(product.saleEndDate) >= now);
-        return isSaleActive ? product.salePrice! : product.regularPrice;
+        const isSaleEnded = saleOffer === true && product.saleEndDate && new Date(product.saleEndDate) < now;
+        return isSaleActive
+          ? product.salePrice!
+          : isSaleEnded && product.saleOverPrice != null
+            ? product.saleOverPrice
+            : product.regularPrice;
       })(),
       paymentGateway: 'cod',
       paymentStatus: 'pending',

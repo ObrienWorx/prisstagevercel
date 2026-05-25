@@ -10,9 +10,31 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (localStorage.getItem('token') && localStorage.getItem('user')) {
-      router.replace('/dashboard');
-    }
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (ok && data.success) {
+          localStorage.setItem('user', JSON.stringify(data.data));
+          router.replace('/dashboard');
+          return;
+        }
+
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('admin_token');
+        fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('admin_token');
+      });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,7 +75,7 @@ export default function LoginPage() {
         <div className="card-body p-5">
           {/* Logo / Brand */}
           <div className="text-center mb-4">
-            <div className="name"><img src="/logo.png" alt="" className='w-100' /></div>
+            <div className="name"><img src="/logo2.png" alt="" className='w-100' /></div>
           </div>
 
           {/* Error Alert */}

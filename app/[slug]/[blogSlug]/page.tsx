@@ -30,20 +30,25 @@ export default async function BlogDetailPage({ params }: P) {
 
   const blog = await Blog.findOne({ slug: blogSlug, publishStatus: 'published' })
     .populate('category', 'name slug')
+    .populate('categories', 'name slug')
     .lean() as any;
 
   if (!blog) notFound();
 
-  // Ensure the category slug in the URL matches the blog's actual category
-  const category = blog.category as { name: string; slug: string } | null;
-  if (category && category.slug !== categorySlug) notFound();
+  // Keep legacy single-category blogs readable while allowing the same post in many categories.
+  const legacyCategory = blog.category as { _id: unknown; name: string; slug: string } | null;
+  const categories = (blog.categories as { _id: unknown; name: string; slug: string }[] | undefined) ?? [];
+  const category = categories.find(item => item.slug === categorySlug)
+    ?? (legacyCategory?.slug === categorySlug ? legacyCategory : null);
+  if ((categories.length > 0 || legacyCategory) && !category) notFound();
 
   // Latest in same category for sidebar
-  const latestBlogs = await Blog.find({
-    category: blog.category?._id ?? null,
+  const latestFilter: Record<string, unknown> = {
     publishStatus: 'published',
     _id: { $ne: blog._id },
-  })
+    ...(category ? { $or: [{ category: category._id }, { categories: category._id }] } : {}),
+  };
+  const latestBlogs = await Blog.find(latestFilter)
     .select('title slug featuredImage createdAt')
     .sort({ createdAt: -1 })
     .limit(5)
