@@ -9,10 +9,12 @@ import ImageUpload from '@/components/ImageUpload';
 const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false });
 
 interface Ref { _id: string; name: string; }
+interface ReportRef { _id: string; title: string; slug: string; }
 interface Report {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
   category: Ref | null; sector: Ref | null; product: Ref | null;
-  upsellTicker: string; ticker: string; price: number; sellPrice: number; recommendation: string;
+  pastStockRecommendation: ReportRef | string | null;
+  upsellTicker: string; ticker: string; price: number; recommendation: string;
   publishStatus: 'draft' | 'published';
   metaTitle: string; metaDescription: string; metaImage: string;
 }
@@ -22,10 +24,12 @@ const RECOM_COLOR: Record<string, string> = {
   'SPECULATIVE BUY': '#0049AC', 'REFRAIN': '#64748b', 'Security Under Review': '#9333ea',
 };
 
+const refId = (ref: ReportRef | string | null | undefined) => typeof ref === 'string' ? ref : ref?._id || '';
+
 const empty = {
   title: '', slug: '', content: '', featuredImage: '',
-  category: '', sector: '', product: '',
-  upsellTicker: '', ticker: '', price: '', sellPrice: '', recommendation: '',
+  category: '', sector: '', product: '', pastStockRecommendation: '',
+  upsellTicker: '', ticker: '', price: '', recommendation: '',
   publishStatus: 'draft' as 'draft' | 'published',
   metaTitle: '', metaDescription: '', metaImage: '',
 };
@@ -80,8 +84,8 @@ export default function ReportsPage() {
       setEditing(target);
       setForm({
         title: target.title, slug: target.slug, content: target.content, featuredImage: target.featuredImage,
-        category: target.category?._id || '', sector: target.sector?._id || '', product: target.product?._id || '',
-        upsellTicker: target.upsellTicker, ticker: target.ticker || '', price: String(target.price ?? ''), sellPrice: String(target.sellPrice ?? ''), recommendation: target.recommendation || '',
+        category: target.category?._id || '', sector: target.sector?._id || '', product: target.product?._id || '', pastStockRecommendation: refId(target.pastStockRecommendation),
+        upsellTicker: target.upsellTicker, ticker: target.ticker || '', price: String(target.price ?? ''), recommendation: target.recommendation || '',
         publishStatus: target.publishStatus,
         metaTitle: target.metaTitle, metaDescription: target.metaDescription, metaImage: target.metaImage,
       });
@@ -98,8 +102,8 @@ export default function ReportsPage() {
     setEditing(item);
     setForm({
       title: item.title, slug: item.slug, content: item.content, featuredImage: item.featuredImage,
-      category: item.category?._id || '', sector: item.sector?._id || '', product: item.product?._id || '',
-      upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), sellPrice: String(item.sellPrice ?? ''), recommendation: item.recommendation || '',
+      category: item.category?._id || '', sector: item.sector?._id || '', product: item.product?._id || '', pastStockRecommendation: refId(item.pastStockRecommendation),
+      upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), recommendation: item.recommendation || '',
       publishStatus: item.publishStatus,
       metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
@@ -115,8 +119,10 @@ export default function ReportsPage() {
         category: form.category || null,
         sector: form.sector || null,
         product: form.product || null,
+        pastStockRecommendation: form.pastStockRecommendation || null,
+        upsellTicker: form.upsellTicker.trim().toUpperCase(),
+        ticker: form.ticker.trim().toUpperCase(),
         price: form.price !== '' ? Number(form.price) : 0,
-        sellPrice: form.sellPrice !== '' ? Number(form.sellPrice) : 0,
       };
       const url = editing ? `/api/reports/${editing._id}` : '/api/reports';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
@@ -216,21 +222,21 @@ export default function ReportsPage() {
                     <div className="form-text">Auto-generated</div>
                   </div>
 
-                  <div className="col-md-4">
+                  <div className="col-md-3">
                     <label className="form-label">Report Category</label>
                     <select className="form-select" value={form.category} onChange={(e) => setForm(prev => ({ ...prev, category: e.target.value }))}>
                       <option value="">— Select Category —</option>
                       {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
                     </select>
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-md-3">
                     <label className="form-label">Sector</label>
                     <select className="form-select" value={form.sector} onChange={(e) => setForm(prev => ({ ...prev, sector: e.target.value }))}>
                       <option value="">— Select Sector —</option>
                       {sectors.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
                     </select>
                   </div>
-                  <div className="col-md-4">
+                  <div className="col-md-3">
                     <label className="form-label">Product <span style={{ fontSize: 11, color: '#f59e0b' }}>(access gate)</span></label>
                     <select className="form-select" value={form.product} onChange={(e) => setForm(prev => ({ ...prev, product: e.target.value }))}>
                       <option value="">— No Gate —</option>
@@ -238,8 +244,14 @@ export default function ReportsPage() {
                     </select>
                   </div>
 
-                  <div className="col-12">
-                    <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm(prev => ({ ...prev, featuredImage: url }))} />
+                  <div className="col-md-3">
+                    <label className="form-label">Past Stock Recommendations</label>
+                    <select className="form-select" value={form.pastStockRecommendation} onChange={(e) => setForm(prev => ({ ...prev, pastStockRecommendation: e.target.value }))}>
+                      <option value="">Select Report</option>
+                      {items
+                        .filter((report) => report._id !== editing?._id)
+                        .map((report) => <option key={report._id} value={report._id}>{report.title}</option>)}
+                    </select>
                   </div>
 
                   <div className="col-md-3">
@@ -259,18 +271,12 @@ export default function ReportsPage() {
                       placeholder="AAPL" />
                   </div>
                   <div className="col-md-3">
-                    <label className="form-label">Buy Price ($)</label>
+                    <label className="form-label">Price ($)</label>
                     <input type="number" min="0" step="0.01" className="form-control" value={form.price}
                       onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
                       placeholder="0.00" />
                   </div>
                   <div className="col-md-3">
-                    <label className="form-label">Sell Price ($)</label>
-                    <input type="number" min="0" step="0.01" className="form-control" value={form.sellPrice}
-                      onChange={(e) => setForm(prev => ({ ...prev, sellPrice: e.target.value }))}
-                      placeholder="0.00" />
-                  </div>
-                  <div className="col-md-4">
                     <label className="form-label">Recommendation</label>
                     <select className="form-select" value={form.recommendation}
                       onChange={(e) => setForm(prev => ({ ...prev, recommendation: e.target.value }))}>
@@ -288,6 +294,11 @@ export default function ReportsPage() {
                     <label className="form-label">Content</label>
                     <TinyEditor value={form.content} onChange={(v) => setForm(prev => ({ ...prev, content: v }))} />
                   </div>
+
+                  <div className="col-12">
+                    <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm(prev => ({ ...prev, featuredImage: url }))} />
+                  </div>
+
 
                   <div className="col-md-4">
                     <label className="form-label">Publish Status</label>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import ImageUpload from '@/components/ImageUpload';
 
 const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false });
@@ -86,6 +87,7 @@ export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(empty);
+  const [salePeriodOpen, setSalePeriodOpen] = useState(false);
   const [del, setDel] = useState<Product | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
@@ -107,7 +109,7 @@ export default function ProductsPage() {
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
 
-  const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm(empty); setSalePeriodOpen(false); setErr(''); setShowModal(true); };
   const openEdit = (item: Product) => {
     setEditing(item);
     setForm({
@@ -124,6 +126,7 @@ export default function ProductsPage() {
       status: item.status ?? 'published', isActive: item.isActive ?? true,
       metaTitle: item.metaTitle ?? '', metaDescription: item.metaDescription ?? '', metaImage: item.metaImage ?? '',
     });
+    setSalePeriodOpen(false);
     setErr(''); setShowModal(true);
   };
 
@@ -194,6 +197,7 @@ export default function ProductsPage() {
     if (typeof window === 'undefined') return saleOfferPath(slug);
     return `${window.location.origin}${saleOfferPath(slug)}`;
   };
+  const activeSaleItems = items.filter(isSaleActive);
 
   return (
     <div>
@@ -214,90 +218,105 @@ export default function ProductsPage() {
         ) : items.length === 0 ? (
           <div className="empty-state"><div className="empty-icon">📦</div><p>No products yet.</p></div>
         ) : (
-          <div className="table-responsive">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th><th>Price</th><th>Plans</th><th>Sale Period</th>
-                  <th>Risk</th><th>Publish</th><th>Active</th>
-                  <th style={{ width: 120 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => {
-                  const onSale = isSaleActive(item);
-                  const planCount = item.plans?.length ?? 0;
-                  return (
-                    <tr key={item._id}>
-                      <td>
-                        <div className="fw-semibold">{item.name}</div>
-                        <code style={{ fontSize: 11, color: 'var(--muted)' }}>{item.slug}</code>
-                      </td>
-                      <td>
-                        <span className="fw-semibold" style={{ color: onSale ? '#059669' : '#1e293b' }}>
-                          {onSale ? `$${item.salePrice!.toFixed(2)}` : `$${(item.regularPrice ?? 0).toFixed(2)}`}
-                        </span>
-                        {onSale && (
-                          <s style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>${(item.regularPrice ?? 0).toFixed(2)}</s>
-                        )}
-                      </td>
-                      <td style={{ fontSize: 12 }}>
-                        {planCount > 0 ? (
-                          <span style={{ background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600 }}>
-                            {planCount} plan{planCount > 1 ? 's' : ''}
+          <>
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Name</th><th>Price</th><th>Plans</th><th>Sale Period</th>
+                    <th>Risk</th><th>Publish</th><th>Active</th>
+                    <th style={{ width: 120 }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    const onSale = isSaleActive(item);
+                    const planCount = item.plans?.length ?? 0;
+                    return (
+                      <tr key={item._id}>
+                        <td>
+                          <div className="fw-semibold">{item.name}</div>
+                          <code style={{ fontSize: 11, color: 'var(--muted)' }}>{item.slug}</code>
+                        </td>
+                        <td>
+                          <span className="fw-semibold" style={{ color: onSale ? '#059669' : '#1e293b' }}>
+                            {onSale ? `$${item.salePrice!.toFixed(2)}` : `$${(item.regularPrice ?? 0).toFixed(2)}`}
                           </span>
-                        ) : <span style={{ color: '#94a3b8' }}>—</span>}
-                      </td>
-                      <td style={{ fontSize: 12 }}>
-                        {item.salePrice != null ? (
-                          <div>
-                            {item.saleStartDate || item.saleEndDate ? (
-                              <div style={{ color: onSale ? '#15803d' : '#64748b' }}>
-                                <div>{item.saleStartDate ? new Date(item.saleStartDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' }) : '—'}</div>
-                                <div style={{ color: '#94a3b8' }}>to {item.saleEndDate ? new Date(item.saleEndDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : 'ongoing'}</div>
-                              </div>
-                            ) : (
-                              <span style={{ color: '#15803d', fontSize: 11, fontWeight: 600 }}>Always on sale</span>
-                            )}
-                            {onSale && (
-                              <div style={{ marginTop: 8 }}>
-                                <div style={{ color: '#15803d', fontSize: 11, fontWeight: 700, marginBottom: 3 }}>
-                                  Sale Period Running
+                          {onSale && (
+                            <s style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>${(item.regularPrice ?? 0).toFixed(2)}</s>
+                          )}
+                        </td>
+                        <td style={{ fontSize: 12 }}>
+                          {planCount > 0 ? (
+                            <span style={{ background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600 }}>
+                              {planCount} plan{planCount > 1 ? 's' : ''}
+                            </span>
+                          ) : <span style={{ color: '#94a3b8' }}>—</span>}
+                        </td>
+                        <td style={{ fontSize: 12 }}>
+                          {item.salePrice != null ? (
+                            <div>
+                              {item.saleStartDate || item.saleEndDate ? (
+                                <div style={{ color: onSale ? '#15803d' : '#64748b' }}>
+                                  <div>{item.saleStartDate ? new Date(item.saleStartDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' }) : '—'}</div>
+                                  <div style={{ color: '#94a3b8' }}>to {item.saleEndDate ? new Date(item.saleEndDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : 'ongoing'}</div>
                                 </div>
-                                <a
-                                  href={saleOfferPath(item.slug)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={{ display: 'block', color: '#2563eb', fontSize: 11, lineHeight: 1.35, wordBreak: 'break-all', textDecoration: 'none' }}
-                                  title={saleOfferUrl(item.slug)}
-                                >
-                                  {saleOfferUrl(item.slug)}
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        ) : <span style={{ color: '#94a3b8' }}>—</span>}
-                      </td>
-                      <td>
-                        {item.riskRating ? (
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 5,
-                            ...(RISK_COLORS[item.riskRating] ?? { bg: '#f8fafc', color: '#64748b' }),
-                          }}>{item.riskRating}</span>
-                        ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
-                      </td>
-                      <td><span className={`badge ${item.status === 'published' ? 'bg-success' : 'bg-secondary'}`}>{item.status ?? 'draft'}</span></td>
-                      <td><span className={`badge ${item.isActive ? 'bg-success' : 'bg-danger'}`}>{item.isActive ? 'Yes' : 'No'}</span></td>
-                      <td className="d-flex">
-                        <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
-                        <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Remove</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                              ) : (
+                                <span style={{ color: '#15803d', fontSize: 11, fontWeight: 600 }}>Always on sale</span>
+                              )}
+                              {onSale && (
+                                <div style={{ marginTop: 8 }}>
+                                  <div style={{ color: '#15803d', fontSize: 11, fontWeight: 700, marginBottom: 3 }}>
+                                    Sale Period Running
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : <span style={{ color: '#94a3b8' }}>—</span>}
+                        </td>
+                        <td>
+                          {item.riskRating ? (
+                            <span style={{
+                              fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 5,
+                              ...(RISK_COLORS[item.riskRating] ?? { bg: '#f8fafc', color: '#64748b' }),
+                            }}>{item.riskRating}</span>
+                          ) : <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>}
+                        </td>
+                        <td><span className={`badge ${item.status === 'published' ? 'bg-success' : 'bg-secondary'}`}>{item.status ?? 'draft'}</span></td>
+                        <td><span className={`badge ${item.isActive ? 'bg-success' : 'bg-danger'}`}>{item.isActive ? 'Yes' : 'No'}</span></td>
+                        <td className="d-flex">
+                          <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
+                          <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Remove</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {activeSaleItems.length > 0 && (
+              <div className="border-top bg-light p-3">
+                <div className="fw-semibold mb-2">Active Sale Offer Links</div>
+                <div className="d-flex flex-column gap-2">
+                  {activeSaleItems.map(item => (
+                    <div key={item._id} className="d-flex flex-wrap align-items-center gap-2">
+                      <span className="badge bg-success">Sale Period Running</span>
+                      <span className="fw-semibold">{item.name}</span>
+                      <code className="small text-break">{saleOfferUrl(item.slug)}</code>
+                      <Link
+                        href={saleOfferPath(item.slug)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn btn-sm btn-outline-primary ms-auto"
+                      >
+                        Open
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -397,55 +416,7 @@ export default function ProductsPage() {
                       onClick={addPlan}>+ Add Plan</button>
                   </div>
 
-                  {/* Sale Period */}
-                  <div className="col-12">
-                    <div className="p-3 rounded" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                      <div className="form-section-title mb-2" style={{ marginBottom: 8 }}>
-                        Sale Period <span className="text-muted fw-normal" style={{ fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>— leave blank to always show sale price</span>
-                      </div>
-                      <div className="row g-3">
-                        <div className="col-md-6">
-                          <label className="form-label">Sale Start Date</label>
-                          <input type="date" className="form-control" value={form.saleStartDate}
-                            onChange={(e) => setForm({ ...form, saleStartDate: e.target.value })} />
-                          <div className="form-text">Sale activates from this date</div>
-                        </div>
-                        <div className="col-md-6">
-                          <label className="form-label">Sale End Date</label>
-                          <input type="date" className="form-control" value={form.saleEndDate}
-                            onChange={(e) => setForm({ ...form, saleEndDate: e.target.value })} />
-                          <div className="form-text">Sale expires after this date</div>
-                        </div>
-                      </div>
-                      <div className="col-md-12 mt-3">
-                        <ImageUpload label="Sale Banner" value={form.saleBanner} onChange={(url) => setForm({ ...form, saleBanner: url })} />
-                        <div className="form-text">Shown in the report sidebar and on the product page to promote this plan.</div>
-                      </div>
-                      <div className="col-md-4 mt-3">
-                        <label className="form-label">Sale Over Price</label>
-                        <div className="input-group">
-                          <span className="input-group-text">$</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            className="form-control"
-                            value={form.saleOverPrice}
-                            onChange={(e) => setForm({ ...form, saleOverPrice: e.target.value })}
-                            placeholder="Shown after sale ends"
-                          />
-                        </div>
-                        <div className="form-text">Used only on the limited sale page after the sale period is over.</div>
-                      </div>
-                      <div className="col-12 mt-3">
-                        <label className="form-label">After Sale Over Content</label>
-                        <TinyEditor value={form.saleOverContent} onChange={(v) => setForm({ ...form, saleOverContent: v })} />
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Risk Rating */}
-                  <div className="col-12"><hr className="my-1" /><div className="form-section-title">Risk &amp; Classification</div></div>
                   <div className="col-md-4">
                     <label className="form-label">Risk Rating</label>
                     <select className="form-select" value={form.riskRating}
@@ -456,7 +427,6 @@ export default function ProductsPage() {
                       <option value="High">🟠 High</option>
                       <option value="Very High">🔴 Very High</option>
                     </select>
-                    <div className="form-text">Displayed on the product subscribe page</div>
                   </div>
                   {form.riskRating && (
                     <div className="col-md-8 d-flex align-items-end">
@@ -473,7 +443,7 @@ export default function ProductsPage() {
                   )}
 
                   {/* Descriptions */}
-                  <div className="col-12"><hr className="my-1" /><div className="form-section-title">Description</div></div>
+
                   <div className="col-12">
                     <label className="form-label">Short Description</label>
                     <textarea className="form-control" rows={2} value={form.shortDescription}
@@ -542,6 +512,66 @@ export default function ProductsPage() {
                     <ImageUpload label="Meta Image" value={form.metaImage} onChange={(url) => setForm({ ...form, metaImage: url })} />
                   </div>
                 </div>
+
+
+                <div className="col-12 mt-5 bg-secondary bg-opacity-10 p-3 rounded">
+                  <hr className="my-1" />
+                  <button
+                    type="button"
+                    className={`accordion-button  mt-2 ${salePeriodOpen ? '' : 'collapsed'}`}
+                    onClick={() => setSalePeriodOpen(open => !open)}
+                    aria-expanded={salePeriodOpen}
+                  >
+                    <span className="fw-semibold">{salePeriodOpen ? 'Hide Sale Settings' : 'Show Sale Settings'}</span>
+                    <span className="badge bg-light text-dark ms-3">
+                      {form.saleStartDate || form.saleEndDate || form.saleBanner || form.saleOverPrice || form.saleOverContent ? 'Configured' : 'Optional'}
+                    </span>
+                  </button>
+                  {salePeriodOpen && (
+                    <div className="p-3 rounded border border-top-0">
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <label className="form-label">Sale Start Date</label>
+                          <input type="date" className="form-control" value={form.saleStartDate}
+                            onChange={(e) => setForm({ ...form, saleStartDate: e.target.value })} />
+                          <div className="form-text">Sale activates from this date</div>
+                        </div>
+                        <div className="col-md-6">
+                          <label className="form-label">Sale End Date</label>
+                          <input type="date" className="form-control" value={form.saleEndDate}
+                            onChange={(e) => setForm({ ...form, saleEndDate: e.target.value })} />
+                          <div className="form-text">Sale expires after this date</div>
+                        </div>
+                      </div>
+                      <div className="col-md-12 mt-3">
+                        <ImageUpload label="Sale Banner" value={form.saleBanner} onChange={(url) => setForm({ ...form, saleBanner: url })} />
+                        <div className="form-text">Shown in the report sidebar and on the product page to promote this plan.</div>
+                      </div>
+                      <div className="col-md-4 mt-3">
+                        <label className="form-label">Sale Over Price</label>
+                        <div className="input-group">
+                          <span className="input-group-text">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="form-control"
+                            value={form.saleOverPrice}
+                            onChange={(e) => setForm({ ...form, saleOverPrice: e.target.value })}
+                            placeholder="Shown after sale ends"
+                          />
+                        </div>
+                        <div className="form-text">Used only on the limited sale page after the sale period is over.</div>
+                      </div>
+                      <div className="col-12 mt-3">
+                        <label className="form-label">After Sale Over Content</label>
+                        <TinyEditor value={form.saleOverContent} onChange={(v) => setForm({ ...form, saleOverContent: v })} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>

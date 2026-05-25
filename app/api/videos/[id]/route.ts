@@ -12,7 +12,8 @@ export async function PUT(req: NextRequest, { params }: P) {
   const body = await req.json();
   const video = await Video.findById(id);
   if (!video) return errorResponse('Not found', 404);
-  Object.assign(video, body);
+  const { title, youtubeUrl, isActive } = body;
+  Object.assign(video, { title, youtubeUrl, isActive });
   await video.save();
   return successResponse(video, 'Video updated');
 }

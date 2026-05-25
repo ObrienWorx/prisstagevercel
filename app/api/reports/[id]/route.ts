@@ -20,7 +20,8 @@ export async function GET(req: NextRequest, { params }: Params) {
   const report = await Report.findById(id)
     .populate('category', 'name slug')
     .populate('sector', 'name slug')
-    .populate('product', 'name price');
+    .populate('product', 'name price')
+    .populate('pastStockRecommendation', 'title slug');
   if (!report) return errorResponse('Report not found', 404);
   return successResponse(report);
 }
@@ -32,7 +33,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   await connectDB();
   const { id } = await params;
   const body = await req.json();
-  const { title, slug, content, featuredImage, category, sector, product, upsellTicker, ticker, price, sellPrice, recommendation, publishStatus, metaTitle, metaDescription, metaImage } = body;
+  const { title, slug, content, featuredImage, category, sector, product, pastStockRecommendation, upsellTicker, ticker, price, recommendation, publishStatus, metaTitle, metaDescription, metaImage } = body;
 
   const existing = await Report.findById(id);
   if (!existing) return errorResponse('Report not found', 404);
@@ -52,10 +53,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
     ...(category            !== undefined && { category: category || null }),
     ...(sector              !== undefined && { sector: sector || null }),
     ...(product             !== undefined && { product: product || null }),
-    ...(upsellTicker        !== undefined && { upsellTicker }),
-    ...(ticker              !== undefined && { ticker }),
+    ...(pastStockRecommendation !== undefined && { pastStockRecommendation: pastStockRecommendation || null }),
+    ...(upsellTicker        !== undefined && { upsellTicker: (upsellTicker || '').trim().toUpperCase() }),
+    ...(ticker              !== undefined && { ticker: (ticker || '').trim().toUpperCase() }),
     ...(price               !== undefined && { price: Number(price) || 0 }),
-    ...(sellPrice           !== undefined && { sellPrice: Number(sellPrice) || 0 }),
     ...(recommendation      !== undefined && { recommendation: recommendation ?? '' }),
     ...(publishStatus       !== undefined && { publishStatus }),
     ...(metaTitle           !== undefined && { metaTitle }),
@@ -66,7 +67,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const updated = await Report.findByIdAndUpdate(id, { $set: update }, { new: true, runValidators: true })
     .populate('category', 'name slug')
     .populate('sector', 'name slug')
-    .populate('product', 'name');
+    .populate('product', 'name')
+    .populate('pastStockRecommendation', 'title slug');
 
   return successResponse(updated, 'Report updated successfully');
 }

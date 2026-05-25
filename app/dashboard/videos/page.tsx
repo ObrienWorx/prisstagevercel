@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getYouTubeId } from '@/lib/orderHelpers';
 
-interface Video { _id: string; title: string; youtubeUrl: string; description: string; isActive: boolean; }
-const empty = { title: '', youtubeUrl: '', description: '', isActive: true };
+interface Video { _id: string; title: string; youtubeUrl: string; isActive: boolean; }
+const empty = { title: '', youtubeUrl: '', isActive: true };
 
 export default function VideosPage() {
   const [items, setItems] = useState<Video[]>([]);
@@ -14,19 +14,22 @@ export default function VideosPage() {
   const [form, setForm] = useState(empty); const [del, setDel] = useState<Video | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-  const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try { const r = await fetch('/api/videos', { headers: h }); const d = await r.json(); if (d.success) setItems(d.data); }
     finally { setLoading(false); }
-  }, []);
+  }, [h]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { load(); }, 0);
+    return () => { window.clearTimeout(timeout); };
+  }, [load]);
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };
 
   const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowModal(true); };
-  const openEdit = (x: Video) => { setEditing(x); setForm({ title: x.title, youtubeUrl: x.youtubeUrl, description: x.description, isActive: x.isActive }); setErr(''); setShowModal(true); };
+  const openEdit = (x: Video) => { setEditing(x); setForm({ title: x.title, youtubeUrl: x.youtubeUrl, isActive: x.isActive }); setErr(''); setShowModal(true); };
 
   const save = async () => {
     if (!form.title.trim()) { setErr('Title is required'); return; }
@@ -74,7 +77,7 @@ export default function VideosPage() {
                       : <div style={{ width: 88, height: 56, background: '#f1f5f9', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>▶️</div>
                     }
                   </td>
-                  <td className="fw-semibold" style={{ maxWidth: 220 }}><div className="text-truncate">{v.title}</div>{v.description && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }} className="text-truncate">{v.description}</div>}</td>
+                  <td className="fw-semibold" style={{ maxWidth: 220 }}><div className="text-truncate">{v.title}</div></td>
                   <td><a href={v.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--primary)', wordBreak: 'break-all' }}>{v.youtubeUrl.length > 40 ? v.youtubeUrl.slice(0, 40) + '...' : v.youtubeUrl}</a></td>
                   <td><span className={`badge ${v.isActive ? 'bg-success' : 'bg-secondary'}`}>{v.isActive ? 'Active' : 'Hidden'}</span></td>
                   <td className="d-flex">
@@ -104,7 +107,6 @@ export default function VideosPage() {
                     </div>
                   )}
                 </div>
-                <div className="col-12"><label className="form-label">Description</label><textarea className="form-control" rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Brief description (shown below video)" /></div>
                 <div className="col-12"><div className="form-check form-switch"><input type="checkbox" className="form-check-input" id="isActive" checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} /><label className="form-check-label" htmlFor="isActive">Show on website</label></div></div>
               </div>
             </div>

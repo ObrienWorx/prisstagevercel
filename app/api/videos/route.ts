@@ -14,9 +14,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'videos'); if (error) return error;
   await connectDB();
-  const { title, youtubeUrl, description, isActive } = await req.json();
+  const { title, youtubeUrl, isActive } = await req.json();
   if (!title) return errorResponse('Title is required');
   if (!youtubeUrl) return errorResponse('YouTube URL is required');
-  const video = await Video.create({ title, youtubeUrl, description: description || '', isActive: isActive ?? true });
+  const video = await Video.create({ title, youtubeUrl, isActive: isActive ?? true });
   return successResponse(video, 'Video added', 201);
 }

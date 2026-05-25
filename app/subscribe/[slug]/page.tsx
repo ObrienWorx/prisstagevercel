@@ -124,12 +124,7 @@ export default async function ProductDetailPage({ params }: P) {
         durationType: p.durationType ?? 'months',
       }];
 
-  const RISK_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-    Low: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
-    Medium: { bg: '#fefce8', text: '#854d0e', border: '#fde68a' },
-    High: { bg: '#fff7ed', text: '#c2410c', border: '#fed7aa' },
-    'Very High': { bg: '#fef2f2', text: '#991b1b', border: '#fecaca' },
-  };
+  const riskClass = p.riskRating ? `risk-${p.riskRating.toLowerCase().replace(/\s+/g, '-')}` : '';
 
   const originalPrice = savedPlans[0]?.regularPrice ?? p.regularPrice ?? 0;
   const afterSalePrice = p.saleOverPrice ?? originalPrice;
@@ -159,43 +154,43 @@ export default async function ProductDetailPage({ params }: P) {
       )}
 
       {showExpiredOffer && (
-        <section style={{ background: '#fff', padding: '2rem 0 1rem' }}>
+        <section className="sale-expired-section">
           <div className="container">
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 410px', gap: '3rem', alignItems: 'start' }}>
-              <div>
-                <div className="tiptap-prose" style={{ fontSize: 15.5, lineHeight: 1.55, color: '#111827' }} dangerouslySetInnerHTML={{ __html: expiredContent }} />
-                <a href="#subscribe-now" className="btn-subscribe" style={{ width: 310, maxWidth: '100%', marginTop: '1.5rem', marginBottom: '0.75rem', background: '#00c314', borderRadius: 16, fontSize: 25, fontStyle: 'italic' }}>
+            <div className="row g-5 align-items-start">
+              <div className="col-lg-7">
+                <div className="tiptap-prose sale-expired-copy" dangerouslySetInnerHTML={{ __html: expiredContent }} />
+                <a href="#subscribe-now" className="btn-subscribe sale-expired-btn">
                   Subscribe Now
                 </a>
-                <p style={{ fontSize: 12.5, color: '#111827', maxWidth: 360, lineHeight: 1.35, margin: 0 }}>
+                <p className="sale-expired-note">
                   Our subscription comes with 14 days cooling-off period, however, it only applies to new subscribers.
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', maxWidth: 650, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 2px 12px rgba(15,23,42,0.15)', marginTop: '2.25rem', padding: '1.75rem 2rem' }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.45, color: '#000' }}>Massive Discount<br />For New Members</div>
-                  <div style={{ borderLeft: '1px solid #e5e7eb', textAlign: 'center' }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: '#d97706' }}>Get special access for just</div>
-                    <div style={{ fontSize: 32, fontWeight: 900, color: '#001b3a', lineHeight: 1.15 }}>
+                <div className="sale-expired-card">
+                  <div className="sale-expired-card-title">Massive Discount<br />For New Members</div>
+                  <div className="sale-expired-card-detail">
+                    <div className="sale-expired-kicker">Get special access for just</div>
+                    <div className="sale-expired-price">
                       ${afterSalePrice.toFixed(2)}
-                      {originalPrice > 0 && <s style={{ fontSize: 20, marginLeft: 10, color: '#111827' }}>${originalPrice.toFixed(2)}</s>}
+                      {originalPrice > 0 && <s>${originalPrice.toFixed(2)}</s>}
                     </div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#d97706' }}>{p.durationValue ?? savedPlans[0]?.durationValue ?? ''} {p.durationType ?? savedPlans[0]?.durationType ?? ''} plan</div>
+                    <div className="sale-expired-duration">{p.durationValue ?? savedPlans[0]?.durationValue ?? ''} {p.durationType ?? savedPlans[0]?.durationType ?? ''} plan</div>
                   </div>
                 </div>
               </div>
-              <div>
-                <div style={{ background: '#dc1f26', color: '#fff', borderRadius: 8, padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, fontWeight: 800 }}>
+              <div className="col-lg-5">
+                <div className="sale-ended-strip">
                   <span>Limited Time Sale has ENDED -</span>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div className="sale-ended-timer">
                     {['HOURS', 'MINS', 'SECS'].map(label => (
-                      <div key={label} style={{ textAlign: 'center' }}>
-                        <div style={{ background: '#b91c1c', borderRadius: 5, padding: '2px 11px', fontSize: 16 }}>00</div>
-                        <div style={{ fontSize: 7, opacity: 0.85 }}>{label}</div>
+                      <div key={label} className="sale-ended-chip">
+                        <div className="sale-ended-value">00</div>
+                        <div className="sale-ended-label">{label}</div>
                       </div>
                     ))}
                   </div>
                 </div>
                 {p.saleBanner && (
-                  <img src={p.saleBanner} alt={`${p.name} promotion`} style={{ width: '100%', marginTop: 12, borderRadius: 14, maxHeight: 510, objectFit: 'cover', display: 'block' }} />
+                  <img src={p.saleBanner} alt={`${p.name} promotion`} className="sale-expired-banner" />
                 )}
               </div>
             </div>
@@ -203,46 +198,46 @@ export default async function ProductDetailPage({ params }: P) {
         </section>
       )}
 
-      {/* Content */}
+      {showExpiredOffer && <hr className="my-5 container" />}
+
       <div className="site-section">
         <div className="container">
           <div className="row">
             <div className="col-lg-7">
-              {isSaleOffer && p.saleBanner && (
-                <div className="container mb-3">
+              {isSaleOffer && !showExpiredOffer && p.saleBanner && (
+                <div className="subscribe-sale-banner-wrap mb-3">
                   <img
                     src={p.saleBanner}
                     alt={`${p.name} promotion`}
-                    style={{ width: '100%', borderRadius: 14, maxHeight: 220, objectFit: 'cover', display: 'block' }}
+                    className="subscribe-sale-banner"
                   />
                 </div>
               )}
               <h1 className='fw-bolder'>{p.name}</h1>
 
               {p.shortDescription && (
-                <div style={{ marginBottom: '2rem', padding: '1.25rem 1.5rem', background: '#eff6ff', borderRadius: 12, borderLeft: '4px solid #3b82f6' }}>
-                  <p style={{ margin: 0, fontSize: 15, color: '#1e40af', lineHeight: 1.7 }}>{p.shortDescription}</p>
+                <div className="subscribe-desc-callout">
+                  <p>{p.shortDescription}</p>
                 </div>
               )}
 
               {p.fullDescription && (
                 <div>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>About This Plan</h3>
+                  <h3 className="subscribe-content-title">About This Plan</h3>
                   <div
-                    className="tiptap-prose"
-                    style={{ fontSize: 15, color: '#374151', lineHeight: 1.8 }}
+                    className="tiptap-prose subscribe-prose"
                     dangerouslySetInnerHTML={{ __html: p.fullDescription }}
                   />
                 </div>
               )}
               {p.features && p.features.length > 0 && (
-                <div style={{ marginBottom: '3rem' }}>
-                  <h2 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', marginBottom: '1.5rem' }}>What&apos;s Included</h2>
+                <div className="subscribe-features">
+                  <h2>What&apos;s Included</h2>
                   <div className="row g-3">
                     {p.features.map((f: string, i: number) => (
                       <div className="col-md-6" key={i}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13.5, color: '#1e293b', lineHeight: 1.4 }}>
-                          <span style={{ color: '#16a34a', fontWeight: 700, flexShrink: 0, fontSize: 16 }}>✓</span>
+                        <div className="subscribe-feature-card">
+                          <span aria-hidden="true">+</span>
                           {f}
                         </div>
                       </div>
@@ -252,20 +247,17 @@ export default async function ProductDetailPage({ params }: P) {
               )}
             </div>
 
-            <div id="subscribe-now" className="col-lg-5 d-none d-lg-block" style={{ scrollMarginTop: 90 }}>
+            <div id="subscribe-now" className="col-lg-5 d-none d-lg-block subscribe-anchor">
               <PurchaseCard slug={p.slug} plans={plans} saleEndDate={saleEndDate} saleOffer={isSaleOffer} />
 
               <div className="mt-4" >
-                {p.riskRating && (() => {
-                  const rc = RISK_COLORS[p.riskRating];
-                  return (
-                    <div style={{ background: rc.bg, border: `1px solid ${rc.border}`, borderRadius: 10, padding: '10px 16px', marginBottom: '1rem', fontSize: 13, fontWeight: 600, color: rc.text }}>
-                      Risk Rating: {p.riskRating}
-                    </div>
-                  );
-                })()}
-                <div style={{ background: '#f8fafc', borderRadius: 14, padding: '1.5rem', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
-                  <h4 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: '1rem' }}>Why PristineGaze?</h4>
+                {p.riskRating && (
+                  <div className={`subscribe-risk-badge ${riskClass}`}>
+                    Risk Rating: {p.riskRating}
+                  </div>
+                )}
+                <div className="subscribe-why-card">
+                  <h4>Why PristineGaze?</h4>
                   {[
                     '🇦🇺 100% Australian market focus',
                     '📊 Daily sector analysis & reports',
@@ -273,7 +265,7 @@ export default async function ProductDetailPage({ params }: P) {
                     '📧 Daily email digest included',
                     '❌ Cancel anytime, no lock-in',
                   ].map(t => (
-                    <div key={t} style={{ fontSize: 13, color: '#374151', padding: '6px 0', borderBottom: '1px solid #f1f5f9', lineHeight: 1.5 }}>{t}</div>
+                    <div key={t} className="subscribe-why-item">{t}</div>
                   ))}
                 </div>
               </div>
