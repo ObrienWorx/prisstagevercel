@@ -5500,14 +5500,14 @@ body {
 .homepage-hero {
   background: #001a33;
   color: #fff;
-  padding: clamp(3rem, 6vw, 2.5rem) 0;
+  padding: clamp(1rem, 6vw, 1.5rem) 0;
   overflow: hidden;
 }
 
 .homepage-hero-title {
   color: #df9000;
-  font-size: clamp(2rem, 7vw, 2.8rem);
-  font-weight: 900;
+  font-size: clamp(2rem, 7vw, 4.8rem);
+  font-weight: 700;
   line-height: 0.98;
   margin-bottom: 1.2rem;
 }
@@ -5515,16 +5515,16 @@ body {
 .homepage-hero-lead {
   max-width: 620px;
   color: #fff;
-  font-size: clamp(0.65rem, 3vw, 1rem);
-  font-weight: 800;
+  font-size: clamp(0.65rem, 3vw, 2rem);
+  font-weight: 600;
   line-height: 1.35;
-  margin-bottom: 2rem;
+  /* margin-bottom: 2rem; */
 }
 
 .homepage-hero-list {
   color: #fff;
   /* max-width: 680px; */
-  margin: 0 0 2rem;
+  margin: 0 0 1rem;
   padding-left: 1.35rem;
   font-size: clamp(1rem, 1.25vw, 0);
   line-height: 1.5rem;
@@ -5545,7 +5545,7 @@ body {
   color: #fff;
   border: none;
   border-radius: 1rem;
-  padding: 1rem 2rem;
+  padding: .5rem 2rem;
   min-inline-size: 13rem;
   text-decoration: none;
   font-size: 1.05rem;
@@ -6127,68 +6127,112 @@ body {
 .home-picks-panel {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.65rem;
-  overflow: hidden;
-  border-top: 4px solid #001a33;
+  gap: 0.9rem;
+  padding-top: 0.75rem;
 }
 
 .home-pick-card {
-  background: #001a33;
-  border-radius: 6px;
-  overflow: hidden;
+  position: relative;
+  background: #0c1f3f;
+  border-radius: 12px;
   color: #fff;
-  min-height: 8.2rem;
-  border: 1px solid #dbeafe;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.home-pick-top {
+/* Conviction badge — floats top-right, outside the card */
+.home-pick-conviction {
+    color: #0f172a;
+    white-space: nowrap;
+    background: #fff;
+    /* border-radius: 20px; */
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px 3px 8px;
+    font-size: .7rem;
+    font-weight: 700;
+    display: flex;
+    position: absolute;
+    top: 0;
+    right: 0;
+    box-shadow: 0 2px 8px #0000002e;
+    width: max-content;
+}
+
+.home-pick-conviction .gauge-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+}
+
+/* Card body padding */
+.home-pick-body {
+  padding: 1rem 0.9rem 0.6rem;
+  flex: 1;
+}
+
+/* Unlock button */
+.home-pick-unlock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  color: #0f172a;
+  border: none;
+  border-radius: 20px;
+  padding: 2px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 4px;
+}
+.home-pick-unlock-btn:hover { background: #e8f0fe; }
+
+/* Potential return inner box */
+.home-pick-return-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.55rem;
-  background: #f8fafc;
-  color: #0f172a;
-  font-size: 0.65rem;
-  font-weight: 700;
-}
-
-.home-pick-top span {
-  padding: 0.18rem 0.35rem;
-  border-radius: 3px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-}
-
-.home-pick-top small {
-  color: #dc2626;
-  font-weight: 800;
+  background: #0d3068;
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  margin-top: 0.75rem;
 }
 
 .home-pick-value {
-  padding-top: 0.8rem;
-  color: #00da11;
-  text-align: center;
-  font-size: 1rem;
+  color: #22c55e;
+  font-size: 1.2rem;
   font-weight: 900;
+  letter-spacing: -0.01em;
 }
 
-.home-pick-label,
+.home-pick-label {
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: right;
+  line-height: 1.2;
+}
+
 .home-pick-cap {
   text-align: center;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  padding: 0.55rem 0 0.3rem;
 }
 
-.home-pick-cap {
-  padding: 0.55rem 0;
-}
-
+/* Entry price strip */
 .home-pick-bottom {
-  padding: 0.45rem 0.65rem;
-  background: #0057c8;
-  font-size: 0.68rem;
-  font-weight: 800;
+  background: #1565f5;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .home-picks-note {
@@ -8256,4 +8300,326 @@ a.cu-info-value:hover {
 .plan-card-status-bar {
   margin-top: auto;
   padding-top: 10px;
+}
+
+/* ─── Homepage Past Recommendations Widget ─────────────────────────────── */
+.home-past-recs-section {
+  padding: 60px 0;
+  background: #f8fafc;
+}
+
+.home-past-recs-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  padding: 28px 32px 24px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.home-past-recs-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.home-past-recs-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.home-past-recs-avg {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.home-past-recs-avg.gain strong { color: #16a34a; }
+.home-past-recs-avg.loss strong { color: #dc2626; }
+
+.home-past-recs-viewall {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 5px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.home-past-recs-viewall:hover {
+  background: #0f172a;
+  color: #fff;
+}
+
+.home-past-recs-rule {
+  height: 3px;
+  width: 40px;
+  background: #e07b23;
+  border-radius: 2px;
+  margin-bottom: 18px;
+}
+
+.home-past-recs-table-wrap {
+  overflow-x: auto;
+}
+
+.home-past-recs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.home-past-recs-table thead tr {
+  background: #0f172a;
+}
+
+.home-past-recs-table thead th {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 10px 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.home-past-recs-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.home-past-recs-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.home-past-recs-table tbody td {
+  padding: 10px 14px;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.home-past-recs-table tbody td:first-child {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.home-past-recs-table tbody td.gain {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.home-past-recs-table tbody td.loss {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.home-past-recs-disclaimer {
+  margin: 16px 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+/* ─── Market Scan + Past Recs Two-Column Section ─────────────────────────── */
+.home-scan-recs-section {
+  padding: 60px 0;
+}
+
+.home-scan-recs-row {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+}
+
+.home-scan-col {
+  background: #0d1b2e;
+}
+
+.home-recs-col {
+  background: #fff;
+}
+
+/* ── Market Scan Widget ──────────────────────────────────────────────────── */
+.home-scan-widget {
+  padding: 36px 32px 28px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-scan-title {
+  font-size: 2rem;
+  font-weight: 300;
+  color: #fff;
+  margin: 0 0 20px;
+  letter-spacing: -0.01em;
+}
+
+.home-scan-title span {
+  font-weight: 700;
+}
+
+.home-scan-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.home-scan-tab {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 4px 0;
+  margin-right: 24px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.home-scan-tab.active {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+.home-scan-tab:hover:not(.active) {
+  color: #cbd5e1;
+}
+
+.home-scan-desc-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.home-scan-desc {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 340px;
+}
+
+.home-scan-viewall-btn {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #d4a017;
+  border: 1.5px solid #d4a017;
+  border-radius: 20px;
+  padding: 5px 16px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.home-scan-viewall-btn:hover {
+  background: #d4a017;
+  color: #0d1b2e;
+}
+
+.home-scan-table-wrap {
+  flex: 1;
+  overflow-x: auto;
+}
+
+.home-scan-state {
+  color: #64748b;
+  font-size: 0.88rem;
+  padding: 24px 0;
+}
+
+.home-scan-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.home-scan-table thead th {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 10px 8px 0;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  white-space: nowrap;
+}
+
+.home-scan-table tbody tr {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.home-scan-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.home-scan-table tbody td {
+  padding: 10px 10px 10px 0;
+  color: #e2e8f0;
+  vertical-align: middle;
+  font-size: 0.88rem;
+}
+
+.home-scan-ticker-code {
+  font-weight: 600;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.home-scan-ticker-name {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.scan-gain { color: #4ade80; font-weight: 500; }
+.scan-loss { color: #f87171; font-weight: 500; }
+
+.home-scan-powered {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.home-scan-powered strong { color: #94a3b8; }
+
+/* ── Past Recs panel inside the two-col layout ───────────────────────────── */
+.home-recs-col .home-past-recs-card {
+  padding: 36px 28px 28px;
+  height: 100%;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+@media (max-width: 991px) {
+  .home-scan-recs-row {
+    border-radius: 8px;
+  }
+  .home-scan-widget {
+    padding: 28px 20px 24px;
+  }
+  .home-recs-col .home-past-recs-card {
+    padding: 28px 20px 24px;
+  }
+  .home-scan-recs-section {
+    padding: 0 0 40px;
+  }
 }

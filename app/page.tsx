@@ -1,9 +1,12 @@
+import HomePicks from '@/components/HomePicks';
+import MarketScan from '@/components/MarketScan';
 import connectDB from '@/lib/mongoose';
 import Product from '@/models/Product';
 import Video from '@/models/Video';
 import HomepageSetting from '@/models/HomepageSetting';
 import Blog from '@/models/Blog';
 import BlogCategory from '@/models/BlogCategory';
+import Report from '@/models/Report';
 import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
 import { getYouTubeId } from '@/lib/orderHelpers';
@@ -105,6 +108,47 @@ export default async function HomePage() {
     getBlogsForCategory('sector-stories', 6),
   ]);
 
+  type HomeRecPopulated = {
+    _id: MongoId;
+    title: string;
+    ticker: string;
+    upsellTicker: string;
+    price: number;
+    pastStockRecommendation: {
+      _id: MongoId;
+      title: string;
+      ticker: string;
+      upsellTicker: string;
+      price: number;
+    } | null;
+  };
+
+  const pastRecReports = await Report.find({
+    publishStatus: 'published',
+    recommendation: 'SELL',
+    pastStockRecommendation: { $ne: null },
+  })
+    .select('title ticker upsellTicker price pastStockRecommendation')
+    .populate('pastStockRecommendation', 'title ticker upsellTicker price')
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .lean() as unknown as HomeRecPopulated[];
+
+  const homeRecs = pastRecReports
+    .map((sell) => {
+      const buy = sell.pastStockRecommendation;
+      if (!buy || !buy.price) return null;
+      const exchange = buy.upsellTicker || sell.upsellTicker || '';
+      const ticker = buy.ticker || sell.ticker || '';
+      const label = exchange && ticker ? ` (${exchange}: ${ticker})` : ticker ? ` (${ticker})` : '';
+      const gainLoss = buy.price > 0 ? ((sell.price - buy.price) / buy.price) * 100 : null;
+      return { code: `${buy.title}${label}`, avgBuy: buy.price, avgSell: sell.price, gainLoss };
+    })
+    .filter((r): r is { code: string; avgBuy: number; avgSell: number; gainLoss: number | null } => r !== null);
+
+  const validGains = homeRecs.filter(r => r.gainLoss !== null).map(r => r.gainLoss as number);
+  const avgGain = validGains.length > 0 ? validGains.reduce((s, v) => s + v, 0) / validGains.length : null;
+
   const fmtPrice = (p: HomeProduct) => {
     const price = p.salePrice ?? p.regularPrice ?? 0;
     return `$${price.toFixed(2)}`;
@@ -198,21 +242,7 @@ export default async function HomePage() {
                 <button className="home-view-link" type="button">View All ↗</button>
               </div>
               <div className="home-title-rule" />
-              <div className="home-picks-panel">
-                {[1, 2, 3, 4].map((item) => (
-                  <div className="home-pick-card" key={item}>
-                    <div className="home-pick-top">
-                      <span>Unlock Ticker</span>
-                      <small>High</small>
-                    </div>
-                    <div className="home-pick-value">6.00%</div>
-                    <div className="home-pick-label">Potential Left</div>
-                    <div className="home-pick-cap">Small-Cap</div>
-                    <div className="home-pick-bottom">Entry Price: locked</div>
-                  </div>
-                ))}
-                <p className="home-picks-note">Performance visuals shown as a preview. Data source can be connected later.</p>
-              </div>
+              <HomePicks />
             </div>
           </div>
         </div>
@@ -331,6 +361,68 @@ export default async function HomePage() {
         </section>
       )}
 
+
+      {/* MARKET SCAN + PAST RECOMMENDATIONS */}
+      <section className="home-scan-recs-section">
+        <div className="container">
+          <div className="row g-0 home-scan-recs-row">
+            <div className="col-lg-7 home-scan-col">
+              <MarketScan />
+            </div>
+            <div className="col-lg-5 home-recs-col">
+              <div className="home-past-recs-card">
+                <div className="home-past-recs-header">
+                  <div>
+                    <h2 className="home-past-recs-title">Past Recommendations</h2>
+                    {avgGain !== null && (
+                      <div className={`home-past-recs-avg ${avgGain >= 0 ? 'gain' : 'loss'}`}>
+                        Avg Return: <strong>{avgGain >= 0 ? '+' : ''}{avgGain.toFixed(2)}%</strong> across closed picks
+                      </div>
+                    )}
+                  </div>
+                  <Link href="/past-recommendations" className="home-past-recs-viewall">View All ↗</Link>
+                </div>
+                <div className="home-past-recs-rule" />
+                {homeRecs.length > 0 ? (
+                  <>
+                    <div className="home-past-recs-table-wrap">
+                      <table className="home-past-recs-table">
+                        <thead>
+                          <tr>
+                            <th>Code</th>
+                            <th>Avg Buy</th>
+                            <th>Avg Sell</th>
+                            <th>Gain/loss</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {homeRecs.map((rec, i) => (
+                            <tr key={i}>
+                              <td>{rec.code}</td>
+                              <td>${rec.avgBuy.toLocaleString('en-AU', { maximumFractionDigits: 3 })}</td>
+                              <td>${rec.avgSell.toLocaleString('en-AU', { maximumFractionDigits: 3 })}</td>
+                              <td className={rec.gainLoss !== null && rec.gainLoss < 0 ? 'loss' : 'gain'}>
+                                {rec.gainLoss !== null ? `${rec.gainLoss.toFixed(2)}%` : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="home-past-recs-disclaimer">
+                      <em>Disclaimer: Not every company performs as expected. Past performance is not an indication of future returns. &ldquo;Gain/Loss&rdquo; reflects movement in difference in average buy price and sell price plus dividends as a percentage of average buy price, and does not take into account costs or taxation.</em>
+                    </p>
+                  </>
+                ) : (
+                  <p className="home-past-recs-disclaimer" style={{ marginTop: '12px' }}>
+                    No closed recommendations yet. Check back soon.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
             {/* SECTOR STORIES */}
       <section className="home-sector-stories">
