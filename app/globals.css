@@ -2829,6 +2829,38 @@ body {
   background: #f8fafc;
 }
 
+.auth-password-field {
+  position: relative;
+}
+
+.auth-password-field .auth-input {
+  padding-right: 52px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 0;
+  cursor: pointer;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-password-toggle svg {
+  display: block;
+}
+
+.auth-password-toggle:hover {
+  color: #1d4ed8;
+}
+
 .auth-input:focus {
   outline: none;
   border-color: #1d4ed8;

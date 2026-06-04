@@ -16,6 +16,7 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
   const [form, setForm] = useState({ email: '', password: '' });
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [otpMode, setOtpMode] = useState(false);
   const [otpStep, setOtpStep] = useState<'email' | 'verify'>('email');
@@ -217,11 +218,37 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
               <label className="auth-label mb-0">Password</label>
               <Link href="/auth/forgot-password" className="auth-forgot">Forgot password?</Link>
             </div>
-            <input
-              type="password" className="auth-input" value={form.password} autoComplete="current-password"
-              onChange={e => setForm({ ...form, password: e.target.value })}
-              placeholder="Your password"
-            />
+            <div className="auth-password-field">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="auth-input"
+                value={form.password}
+                autoComplete="current-password"
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                placeholder="Your password"
+              />
+              <button
+                type="button"
+                className="auth-password-toggle"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword(prev => !prev)}
+              >
+                {showPassword ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M17.94 17.94A10.05 10.05 0 0 1 12 20c-7 0-11-8-11-8a18.1 18.1 0 0 1 5.06-5.94" />
+                    <path d="M1 1l22 22" />
+                    <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+                    <path d="M14.12 14.12A3 3 0 0 1 9.88 9.88" />
+                    <path d="M14.93 14.93A10.05 10.05 0 0 0 23 12s-4-8-11-8a10.05 10.05 0 0 0-5.94 1.94" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <button type="submit" className="auth-btn mt-2" disabled={loading}>
