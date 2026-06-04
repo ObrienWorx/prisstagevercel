@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   await connectDB();
 
   const body = await req.json();
-  const { subscriberId, paymentStatus, orderStatus, paymentGateway, notes } = body;
+  const { subscriberId, paymentStatus, orderStatus, paymentGateway, notes, sellingPrice } = body;
 
   if (!subscriberId) return errorResponse('Subscriber is required');
 
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     subscriber: subscriberId,
     product: first.productId,
     pricePaid: totalPrice,
+    ...(sellingPrice !== undefined && sellingPrice !== '' && { sellingPrice: Number(sellingPrice) }),
     paymentStatus: paymentStatus || 'completed',
     orderStatus: orderStatus || 'completed',
     purchaseDate: first.start,

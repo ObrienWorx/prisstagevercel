@@ -4,9 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 
 interface Txn {
   _id: string; transactionNumber: string;
-  order: { orderNumber: string };
-  subscriber: { name: string; email: string };
-  product: { name: string };
+  order: { orderNumber: string } | null;
+  subscriber: { name: string; email: string } | null;
+  product: { name: string } | null;
   amount: number; paymentGateway: string;
   paymentStatus: string; paymentDate: string;
 }
@@ -65,8 +65,8 @@ export default function TransactionsPage() {
             {filtered.map((x) => (<tr key={x._id}>
               <td><span className="fw-semibold" style={{ color: 'var(--primary)', fontSize: 12 }}>{x.transactionNumber}</span></td>
               <td style={{ fontSize: 12, color: 'var(--muted)' }}>{x.order?.orderNumber || '—'}</td>
-              <td><div style={{ fontSize: 13 }} className="fw-semibold">{x.subscriber.name}</div><div style={{ fontSize: 11, color: 'var(--muted)' }}>{x.subscriber.email}</div></td>
-              <td style={{ fontSize: 13 }}>{x.product.name}</td>
+              <td><div style={{ fontSize: 13 }} className="fw-semibold">{x.subscriber?.name || '(deleted)'}</div><div style={{ fontSize: 11, color: 'var(--muted)' }}>{x.subscriber?.email || ''}</div></td>
+              <td style={{ fontSize: 13 }}>{x.product?.name || '(deleted)'}</td>
               <td className="fw-semibold" style={{ color: '#059669' }}>${x.amount.toFixed(2)}</td>
               <td><span className="badge bg-light text-dark border" style={{ fontSize: 11 }}>{x.paymentGateway}</span></td>
               <td><span className={`badge ${STATUS_COLORS[x.paymentStatus] || 'bg-secondary'}`}>{x.paymentStatus}</span></td>

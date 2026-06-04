@@ -35,8 +35,10 @@ export default function OrdersPage() {
   const [ok, setOk] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [editOrder, setEditOrder] = useState<Order | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const [cForm, setCForm] = useState({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '' });
+  const [cForm, setCForm] = useState({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '', sellingPrice: '' });
   const [lines, setLines] = useState<LineItem[]>([defaultLine()]);
   const [eForm, setEForm] = useState({ paymentStatus: 'completed', orderStatus: 'completed', notes: '' });
 
@@ -81,7 +83,7 @@ export default function OrdersPage() {
 
   const openCreate = () => {
     setShowCreate(true); setErr('');
-    setCForm({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '' });
+    setCForm({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '', sellingPrice: '' });
     setLines([defaultLine()]);
   };
 
@@ -94,6 +96,7 @@ export default function OrdersPage() {
         method: 'POST', headers: h,
         body: JSON.stringify({
           ...cForm,
+          sellingPrice: cForm.sellingPrice !== '' ? parseFloat(cForm.sellingPrice) : undefined,
           products: lines.map(l => ({
             productId: l.productId,
             pricePaid: parseFloat(l.pricePaid) || 0,
@@ -120,6 +123,17 @@ export default function OrdersPage() {
       if (d.success) { flash('Order updated'); setEditOrder(null); loadAll(); }
       else setErr(d.error || 'Error');
     } finally { setSaving(false); }
+  };
+
+  const deleteOrder = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      const r = await fetch(`/api/orders/${deleteId}`, { method: 'DELETE', headers: h });
+      const d = await r.json();
+      if (d.success) { flash('Order deleted'); setDeleteId(null); loadAll(); }
+      else setErr(d.error || 'Error');
+    } finally { setDeleting(false); }
   };
 
   const isExpired = (d: string) => new Date() > new Date(d);
@@ -196,6 +210,10 @@ export default function OrdersPage() {
                               className="btn btn-sm btn-outline-secondary"
                               onClick={() => { setEditOrder(o); setEForm({ paymentStatus: o.paymentStatus, orderStatus: o.orderStatus, notes: '' }); setErr(''); }}
                             >Edit</button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => { setDeleteId(o._id); setErr(''); }}
+                            >Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -246,6 +264,27 @@ export default function OrdersPage() {
                   <div className="col-md-2">
                     <label className="form-label fw-semibold">Notes</label>
                     <input className="form-control" value={cForm.notes} onChange={e => setCForm({ ...cForm, notes: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="row g-3 mb-3">
+                  <div className="col-md-4">
+                    <label className="form-label fw-semibold">
+                      Selling Price (A$)
+                      <span className="text-muted fw-normal ms-1" style={{ fontSize: 12 }}>— shown on invoice</span>
+                    </label>
+                    <input
+                      type="number" min="0" step="0.01"
+                      className="form-control"
+                      placeholder={`e.g. ${totalPrice.toFixed(2)}`}
+                      value={cForm.sellingPrice}
+                      onChange={e => setCForm({ ...cForm, sellingPrice: e.target.value })}
+                    />
+                    {cForm.sellingPrice && (
+                      <div className="form-text">
+                        Invoice will show A${parseFloat(cForm.sellingPrice).toFixed(2)} instead of the price paid total.
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -330,7 +369,7 @@ export default function OrdersPage() {
                     <tfoot style={{ background: '#f8fafc' }}>
                       <tr>
                         <td colSpan={4} className="text-end fw-bold py-2 pe-3" style={{ fontSize: 14 }}>
-                          Total: A${totalPrice.toFixed(2)}
+                          Price Paid Total: A${totalPrice.toFixed(2)}
                         </td>
                         <td />
                       </tr>
@@ -343,6 +382,29 @@ export default function OrdersPage() {
                 <button className="btn btn-primary" onClick={createOrder} disabled={saving}>
                   {saving && <span className="spinner-border spinner-border-sm me-2" />}
                   Create Order
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Confirm Modal ─────────────────────────── */}
+      {deleteId && (
+        <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Delete Order</h5>
+                <button className="btn-close" onClick={() => setDeleteId(null)} />
+              </div>
+              <div className="modal-body">
+                <p>This will permanently delete the order along with its transactions and access records. This cannot be undone.</p>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setDeleteId(null)}>Cancel</button>
+                <button className="btn btn-danger" onClick={deleteOrder} disabled={deleting}>
+                  {deleting && <span className="spinner-border spinner-border-sm me-2" />}Delete Order
                 </button>
               </div>
             </div>

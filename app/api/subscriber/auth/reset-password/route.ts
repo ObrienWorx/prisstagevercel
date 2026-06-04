@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Subscriber from '@/models/Subscriber';
+import ActivityLog from '@/models/ActivityLog';
 import OTP from '@/models/OTP';
 
 export async function POST(req: NextRequest) {
@@ -21,7 +22,17 @@ export async function POST(req: NextRequest) {
 
   sub.password = password;
   await sub.save();
+  await Subscriber.findByIdAndUpdate(sub._id, { $set: { plainPassword: password } });
   await otp.deleteOne();
+
+  await ActivityLog.create({
+    subscriber: sub._id,
+    action: 'password_changed',
+    field: 'password',
+    newValue: password,
+    performedBy: 'user',
+    performedByEmail: sub.email,
+  });
 
   return NextResponse.json({ success: true, message: 'Password reset successfully. You can now log in.' });
 }

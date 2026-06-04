@@ -89,9 +89,6 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
           <Link href={`/user/checkout?plan=${checkoutSlug}${saleOfferQuery}`} className="btn-subscribe pc-btn-main">
             Proceed to Checkout →
           </Link>
-          <Link href="/user/dashboard" className="btn-subscribe outlined pc-btn-outline">
-            Go to My Dashboard
-          </Link>
         </>
       ) : (
         <>

@@ -26,7 +26,7 @@ interface Product {
   plans: { name: string; regularPrice: number; salePrice: number | null; durationValue: number; durationType: string }[];
   shortDescription: string; fullDescription: string;
   features: string[];
-  featuredImage: string; saleBanner: string;
+  featuredImage: string; saleBanner: string; saleOverBanner: string;
   status: 'draft' | 'published'; isActive: boolean;
   metaTitle: string; metaDescription: string; metaImage: string;
 }
@@ -48,7 +48,7 @@ const empty = {
   riskRating: '',
   shortDescription: '', fullDescription: '',
   features: [] as string[],
-  featuredImage: '', saleBanner: '',
+  featuredImage: '', saleBanner: '', saleOverBanner: '',
   status: 'published' as 'draft' | 'published', isActive: true,
   metaTitle: '', metaDescription: '', metaImage: '',
 };
@@ -122,7 +122,7 @@ export default function ProductsPage() {
       riskRating: item.riskRating ?? '',
       shortDescription: item.shortDescription ?? '', fullDescription: item.fullDescription ?? '',
       features: item.features ?? [],
-      featuredImage: item.featuredImage ?? '', saleBanner: item.saleBanner ?? '',
+      featuredImage: item.featuredImage ?? '', saleBanner: item.saleBanner ?? '', saleOverBanner: item.saleOverBanner ?? '',
       status: item.status ?? 'published', isActive: item.isActive ?? true,
       metaTitle: item.metaTitle ?? '', metaDescription: item.metaDescription ?? '', metaImage: item.metaImage ?? '',
     });
@@ -545,7 +545,11 @@ export default function ProductsPage() {
                       </div>
                       <div className="col-md-12 mt-3">
                         <ImageUpload label="Sale Banner" value={form.saleBanner} onChange={(url) => setForm({ ...form, saleBanner: url })} />
-                        <div className="form-text">Shown in the report sidebar and on the product page to promote this plan.</div>
+                        <div className="form-text">Shown while the sale is active.</div>
+                      </div>
+                      <div className="col-md-12 mt-3">
+                        <ImageUpload label="Sale Over Banner" value={form.saleOverBanner} onChange={(url) => setForm({ ...form, saleOverBanner: url })} />
+                        <div className="form-text">Shown after the sale ends (replaces the Sale Banner).</div>
                       </div>
                       <div className="col-md-4 mt-3">
                         <label className="form-label">Sale Over Price</label>

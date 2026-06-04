@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
         name,
         email,
         password: tempPassword,
+        plainPassword: tempPassword,
         phone: '',
         isActive: true,
         isEmailVerified: true, // PayPal verified email

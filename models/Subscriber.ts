@@ -5,6 +5,7 @@ export interface ISubscriber extends Document {
   name: string;
   email: string;
   password?: string;
+  plainPassword?: string;
   phone: string;
   isActive: boolean;
   isEmailVerified: boolean;
@@ -18,6 +19,7 @@ const SubscriberSchema = new Schema<ISubscriber>(
     name: { type: String, required: [true, 'Name is required'], trim: true },
     email: { type: String, required: [true, 'Email is required'], unique: true, lowercase: true, trim: true },
     password: { type: String, minlength: 6 },
+    plainPassword: { type: String },
     phone: { type: String, required: [true, 'Phone is required'], trim: true },
     isActive: { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
@@ -27,6 +29,7 @@ const SubscriberSchema = new Schema<ISubscriber>(
 
 SubscriberSchema.pre('save', async function () {
   if (!this.isModified('password') || !this.password) return;
+  this.plainPassword = this.password;
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
 });

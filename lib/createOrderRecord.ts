@@ -20,7 +20,22 @@ export async function createOrderRecord({
   const product = await Product.findById(productId);
   if (!product) throw new Error('Product not found');
 
-  const start = startDate ?? new Date();
+  const purchaseDate = new Date();
+
+  let start: Date;
+  if (startDate) {
+    // Admin explicitly set a start date — respect it
+    start = startDate;
+  } else {
+    // Auto: if subscriber has a still-valid subscription for this product, stack after it
+    const existing = await UserProduct.findOne({
+      subscriber: subscriberId,
+      product: productId,
+      expiryDate: { $gt: purchaseDate },
+    }).sort({ expiryDate: -1 });
+    start = existing ? new Date(existing.expiryDate) : purchaseDate;
+  }
+
   const expiry = calculateExpiryDate(start, product.durationType, product.durationValue);
   const orderStatus = paymentStatus === 'completed' ? 'completed' : 'pending';
 
@@ -30,7 +45,7 @@ export async function createOrderRecord({
     pricePaid,
     paymentStatus,
     orderStatus,
-    purchaseDate: start,
+    purchaseDate,
     expiryDate: expiry,
     notes: notes ?? '',
   });
@@ -42,7 +57,7 @@ export async function createOrderRecord({
     amount: pricePaid,
     paymentGateway,
     paymentStatus,
-    paymentDate: start,
+    paymentDate: purchaseDate,
     notes: notes ?? '',
   });
 

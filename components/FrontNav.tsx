@@ -217,18 +217,24 @@ export default function FrontNav() {
                   <div className="hn-dropdown hn-dropdown-wide nav-product-dropdown">
                     {products.length === 0 ? (
                       <div className="hn-dd-item hn-dd-disabled">No products yet</div>
-                    ) : products.map(p => (
-                      <Link
-                        key={p._id}
-                        href={`/subscribe/${p.slug}`}
-                        className={`hn-dd-item nav-product-item ${isActive(`/subscribe/${p.slug}`) ? 'active' : ''}`}
-                        onClick={() => setProductOpen(false)}
-                      >
-                        {p.featuredImage && <img src={p.featuredImage} alt="" className="nav-sector-img" />}
-                        <span className="nav-product-name">{p.name}</span>
-                        <ProductLock productId={p._id} />
-                      </Link>
-                    ))}
+                    ) : products.map(p => {
+                      const unlocked = unlockedProducts.has(p._id);
+                      const href = unlocked ? `/reports/${p.slug}` : `/subscribe/${p.slug}`;
+                      return (
+                        <Link
+                          key={p._id}
+                          href={href}
+                          className={`hn-dd-item nav-product-item ${isActive(href) ? 'active' : ''}`}
+                          onClick={() => setProductOpen(false)}
+                        >
+                          {p.featuredImage && <img src={p.featuredImage} alt="" className="nav-sector-img" />}
+                          <span className="nav-product-name">{p.name}</span>
+                          {unlocked
+                            ? <span className="nav-product-unlocked" title="You have access">🔓</span>
+                            : <ProductLock productId={p._id} />}
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
               </div>

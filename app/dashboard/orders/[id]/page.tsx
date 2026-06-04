@@ -6,10 +6,10 @@ import Link from 'next/link';
 
 interface Subscriber { _id: string; name: string; email: string; phone?: string; }
 interface ProductRef { _id: string; name: string; regularPrice: number; salePrice?: number; durationValue: number; durationType: string; }
-interface OrderItem { product: ProductRef; pricePaid: number; startDate: string; expiryDate: string; durationValue: number; durationType: string; }
+interface OrderItem { product: ProductRef; pricePaid: number; sellingPrice?: number; startDate: string; expiryDate: string; durationValue: number; durationType: string; }
 interface Order {
   _id: string; orderNumber: string; subscriber: Subscriber;
-  product: ProductRef; pricePaid: number;
+  product: ProductRef; pricePaid: number; sellingPrice?: number;
   paymentStatus: string; orderStatus: string;
   purchaseDate: string; expiryDate: string;
   items: OrderItem[]; notes: string; createdAt: string;
@@ -82,8 +82,9 @@ export default function OrderDetailPage() {
       durationType: order.product?.durationType,
     }];
 
-  const gstTotal = order.pricePaid / 11;
-  const subtotal = order.pricePaid - gstTotal;
+  const invoiceTotal = order.sellingPrice ?? order.pricePaid;
+  const gstTotal = invoiceTotal / 11;
+  const subtotal = invoiceTotal - gstTotal;
 
   return (
     <div>
@@ -259,7 +260,7 @@ export default function OrderDetailPage() {
                   <span>GST (10%)</span><span>A${gstTotal.toFixed(2)}</span>
                 </div>
                 <div className="inv-total-row inv-grand-total">
-                  <span>Total</span><span>A${order.pricePaid.toFixed(2)}</span>
+                  <span>Total</span><span>A${invoiceTotal.toFixed(2)}</span>
                 </div>
               </div>
               {order.paymentStatus === 'completed' && <div className="inv-paid-stamp">PAID</div>}

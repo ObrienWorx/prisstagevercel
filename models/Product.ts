@@ -27,6 +27,7 @@ export interface IProduct extends Document {
   features: string[];
   featuredImage: string;
   saleBanner: string;
+  saleOverBanner: string;
   status: 'draft' | 'published';
   isActive: boolean;
   metaTitle: string;
@@ -66,6 +67,7 @@ const ProductSchema = new Schema<IProduct>(
     features: { type: [String], default: [] },
     featuredImage: { type: String, default: '' },
     saleBanner: { type: String, default: '' },
+    saleOverBanner: { type: String, default: '' },
     status: { type: String, enum: ['draft', 'published'], default: 'published' },
     isActive: { type: Boolean, default: true },
     metaTitle: { type: String, default: '' },

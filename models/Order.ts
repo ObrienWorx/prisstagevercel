@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model, Types } from 'mongoose';
 export interface IOrderItem {
   product: Types.ObjectId;
   pricePaid: number;
+  sellingPrice?: number;
   startDate: Date;
   expiryDate: Date;
   durationValue: number;
@@ -14,6 +15,7 @@ export interface IOrder extends Document {
   subscriber: Types.ObjectId;
   product: Types.ObjectId;       // primary product (first item) — kept for compat
   pricePaid: number;             // total across all items
+  sellingPrice?: number;         // invoice display price (admin-set, optional)
   paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
   orderStatus: 'pending' | 'completed' | 'cancelled' | 'refunded';
   purchaseDate: Date;
@@ -28,6 +30,7 @@ const OrderItemSchema = new Schema<IOrderItem>(
   {
     product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     pricePaid: { type: Number, required: true, min: 0 },
+    sellingPrice: { type: Number, min: 0 },
     startDate: { type: Date, required: true },
     expiryDate: { type: Date, required: true },
     durationValue: { type: Number, default: 1 },
@@ -42,6 +45,7 @@ const OrderSchema = new Schema<IOrder>(
     subscriber: { type: Schema.Types.ObjectId, ref: 'Subscriber', required: true },
     product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     pricePaid: { type: Number, required: true, min: 0 },
+    sellingPrice: { type: Number, min: 0 },
     paymentStatus: { type: String, enum: ['pending', 'completed', 'failed', 'refunded'], default: 'pending' },
     orderStatus: { type: String, enum: ['pending', 'completed', 'cancelled', 'refunded'], default: 'pending' },
     purchaseDate: { type: Date, default: Date.now },

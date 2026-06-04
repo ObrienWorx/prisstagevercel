@@ -1,10 +1,11 @@
 import connectDB from '@/lib/mongoose';
 import Report from '@/models/Report';
-import '@/models/Sector';
-import '@/models/Product';
-import '@/models/ReportCategory';
+import Product from '@/models/Product';
+import Sector from '@/models/Sector';
+import ReportCategory from '@/models/ReportCategory';
 import UserProduct from '@/models/UserProduct';
 import SiteLayout from '@/components/SiteLayout';
+import ContentListing from '@/components/ContentListing';
 import SidebarLoginForm from '@/components/SidebarLoginForm';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -18,18 +19,77 @@ type P = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: P) {
   const { slug } = await params;
   await connectDB();
+  const product = await Product.findOne({ slug, isActive: true }).lean() as any;
+  if (product) return { title: `${product.name} – PristineGaze Research` };
   const r = await Report.findOne({ slug, publishStatus: 'published' }).lean() as any;
   if (!r) return { title: 'Report Not Found – PristineGaze' };
   return { title: `${r.title} – PristineGaze`, description: r.metaDescription || r.title };
 }
 
-export default async function ReportDetailPage({ params }: P) {
+function fmtDate(d: string | Date) {
+  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+export default async function ReportSlugPage({ params }: P) {
   const { slug } = await params;
   await connectDB();
 
+  // ── 1. Check if this slug belongs to a Product ──────────────────────────
+  const product = await Product.findOne({ slug, isActive: true }).lean() as any;
+
+  if (product) {
+    const [reports, latestReports, allSectors, allReportCats] = await Promise.all([
+      Report.find({ product: product._id, publishStatus: 'published' })
+        .select('title slug featuredImage createdAt recommendation')
+        .sort({ createdAt: -1 })
+        .lean() as Promise<any[]>,
+      Report.find({ publishStatus: 'published' })
+        .select('title slug featuredImage createdAt')
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean() as Promise<any[]>,
+      Sector.find({}).select('name slug').sort({ name: 1 }).lean(),
+      ReportCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean(),
+    ]);
+
+    const items = reports.map((r: any) => ({
+      _id: r._id.toString(),
+      title: r.title,
+      slug: r.slug,
+      featuredImage: r.featuredImage,
+      date: fmtDate(r.createdAt),
+      href: `/reports/${r.slug}`,
+      cta: 'Read Report »',
+      recommendation: r.recommendation || '',
+    }));
+
+    const latestItems = latestReports.map((r: any) => ({
+      _id: r._id.toString(),
+      title: r.title,
+      featuredImage: r.featuredImage,
+      href: `/reports/${r.slug}`,
+    }));
+
+    return (
+      <SiteLayout>
+        <ContentListing
+          title={product.name}
+          items={items}
+          latestItems={latestItems}
+          sidebarType="report"
+          latestLabel="Latest Reports"
+          emptyMessage="No reports published for this product yet."
+          sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }))}
+          categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+        />
+      </SiteLayout>
+    );
+  }
+
+  // ── 2. Individual report ─────────────────────────────────────────────────
   const report = await Report.findOne({ slug, publishStatus: 'published' })
     .populate('sector', 'name slug')
-    .populate('product', 'name slug regularPrice salePrice shortDescription features featuredImage saleBanner riskRating durationValue durationType plans')
+    .populate('product', 'name slug regularPrice salePrice saleOverPrice saleEndDate shortDescription features featuredImage saleBanner saleOverBanner riskRating durationValue durationType plans')
     .populate('category', 'name slug')
     .lean() as any;
 
@@ -50,17 +110,12 @@ export default async function ReportDetailPage({ params }: P) {
         isActive: true,
         expiryDate: { $gt: new Date() },
       };
-      if (report.product) {
-        // Require subscription to this specific product
-        query.product = report.product._id;
-      }
+      if (report.product) query.product = report.product._id;
       const up = await UserProduct.findOne(query).lean();
       hasAccess = !!up;
     }
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
   const excerpt = report.content ? report.content.replace(/<[^>]+>/g, '').slice(0, 400) : '';
 
   return (
@@ -94,9 +149,9 @@ export default async function ReportDetailPage({ params }: P) {
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span>Published {fmtDate(report.createdAt)}</span>
             {report.product && (
-              <span style={{ background: 'rgba(59,130,246,0.2)', color: '#93c5fd', padding: '2px 10px', borderRadius: 5, fontWeight: 500, fontSize: 12 }}>
+              <Link href={`/reports/${report.product.slug}`} style={{ background: 'rgba(59,130,246,0.2)', color: '#93c5fd', padding: '2px 10px', borderRadius: 5, fontWeight: 500, fontSize: 12, textDecoration: 'none' }}>
                 {report.product.name}
-              </span>
+              </Link>
             )}
           </div>
         </div>
@@ -115,7 +170,6 @@ export default async function ReportDetailPage({ params }: P) {
                 <div className="tiptap-prose" style={{ fontSize: 16, lineHeight: 1.85, color: '#1e293b' }} dangerouslySetInnerHTML={{ __html: report.content }} />
               ) : (
                 <div>
-                  {/* Blurred preview — only show if there's text content */}
                   {excerpt && (
                     <div style={{ position: 'relative', marginBottom: '2rem', overflow: 'hidden', maxHeight: 180 }}>
                       <div style={{ filter: 'blur(3px)', userSelect: 'none', pointerEvents: 'none', fontSize: 15, lineHeight: 1.8, color: '#374151' }}>
@@ -125,7 +179,6 @@ export default async function ReportDetailPage({ params }: P) {
                     </div>
                   )}
 
-                  {/* Gate card */}
                   <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', borderRadius: 20, padding: '2.5rem', color: '#fff', textAlign: 'center' }}>
                     <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
                     <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>
@@ -158,7 +211,7 @@ export default async function ReportDetailPage({ params }: P) {
                       </Link>
                       {!isLoggedIn && (
                         <Link
-                          href={`/auth/login`}
+                          href="/auth/login"
                           style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '0.75rem 2rem', borderRadius: 10, fontWeight: 600, fontSize: 15, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}
                         >
                           Sign In
@@ -185,33 +238,30 @@ export default async function ReportDetailPage({ params }: P) {
 
                 {!hasAccess && (
                   <>
-                    {/* Login form — only shown when not logged in */}
                     {!isLoggedIn && (
                       <div style={{ marginBottom: 16 }}>
                         <SidebarLoginForm redirectPath={`/reports/${report.slug}`} />
                       </div>
                     )}
 
-                    {/* Sale banner image */}
-                    {report.product?.saleBanner && (
+                    {(report.product?.saleOverBanner || report.product?.saleBanner) && (
                       <div style={{ marginBottom: 16 }}>
                         <img
-                          src={report.product.saleBanner}
+                          src={
+                            report.product.saleEndDate && new Date(report.product.saleEndDate) < new Date()
+                              ? (report.product.saleOverBanner || report.product.saleBanner)
+                              : (report.product.saleBanner || report.product.saleOverBanner)
+                          }
                           alt={`${report.product.name} promotion`}
                           style={{ width: '100%', borderRadius: 12, display: 'block' }}
                         />
                       </div>
                     )}
 
-                    {/* Product sales banner */}
                     {report.product ? (
                       <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', borderRadius: 14, padding: '1.5rem', color: '#fff', border: '1px solid rgba(59,130,246,0.2)' }}>
                         {report.product.featuredImage && (
-                          <img
-                            src={report.product.featuredImage}
-                            alt={report.product.name}
-                            style={{ width: '100%', borderRadius: 9, marginBottom: 12, maxHeight: 120, objectFit: 'cover' }}
-                          />
+                          <img src={report.product.featuredImage} alt={report.product.name} style={{ width: '100%', borderRadius: 9, marginBottom: 12, maxHeight: 120, objectFit: 'cover' }} />
                         )}
                         <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#93c5fd', marginBottom: 6 }}>
                           {isLoggedIn ? 'Upgrade to access' : 'Required subscription'}
@@ -237,40 +287,25 @@ export default async function ReportDetailPage({ params }: P) {
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 14 }}>
                           {report.product.salePrice != null && report.product.salePrice < report.product.regularPrice ? (
                             <>
-                              <span style={{ fontSize: 24, fontWeight: 800, color: '#4ade80' }}>
-                                A${report.product.salePrice.toFixed(2)}
-                              </span>
-                              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>
-                                A${report.product.regularPrice.toFixed(2)}
-                              </span>
+                              <span style={{ fontSize: 24, fontWeight: 800, color: '#4ade80' }}>A${report.product.salePrice.toFixed(2)}</span>
+                              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>A${report.product.regularPrice.toFixed(2)}</span>
                             </>
                           ) : (
-                            <span style={{ fontSize: 24, fontWeight: 800, color: '#93c5fd' }}>
-                              A${(report.product.regularPrice || 0).toFixed(2)}
-                            </span>
+                            <span style={{ fontSize: 24, fontWeight: 800, color: '#93c5fd' }}>A${(report.product.regularPrice || 0).toFixed(2)}</span>
                           )}
-                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                            / {report.product.durationValue} {report.product.durationType}
-                          </span>
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>/ {report.product.durationValue} {report.product.durationType}</span>
                         </div>
 
                         {report.product.riskRating && (
                           <div style={{ fontSize: 11, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ color: 'rgba(255,255,255,0.4)' }}>Risk:</span>
-                            <span style={{
-                              padding: '2px 8px', borderRadius: 100, fontWeight: 700,
-                              background: report.product.riskRating === 'Low' ? 'rgba(74,222,128,0.15)' : report.product.riskRating === 'Medium' ? 'rgba(251,191,36,0.15)' : 'rgba(248,113,113,0.15)',
-                              color: report.product.riskRating === 'Low' ? '#4ade80' : report.product.riskRating === 'Medium' ? '#fbbf24' : '#f87171',
-                            }}>
+                            <span style={{ padding: '2px 8px', borderRadius: 100, fontWeight: 700, background: report.product.riskRating === 'Low' ? 'rgba(74,222,128,0.15)' : report.product.riskRating === 'Medium' ? 'rgba(251,191,36,0.15)' : 'rgba(248,113,113,0.15)', color: report.product.riskRating === 'Low' ? '#4ade80' : report.product.riskRating === 'Medium' ? '#fbbf24' : '#f87171' }}>
                               {report.product.riskRating}
                             </span>
                           </div>
                         )}
 
-                        <Link
-                          href={`/subscribe/${report.product.slug}`}
-                          style={{ display: 'block', background: '#3b82f6', color: '#fff', padding: '0.7rem', borderRadius: 9, fontWeight: 700, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}
-                        >
+                        <Link href={`/subscribe/${report.product.slug}`} style={{ display: 'block', background: '#3b82f6', color: '#fff', padding: '0.7rem', borderRadius: 9, fontWeight: 700, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}>
                           Subscribe Now →
                         </Link>
                       </div>

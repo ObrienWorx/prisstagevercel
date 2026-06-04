@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 
 interface Product { _id: string; name: string; durationType: string; durationValue: number; regularPrice: number; salePrice: number | null; }
 interface UserProd { _id: string; product: Product; startDate: string; expiryDate: string; isActive: boolean; order?: { orderNumber: string; pricePaid: number; }; }
-interface Sub { _id: string; name: string; email: string; phone: string; isActive: boolean; createdAt: string; }
+interface Sub { _id: string; name: string; email: string; phone: string; isActive: boolean; createdAt: string; plainPassword?: string; }
+interface ActivityLog { _id: string; action: string; field?: string; oldValue?: string; newValue?: string; performedBy: 'admin' | 'user'; performedByEmail: string; createdAt: string; }
 
 function calcEndDate(startDate: string, durationValue: string, durationType: string): string {
   if (!startDate || !durationValue) return '';
@@ -47,6 +48,10 @@ export default function SubscribersPage() {
   const [assignForm, setAssignForm] = useState<{ paymentGateway: string; paymentStatus: string; lines: ReturnType<typeof getEmptyLine>[] }>(getEmptyAssign());
   const [editProd, setEditProd]     = useState<UserProd | null>(null);
   const [editForm, setEditForm]     = useState({ startDate: '', durationValue: '12', durationType: 'months', isActive: true });
+  const [showPwd, setShowPwd]       = useState(false);
+  const [activitySub, setActivitySub]   = useState<Sub | null>(null);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [loadingLogs, setLoadingLogs]   = useState(false);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -68,17 +73,28 @@ export default function SubscribersPage() {
 
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm); setErr(''); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyForm); setShowPwd(false); setErr(''); setShowModal(true); };
   const openEdit = (x: Sub) => {
     setEditing(x);
-    setForm({ name: x.name, email: x.email, password: '', phone: x.phone, isActive: x.isActive });
-    setErr(''); setShowModal(true);
+    setForm({ name: x.name, email: x.email, password: x.plainPassword || '', phone: x.phone, isActive: x.isActive });
+    setShowPwd(false); setErr(''); setShowModal(true);
   };
 
   const loadSubProducts = async (sub: Sub) => {
     const r = await fetch(`/api/subscribers/${sub._id}/products`, { headers: h });
     const d = await r.json();
     if (d.success) setSubProducts(d.data);
+  };
+
+  const openActivity = async (sub: Sub) => {
+    setActivitySub(sub);
+    setActivityLogs([]);
+    setLoadingLogs(true);
+    try {
+      const r = await fetch(`/api/subscribers/${sub._id}/activity`, { headers: h });
+      const d = await r.json();
+      if (d.success) setActivityLogs(d.data);
+    } finally { setLoadingLogs(false); }
   };
 
   const viewProducts = (sub: Sub) => {
@@ -168,6 +184,8 @@ export default function SubscribersPage() {
 
   const isExpired = (date: string) => new Date() > new Date(date);
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+  const fmtDateTime = (d: string) => new Date(d).toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const actionLabel = (a: string) => ({ created: 'Account Created', password_changed: 'Password Changed', email_updated: 'Email Updated', phone_updated: 'Phone Updated', name_updated: 'Name Updated', status_changed: 'Status Changed' }[a] ?? a);
 
   const editEndDate = calcEndDate(editForm.startDate, editForm.durationValue, editForm.durationType);
 
@@ -200,18 +218,20 @@ export default function SubscribersPage() {
           <div className="table-responsive">
             <table className="table">
               <thead>
-                <tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
+                <tr><th>Name</th><th>Email</th><th>Password</th><th>Phone</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {items.map((x) => (
                   <tr key={x._id}>
                     <td className="fw-semibold">{x.name}</td>
                     <td className="text-muted">{x.email}</td>
+                    <td className="font-monospace small">{x.plainPassword || '—'}</td>
                     <td className="text-muted">{x.phone || '—'}</td>
                     <td><span className={`badge ${x.isActive ? 'bg-success' : 'bg-danger'}`}>{x.isActive ? 'Active' : 'Inactive'}</span></td>
                     <td className="text-muted small">{fmtDate(x.createdAt)}</td>
                     <td className="d-flex gap-1 flex-wrap">
                       <button className="btn btn-sm btn-outline-primary" onClick={() => openEdit(x)}>Edit</button>
+                      <button className="btn btn-sm btn-outline-secondary" onClick={() => openActivity(x)}>Activity</button>
                       <button className="btn btn-sm btn-outline-success" onClick={() => viewProducts(x)}>Products</button>
                       <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(x)}>Del</button>
                     </td>
@@ -241,9 +261,29 @@ export default function SubscribersPage() {
                 <div className="col-md-6"><label className="form-label">Phone</label>
                   <input className="form-control" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                 <div className="col-md-6">
-                  <label className="form-label">{editing ? 'New Password (leave blank to keep)' : 'Password *'}</label>
-                  <input type="password" className="form-control" value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 6 characters" />
+                  <label className="form-label">{editing ? 'Password (leave blank to keep)' : 'Password *'}</label>
+                  {editing && (
+                    <div className="text-muted small mb-1">
+                      Current: <span className="font-monospace">{editing.plainPassword || '—'}</span>
+                    </div>
+                  )}
+                  <div className="input-group">
+                    <input
+                      type={showPwd ? 'text' : 'password'}
+                      className="form-control"
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      placeholder="Min 6 characters"
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setShowPwd(v => !v)}
+                      tabIndex={-1}
+                    >
+                      {showPwd ? '🙈' : '👁️'}
+                    </button>
+                  </div>
                 </div>
                 <div className="col-12">
                   <div className="form-check form-switch">
@@ -274,19 +314,12 @@ export default function SubscribersPage() {
                 <h5 className="modal-title mb-0">{viewSub.name} — Assigned Products</h5>
                 <small className="text-muted">{viewSub.email}</small>
               </div>
-              <div className="d-flex gap-2 align-items-center">
-                {/* {!showAssign && !editProd && (
-                  <button className="btn btn-sm btn-success"
-                    onClick={() => { setShowAssign(true); setEditProd(null); setErr(''); setAssignForm(getEmptyAssign()); }}>
-                    + Assign Product
-                  </button>
-                )} */}
-                <button className="btn-close" onClick={() => { setViewSub(null); setSubProducts([]); setShowAssign(false); setEditProd(null); setErr(''); }} />
-              </div>
+              <button className="btn-close" onClick={() => { setViewSub(null); setSubProducts([]); setShowAssign(false); setEditProd(null); setErr(''); }} />
             </div>
 
             <div className="modal-body">
               {err && <div className="alert alert-danger">{err}</div>}
+
 
               {/* Assign Form */}
               {showAssign && (
@@ -479,6 +512,7 @@ export default function SubscribersPage() {
                   </table>
                 </div>
               )}
+
             </div>
 
             <div className="modal-footer">
@@ -507,6 +541,55 @@ export default function SubscribersPage() {
               <button className="btn btn-danger" onClick={remove} disabled={saving}>
                 {saving && <span className="spinner-border spinner-border-sm me-2" />}Delete
               </button>
+            </div>
+          </div></div>
+        </div>
+      )}
+
+      {/* ── Activity Log Modal ── */}
+      {activitySub && (
+        <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-scrollable"><div className="modal-content">
+            <div className="modal-header justify-content-between">
+              <div>
+                <h5 className="modal-title mb-0">Activity Log — {activitySub.name}</h5>
+                <small className="text-muted">{activitySub.email}</small>
+              </div>
+              <button className="btn-close" onClick={() => { setActivitySub(null); setActivityLogs([]); }} />
+            </div>
+            <div className="modal-body">
+              {loadingLogs ? (
+                <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
+              ) : activityLogs.length === 0 ? (
+                <div className="text-center p-4 text-muted">No activity recorded yet.</div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-sm align-middle">
+                    <thead className="table-light">
+                      <tr><th>When</th><th>Action</th><th>Was</th><th>Now</th><th>By</th></tr>
+                    </thead>
+                    <tbody>
+                      {activityLogs.map(log => (
+                        <tr key={log._id}>
+                          <td className="small text-muted text-nowrap">{fmtDateTime(log.createdAt)}</td>
+                          <td><span className="badge bg-secondary">{actionLabel(log.action)}</span></td>
+                          <td className="small font-monospace text-muted">{log.oldValue || '—'}</td>
+                          <td className="small font-monospace">{log.newValue || '—'}</td>
+                          <td>
+                            <span className={`badge ${log.performedBy === 'admin' ? 'bg-danger' : 'bg-info text-dark'}`}>
+                              {log.performedBy === 'admin' ? 'Admin' : 'User'}
+                            </span>
+                            <div className="text-muted" style={{ fontSize: 11 }}>{log.performedByEmail}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => { setActivitySub(null); setActivityLogs([]); }}>Close</button>
             </div>
           </div></div>
         </div>

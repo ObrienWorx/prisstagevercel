@@ -34,6 +34,7 @@ type ProductDoc = {
   plans?: PlanDoc[];
   features?: string[];
   saleBanner?: string;
+  saleOverBanner?: string;
   riskRating?: string;
 };
 
@@ -189,8 +190,8 @@ export default async function ProductDetailPage({ params }: P) {
                     ))}
                   </div>
                 </div>
-                {p.saleBanner && (
-                  <img src={p.saleBanner} alt={`${p.name} promotion`} className="sale-expired-banner" />
+                {(p.saleOverBanner || p.saleBanner) && (
+                  <img src={p.saleOverBanner || p.saleBanner!} alt={`${p.name} promotion`} className="sale-expired-banner" />
                 )}
               </div>
             </div>

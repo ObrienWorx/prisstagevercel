@@ -36,6 +36,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'Media & Pages',
     items: [
       { label: 'Homepage Settings', href: '/dashboard/homepage-settings', icon: '⚙', module: null },
+      { label: 'Expert Picks', href: '/dashboard/picks', icon: '🎯', module: null },
       { label: 'Videos', href: '/dashboard/videos', icon: '🎥', module: 'videos' },
       { label: 'Static Pages', href: '/dashboard/static-pages', icon: '📄', module: null },
     ],
