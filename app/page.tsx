@@ -206,8 +206,8 @@ export default async function HomePage() {
       {/* MARKET NEWS */}
       <section className="home-market-section">
         <div className="container">
-          <div className="row g-4 align-items-start">
-            <div className="col-lg-8">
+          <div className="row g-4 align-items-stretch">
+            <div className="col-lg-8 d-flex flex-column">
               <div className="home-section-head">
                 <h2>Trending Market News</h2>
                 <Link href="/trending-stock-market-news" className="home-view-link">View All ↗</Link>

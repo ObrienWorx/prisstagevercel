@@ -6080,7 +6080,9 @@ body {
 .home-news-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: repeat(2, 1fr);
   gap: 0.5rem;
+  flex: 1;
 }
 
 .home-news-grid .home-news-card {
@@ -6370,7 +6372,7 @@ body {
 }
 
 .home-section-head-large h2 {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(1.1rem,2vw,1.35rem);
 }
 
 .home-sector-grid {
@@ -6445,10 +6447,6 @@ body {
   color: #334155;
   font-size: 0.82rem;
   font-weight: 600;
-}
-
-.home-newsletter-heading {
-  min-height: clamp(2.5rem, 4vw, 3.4rem);
 }
 
 .home-newsletter-card {
@@ -8670,6 +8668,6 @@ a.cu-info-value:hover {
     padding: 28px 20px 24px;
   }
   .home-scan-recs-section {
-    padding: 0 0 40px;
+    padding: 2rem 0 40px;
   }
 }
