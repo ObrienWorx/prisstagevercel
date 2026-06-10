@@ -55,7 +55,7 @@ const empty = {
 
 function toDateInput(d: string | null | undefined) {
   if (!d) return '';
-  return new Date(d).toISOString().slice(0, 10);
+  return new Date(d).toISOString().slice(0, 16);
 }
 
 function plansFromItem(item: Product): Plan[] {
@@ -531,16 +531,16 @@ export default function ProductsPage() {
                     <div className="p-3 rounded border border-top-0">
                       <div className="row g-3">
                         <div className="col-md-6">
-                          <label className="form-label">Sale Start Date</label>
-                          <input type="date" className="form-control" value={form.saleStartDate}
+                          <label className="form-label">Sale Start Date &amp; Time</label>
+                          <input type="datetime-local" className="form-control" value={form.saleStartDate}
                             onChange={(e) => setForm({ ...form, saleStartDate: e.target.value })} />
-                          <div className="form-text">Sale activates from this date</div>
+                          <div className="form-text">Sale activates from this date &amp; time</div>
                         </div>
                         <div className="col-md-6">
-                          <label className="form-label">Sale End Date</label>
-                          <input type="date" className="form-control" value={form.saleEndDate}
+                          <label className="form-label">Sale End Date &amp; Time</label>
+                          <input type="datetime-local" className="form-control" value={form.saleEndDate}
                             onChange={(e) => setForm({ ...form, saleEndDate: e.target.value })} />
-                          <div className="form-text">Sale expires after this date</div>
+                          <div className="form-text">Sale expires after this date &amp; time</div>
                         </div>
                       </div>
                       <div className="col-md-12 mt-3">

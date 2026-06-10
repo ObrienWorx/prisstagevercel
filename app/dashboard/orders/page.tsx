@@ -41,6 +41,7 @@ export default function OrdersPage() {
   const [cForm, setCForm] = useState({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '', sellingPrice: '' });
   const [lines, setLines] = useState<LineItem[]>([defaultLine()]);
   const [eForm, setEForm] = useState({ paymentStatus: 'completed', orderStatus: 'completed', notes: '' });
+  const [lineWarnings, setLineWarnings] = useState<Record<number, string>>({});
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -65,9 +66,34 @@ export default function OrdersPage() {
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };
 
   const addLine = () => setLines(ls => [...ls, defaultLine()]);
-  const removeLine = (i: number) => setLines(ls => ls.filter((_, idx) => idx !== i));
+  const removeLine = (i: number) => {
+    setLines(ls => ls.filter((_, idx) => idx !== i));
+    setLineWarnings(w => { const n = { ...w }; delete n[i]; return n; });
+  };
   const setLine = (i: number, patch: Partial<LineItem>) =>
     setLines(ls => ls.map((l, idx) => idx === i ? { ...l, ...patch } : l));
+
+  const checkSubscription = async (subscriberId: string, productId: string, lineIdx: number) => {
+    if (!subscriberId || !productId) {
+      setLineWarnings(w => { const n = { ...w }; delete n[lineIdx]; return n; });
+      return;
+    }
+    try {
+      const r = await fetch(
+        `/api/orders/check-subscription?subscriberId=${subscriberId}&productId=${productId}`,
+        { headers: h },
+      );
+      const d = await r.json();
+      if (d.success && d.data.active) {
+        const expiry = new Date(d.data.expiryDate).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+        setLineWarnings(w => ({ ...w, [lineIdx]: `Already has an active subscription — expires ${expiry}` }));
+      } else {
+        setLineWarnings(w => { const n = { ...w }; delete n[lineIdx]; return n; });
+      }
+    } catch {
+      setLineWarnings(w => { const n = { ...w }; delete n[lineIdx]; return n; });
+    }
+  };
 
   const onProductSelect = (i: number, productId: string) => {
     const p = products.find(x => x._id === productId);
@@ -77,6 +103,7 @@ export default function OrdersPage() {
       durationValue: p ? String(p.durationValue) : '12',
       durationType: p ? p.durationType : 'months',
     });
+    checkSubscription(cForm.subscriberId, productId, i);
   };
 
   const totalPrice = lines.reduce((s, l) => s + (parseFloat(l.pricePaid) || 0), 0);
@@ -85,6 +112,7 @@ export default function OrdersPage() {
     setShowCreate(true); setErr('');
     setCForm({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '', sellingPrice: '' });
     setLines([defaultLine()]);
+    setLineWarnings({});
   };
 
   const createOrder = async () => {
@@ -239,7 +267,15 @@ export default function OrdersPage() {
                 <div className="row g-3 mb-3">
                   <div className="col-md-5">
                     <label className="form-label fw-semibold">Subscriber *</label>
-                    <select className="form-select" value={cForm.subscriberId} onChange={e => setCForm({ ...cForm, subscriberId: e.target.value })}>
+                    <select
+                      className="form-select"
+                      value={cForm.subscriberId}
+                      onChange={e => {
+                        const sid = e.target.value;
+                        setCForm(f => ({ ...f, subscriberId: sid }));
+                        lines.forEach((l, i) => checkSubscription(sid, l.productId, i));
+                      }}
+                    >
                       <option value="">— Select Subscriber —</option>
                       {subscribers.map(s => <option key={s._id} value={s._id}>{s.name} ({s.email})</option>)}
                     </select>
@@ -321,6 +357,11 @@ export default function OrdersPage() {
                                 </option>
                               ))}
                             </select>
+                            {lineWarnings[i] && (
+                              <div style={{ fontSize: 11, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 4, padding: '3px 7px', marginTop: 4 }}>
+                                ⚠ {lineWarnings[i]}
+                              </div>
+                            )}
                           </td>
                           <td>
                             <input
@@ -344,13 +385,11 @@ export default function OrdersPage() {
                                 className="form-control"
                                 value={line.durationValue}
                                 onChange={e => setLine(i, { durationValue: e.target.value })}
-                                style={{ maxWidth: 60 }}
                               />
                               <select
                                 className="form-select"
                                 value={line.durationType}
                                 onChange={e => setLine(i, { durationType: e.target.value })}
-                                style={{ maxWidth: 90 }}
                               >
                                 <option value="days">Days</option>
                                 <option value="months">Months</option>

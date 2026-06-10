@@ -7,7 +7,9 @@ interface Props {
   badge?: string;
   title?: string;
   buttonText?: string;
+  successText?: string;
   source?: string;
+  onSuccess?: () => void;
 }
 
 const AU_PHONE_RE = /^(?:0[23478]\d{8}|(?:\+?61)[23478]\d{8}|[23478]\d{8})$/;
@@ -21,7 +23,9 @@ export default function LeadCaptureForm({
   badge = 'Pristine Gaze',
   title = 'Grab Your FREE Report on Top 5 ASX Stocks to Buy in 2026',
   buttonText = 'Grab your free report',
+  successText = 'We\'ll be in touch with your free report shortly.',
   source = 'general',
+  onSuccess,
 }: Props) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', postalCode: '' });
   const [consent, setConsent] = useState(false);
@@ -56,6 +60,7 @@ export default function LeadCaptureForm({
       const data = await res.json();
       if (data.success) {
         setSuccess(true);
+        onSuccess?.();
       } else {
         setError(data.error || 'Something went wrong. Please try again.');
       }
@@ -72,7 +77,7 @@ export default function LeadCaptureForm({
         <div className="lcf-success">
           <div className="lcf-success-icon">✓</div>
           <div className="lcf-success-title">Thank you!</div>
-          <div className="lcf-success-sub">We&apos;ll be in touch with your free report shortly.</div>
+          <div className="lcf-success-sub">{successText}</div>
         </div>
       </div>
     );

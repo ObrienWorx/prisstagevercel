@@ -27,13 +27,20 @@ export async function createOrderRecord({
     // Admin explicitly set a start date — respect it
     start = startDate;
   } else {
-    // Auto: if subscriber has a still-valid subscription for this product, stack after it
+    // Auto: stack after the latest active subscription for this product
     const existing = await UserProduct.findOne({
       subscriber: subscriberId,
       product: productId,
+      isActive: true,
       expiryDate: { $gt: purchaseDate },
     }).sort({ expiryDate: -1 });
-    start = existing ? new Date(existing.expiryDate) : purchaseDate;
+    if (existing) {
+      // Start the day AFTER the current subscription expires (no overlap)
+      start = new Date(existing.expiryDate);
+      start.setDate(start.getDate() + 1);
+    } else {
+      start = purchaseDate;
+    }
   }
 
   const expiry = calculateExpiryDate(start, product.durationType, product.durationValue);

@@ -125,10 +125,7 @@ export default function FrontNav() {
   const ProductLock = ({ productId }: { productId: string }) => (
     unlockedProducts.has(productId) ? null : (
       <span className="nav-product-lock" aria-label="Subscription required" title="Subscription required">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="5" y="10" width="14" height="11" rx="2" />
-          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-        </svg>
+        🔒
       </span>
     )
   );
@@ -230,7 +227,7 @@ export default function FrontNav() {
                           {p.featuredImage && <img src={p.featuredImage} alt="" className="nav-sector-img" />}
                           <span className="nav-product-name">{p.name}</span>
                           {unlocked
-                            ? <span className="nav-product-unlocked" title="You have access">🔓</span>
+                            ? null
                             : <ProductLock productId={p._id} />}
                         </Link>
                       );

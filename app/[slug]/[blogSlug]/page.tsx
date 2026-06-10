@@ -3,6 +3,7 @@ import Blog from '@/models/Blog';
 import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import BlogSidebarPromo from '@/components/BlogSidebarPromo';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,9 +99,11 @@ export default async function BlogDetailPage({ params }: P) {
 
             {/* Sidebar */}
             <div className="col-lg-4 d-none d-lg-block">
-              <div style={{ position: 'sticky', top: 80 }}>
+              <div style={{ position: 'sticky', top: 80, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <BlogSidebarPromo />
+
                 {category && (
-                  <div style={{ background: '#fff', borderRadius: 14, padding: '1.25rem', border: '1px solid #e2e8f0', marginBottom: 16, boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+                  <div style={{ background: '#fff', borderRadius: 14, padding: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#94a3b8', marginBottom: 8 }}>Category</div>
                     <Link
                       href={`/${category.slug}`}

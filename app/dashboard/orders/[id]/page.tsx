@@ -203,7 +203,7 @@ export default function OrderDetailPage() {
             <div className="inv-doc">
               <div className="inv-hdr">
                 <div className="inv-brand">
-                  <img src="/logo.png" alt="PristineGaze" className="inv-brand-logo w-100" />
+                  <img src="/logo2.png" alt="PristineGaze" className="inv-brand-logo w-100" />
                 </div>
                 <div className="inv-title-block">
                   <div className="inv-title">TAX INVOICE</div>

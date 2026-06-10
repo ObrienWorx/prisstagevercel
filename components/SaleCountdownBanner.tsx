@@ -27,10 +27,10 @@ export default function SaleCountdownBanner({ endDate, onExpired, compact = fals
 
   if (ms <= 0) return null;
 
-  const days  = Math.floor(ms / 86400000);
+  const days = Math.floor(ms / 86400000);
   const hours = Math.floor((ms % 86400000) / 3600000);
-  const mins  = Math.floor((ms % 3600000)  / 60000);
-  const secs  = Math.floor((ms % 60000)    / 1000);
+  const mins = Math.floor((ms % 3600000) / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
 
   if (compact) {
     return (
@@ -53,7 +53,7 @@ export default function SaleCountdownBanner({ endDate, onExpired, compact = fals
   return (
     <div style={{
       background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-      color: '#fff', padding: '1rem 0',
+      color: '#fff', padding: '.5rem 0',
     }}>
       <div className="container">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
@@ -63,8 +63,8 @@ export default function SaleCountdownBanner({ endDate, onExpired, compact = fals
           <div style={{ display: 'flex', gap: 8 }}>
             {days > 0 && <BigChip label="Days" value={days} />}
             <BigChip label="Hours" value={hours} />
-            <BigChip label="Mins"  value={mins} />
-            <BigChip label="Secs"  value={secs} />
+            <BigChip label="Mins" value={mins} />
+            <BigChip label="Secs" value={secs} />
           </div>
         </div>
       </div>

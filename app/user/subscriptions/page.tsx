@@ -1,40 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 
 interface Product { _id: string; name: string; slug: string; featuredImage?: string; durationType: string; durationValue: number; regularPrice: number; salePrice?: number; }
-interface Order { _id: string; orderNumber: string; pricePaid: number; paymentStatus: string; paymentGateway: string; }
-interface UserProduct { _id: string; product: Product; order: Order; startDate: string; expiryDate: string; isActive: boolean; createdAt: string; }
-interface ReportItem { _id: string; title: string; slug: string; featuredImage?: string; recommendation?: string; createdAt: string; }
+interface OrderRef { _id: string; orderNumber: string; pricePaid: number; paymentStatus: string; paymentGateway: string; }
+interface UserProduct { _id: string; product: Product; order: OrderRef; startDate: string; expiryDate: string; isActive: boolean; createdAt: string; }
 interface SubscriberUser { name: string; email: string; }
 interface InvProduct { name: string; durationValue?: number; durationType?: string; }
 interface OrderItem { product: InvProduct; pricePaid: number; startDate: string; expiryDate: string; durationValue: number; durationType: string; }
 interface FullOrder { _id: string; orderNumber: string; pricePaid: number; purchaseDate: string; paymentStatus: string; orderStatus: string; items: OrderItem[]; product?: InvProduct; expiryDate: string; }
 
+interface OrderGroup {
+  orderId: string;
+  orderNumber: string;
+  pricePaid: number;
+  paymentStatus: string;
+  paymentGateway: string;
+  items: UserProduct[];
+  minStartDate: string;
+  maxExpiryDate: string;
+  maxCreatedAt: string;
+  isAnyActive: boolean;
+}
+
 function getDaysLeft(d: string) { return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000); }
 function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }); }
 
-function ProgressBar({ start, end }: { start: string; end: string }) {
-  const total = new Date(end).getTime() - new Date(start).getTime();
-  const used = Date.now() - new Date(start).getTime();
-  const pct = Math.max(0, Math.min(100, (used / total) * 100));
-  const color = pct > 85 ? '#ef4444' : pct > 70 ? '#f59e0b' : '#3b82f6';
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
-        <span>{fmtDate(start)}</span>
-        <span style={{ color }}>{(100 - pct).toFixed(0)}% remaining</span>
-        <span>{fmtDate(end)}</span>
-      </div>
-      <div style={{ height: 6, background: '#e2e8f0', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4, transition: 'width 0.4s' }} />
-      </div>
-    </div>
-  );
-}
-
-const REC_COLOR: Record<string, string> = { BUY: '#16a34a', HOLD: '#d97706', SELL: '#dc2626', 'SPECULATIVE BUY': '#0049AC', REFRAIN: '#64748b' };
 const GW_MAP: Record<string, { icon: string; label: string }> = {
   paypal: { icon: '🅿', label: 'PayPal' }, stripe: { icon: '💳', label: 'Stripe' },
   manual: { icon: '🏦', label: 'Manual' }, bank_transfer: { icon: '🏦', label: 'Bank Transfer' }, cod: { icon: '💵', label: 'COD' },
@@ -45,8 +37,6 @@ export default function SubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'expired'>('all');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [reportsMap, setReportsMap] = useState<Record<string, ReportItem[]>>({});
-  const [loadingReports, setLoadingReports] = useState<Set<string>>(new Set());
   const [invoiceOrder, setInvoiceOrder] = useState<FullOrder | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [subscriber, setSubscriber] = useState<SubscriberUser | null>(null);
@@ -63,40 +53,63 @@ export default function SubscriptionsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const toggle = async (up: UserProduct) => {
-    const next = new Set(expanded);
-    if (next.has(up._id)) { next.delete(up._id); setExpanded(next); return; }
-    next.add(up._id); setExpanded(next);
-    if (!reportsMap[up._id] && up.product?._id) {
-      setLoadingReports(prev => new Set(prev).add(up._id));
-      try {
-        const r = await fetch(`/api/public/reports?product=${up.product._id}`);
-        const d = await r.json();
-        if (d.success) setReportsMap(prev => ({ ...prev, [up._id]: d.data }));
-      } finally {
-        setLoadingReports(prev => { const s = new Set(prev); s.delete(up._id); return s; });
+  // Group UserProducts by order — one card per order
+  const orderGroups = useMemo<OrderGroup[]>(() => {
+    const map = new Map<string, OrderGroup>();
+    products.forEach(up => {
+      const orderId = up.order?._id ?? `solo-${up._id}`;
+      if (!map.has(orderId)) {
+        map.set(orderId, {
+          orderId,
+          orderNumber: up.order?.orderNumber ?? '—',
+          pricePaid: up.order?.pricePaid ?? 0,
+          paymentStatus: up.order?.paymentStatus ?? '—',
+          paymentGateway: up.order?.paymentGateway ?? '—',
+          items: [],
+          minStartDate: up.startDate,
+          maxExpiryDate: up.expiryDate,
+          maxCreatedAt: up.createdAt,
+          isAnyActive: false,
+        });
       }
-    }
+      const g = map.get(orderId)!;
+      g.items.push(up);
+      if (new Date(up.startDate) < new Date(g.minStartDate)) g.minStartDate = up.startDate;
+      if (new Date(up.expiryDate) > new Date(g.maxExpiryDate)) g.maxExpiryDate = up.expiryDate;
+      if (new Date(up.createdAt) > new Date(g.maxCreatedAt)) g.maxCreatedAt = up.createdAt;
+    });
+    map.forEach(g => {
+      g.isAnyActive = g.items.some(up => up.isActive && getDaysLeft(up.expiryDate) > 0);
+    });
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.maxCreatedAt).getTime() - new Date(a.maxCreatedAt).getTime()
+    );
+  }, [products]);
+
+  const toggle = (group: OrderGroup) => {
+    const next = new Set(expanded);
+    if (next.has(group.orderId)) { next.delete(group.orderId); } else { next.add(group.orderId); }
+    setExpanded(next);
   };
 
-  const openInvoice = async (up: UserProduct) => {
-    if (!up.order?._id) return;
+  const openInvoice = async (orderId: string) => {
+    if (!orderId || orderId.startsWith('solo-')) return;
     setInvoiceLoading(true);
     try {
-      const r = await fetch(`/api/subscriber/orders/${up.order._id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const r = await fetch(`/api/subscriber/orders/${orderId}`, { headers: { Authorization: `Bearer ${token}` } });
       const d = await r.json();
       if (d.success) setInvoiceOrder(d.data);
     } finally { setInvoiceLoading(false); }
   };
 
-  const filtered = products.filter(p => {
-    if (filter === 'active') return p.isActive && getDaysLeft(p.expiryDate) > 0;
-    if (filter === 'expired') return !p.isActive || getDaysLeft(p.expiryDate) <= 0;
+  const filtered = orderGroups.filter(g => {
+    if (filter === 'active') return g.isAnyActive;
+    if (filter === 'expired') return !g.isAnyActive;
     return true;
   });
 
-  const activeCount = products.filter(p => p.isActive && getDaysLeft(p.expiryDate) > 0).length;
-  const expiredCount = products.filter(p => !p.isActive || getDaysLeft(p.expiryDate) <= 0).length;
+  const activeCount = orderGroups.filter(g => g.isAnyActive).length;
+  const expiredCount = orderGroups.filter(g => !g.isAnyActive).length;
 
   const invItems: OrderItem[] = invoiceOrder
     ? (invoiceOrder.items?.length ? invoiceOrder.items : invoiceOrder.product
@@ -114,14 +127,14 @@ export default function SubscriptionsPage() {
       <div className="page-hdr d-flex align-items-flex-start justify-content-between flex-wrap gap-3">
         <div>
           <h4>My Subscriptions</h4>
-          <p>{products.length} total subscription{products.length !== 1 ? 's' : ''}</p>
+          <p>{orderGroups.length} order{orderGroups.length !== 1 ? 's' : ''} · {products.length} subscription{products.length !== 1 ? 's' : ''}</p>
         </div>
         <Link href="/subscribe" className="btn btn-dark btn-sm d-inline-flex align-items-center gap-1">+ Browse Plans</Link>
       </div>
 
       <div className="filter-tabs">
         {([
-          { key: 'all', label: `All (${products.length})` },
+          { key: 'all', label: `All (${orderGroups.length})` },
           { key: 'active', label: `Active (${activeCount})` },
           { key: 'expired', label: `Expired (${expiredCount})` },
         ] as const).map(f => (
@@ -140,42 +153,40 @@ export default function SubscriptionsPage() {
         </div>
       ) : (
         <div className="d-flex flex-column gap-3">
-          {filtered.map(up => {
-            const daysLeft = getDaysLeft(up.expiryDate);
-            const isActive = up.isActive && daysLeft > 0;
-            const isOpen = expanded.has(up._id);
-            const gw = GW_MAP[up.order?.paymentGateway?.toLowerCase?.() ?? ''] ?? { icon: '💳', label: up.order?.paymentGateway ?? '—' };
-            const reports = reportsMap[up._id] ?? [];
-            const loadingRep = loadingReports.has(up._id);
+          {filtered.map(group => {
+            const daysLeft = getDaysLeft(group.maxExpiryDate);
+            const isActive = group.isAnyActive;
+            const isOpen = expanded.has(group.orderId);
+            const gw = GW_MAP[group.paymentGateway?.toLowerCase?.() ?? ''] ?? { icon: '💳', label: group.paymentGateway ?? '—' };
+            const firstProduct = group.items[0]?.product;
 
             return (
-              <div key={up._id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+              <div key={group.orderId} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
 
-                {/* ── Row header ── */}
+                {/* ── Order row header ── */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1.1rem', flexWrap: 'wrap' }}>
                   {/* Thumbnail */}
                   <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {up.product?.featuredImage
-                      ? <img src={up.product.featuredImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {firstProduct?.featuredImage
+                      ? <img src={firstProduct.featuredImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <span style={{ fontSize: 20 }}>📊</span>}
                   </div>
 
-                  {/* Order + product */}
+                  {/* Order + product summary */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>
-                      Order <span style={{ fontFamily: 'monospace', color: '#3b82f6' }}>#{up.order?.orderNumber ?? '—'}</span>
+                      Order <span style={{ fontFamily: 'monospace', color: '#3b82f6' }}>#{group.orderNumber}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
-                      {up.product?.name ?? 'Unknown Product'} · {up.product?.durationValue} {up.product?.durationType}
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {group.items.map(up => up.product?.name).filter(Boolean).join(' · ')}
+                      {group.items.length > 1 && <span style={{ marginLeft: 4, color: '#3b82f6', fontWeight: 600 }}>({group.items.length} plans)</span>}
                     </div>
                   </div>
 
                   {/* Amount */}
-                  {up.order?.pricePaid != null && (
-                    <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a', flexShrink: 0 }}>
-                      A${up.order.pricePaid.toFixed(2)}
-                    </div>
-                  )}
+                  <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a', flexShrink: 0 }}>
+                    A${group.pricePaid.toFixed(2)}
+                  </div>
 
                   {/* Status badge */}
                   <div style={{ flexShrink: 0 }}>
@@ -188,7 +199,7 @@ export default function SubscriptionsPage() {
                   <button
                     className="btn btn-sm btn-outline-secondary"
                     style={{ fontSize: 12, flexShrink: 0 }}
-                    onClick={() => openInvoice(up)}
+                    onClick={() => openInvoice(group.orderId)}
                     disabled={invoiceLoading}
                   >
                     {invoiceLoading ? <span className="spinner-border spinner-border-sm" /> : '🧾 Invoice'}
@@ -196,91 +207,79 @@ export default function SubscriptionsPage() {
 
                   {/* Expand toggle */}
                   <button
-                    onClick={() => toggle(up)}
+                    onClick={() => toggle(group)}
                     style={{ background: isOpen ? '#eff6ff' : '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#475569', flexShrink: 0, transition: 'background 0.15s' }}
                   >
                     {isOpen ? '▲ Hide' : '▼ Details'}
                   </button>
                 </div>
 
-                {/* ── Expanded details ── */}
+                {/* ── Expanded detail ── */}
                 {isOpen && (
                   <div style={{ borderTop: '1px solid #f1f5f9', padding: '1.1rem 1.1rem 1.25rem', background: '#fafbfc' }}>
 
-                    {/* Progress + dates */}
-                    <div style={{ marginBottom: '1.1rem' }}>
-                      <ProgressBar start={up.startDate} end={up.expiryDate} />
-                    </div>
-
-                    {/* Meta row */}
+                    {/* Order meta row */}
                     <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
                       <div>
-                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Started</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>{fmtDate(up.startDate)}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Expires</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? '#0f172a' : '#dc2626', marginTop: 2 }}>{fmtDate(up.expiryDate)}</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Purchase Date</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>{fmtDate(group.minStartDate)}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Payment</div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>{gw.icon} {gw.label}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Status</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: up.order?.paymentStatus === 'completed' ? '#16a34a' : '#f59e0b', marginTop: 2, textTransform: 'capitalize' }}>{up.order?.paymentStatus ?? '—'}</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Payment Status</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: group.paymentStatus === 'completed' ? '#16a34a' : '#f59e0b', marginTop: 2, textTransform: 'capitalize' }}>{group.paymentStatus}</div>
                       </div>
                     </div>
 
-                    {/* Reports section */}
-                    <div>
+                    {/* Products table */}
+                    <div style={{ marginBottom: '1.25rem' }}>
                       <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em', marginBottom: 8 }}>
-                        Reports Included {!loadingRep && reports.length > 0 && <span style={{ color: '#3b82f6' }}>({reports.length})</span>}
+                        Subscriptions ({group.items.length})
                       </div>
-
-                      {loadingRep ? (
-                        <div style={{ padding: '0.75rem 0', color: '#94a3b8', fontSize: 13 }}>
-                          <span className="spinner-border spinner-border-sm me-2" />Loading reports…
-                        </div>
-                      ) : reports.length === 0 ? (
-                        <div style={{ fontSize: 13, color: '#94a3b8', padding: '0.5rem 0' }}>No reports published yet for this subscription.</div>
-                      ) : (
-                        <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
-                          {reports.map((r, i) => (
-                            <Link
-                              key={r._id}
-                              href={isActive ? `/reports/${r.slug}` : `/subscribe/${up.product?.slug}`}
-                              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.6rem 0.85rem', borderBottom: i < reports.length - 1 ? '1px solid #f1f5f9' : 'none', background: '#fff', textDecoration: 'none', transition: 'background 0.12s' }}
-                            >
-                              {r.featuredImage
-                                ? <img src={r.featuredImage} alt="" style={{ width: 34, height: 34, borderRadius: 5, objectFit: 'cover', flexShrink: 0, filter: isActive ? 'none' : 'blur(3px)' }} />
-                                : <div style={{ width: 34, height: 34, borderRadius: 5, background: '#f1f5f9', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>📄</div>}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? '#0f172a' : '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', filter: isActive ? 'none' : 'blur(3px)' }}>
-                                  {r.title}
-                                </div>
-                                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{fmtDate(r.createdAt)}</div>
-                              </div>
-                              {r.recommendation && (
-                                <span style={{ fontSize: 10, fontWeight: 800, color: REC_COLOR[r.recommendation] ?? '#64748b', background: '#f8fafc', border: `1px solid ${REC_COLOR[r.recommendation] ?? '#e2e8f0'}`, borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>
-                                  {r.recommendation}
-                                </span>
-                              )}
-                              {isActive
-                                ? <span style={{ fontSize: 11, color: '#3b82f6', fontWeight: 600, flexShrink: 0 }}>Read →</span>
-                                : <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>🔒</span>}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569', fontSize: 11 }}>Product</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569', fontSize: 11 }}>Duration</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569', fontSize: 11 }}>Start</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569', fontSize: 11 }}>Expiry</th>
+                              <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, color: '#475569', fontSize: 11 }}>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.items.map((up, idx) => {
+                              const upDaysLeft = getDaysLeft(up.expiryDate);
+                              const upActive = up.isActive && upDaysLeft > 0;
+                              return (
+                                <tr key={up._id} style={{ borderBottom: idx < group.items.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                                  <td style={{ padding: '10px 12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      {up.product?.featuredImage
+                                        ? <img src={up.product.featuredImage} alt="" style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                                        : <div style={{ width: 28, height: 28, borderRadius: 4, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>📊</div>}
+                                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{up.product?.name ?? '—'}</span>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '10px 12px', color: '#64748b' }}>{up.product?.durationValue} {up.product?.durationType}</td>
+                                  <td style={{ padding: '10px 12px', color: '#64748b' }}>{fmtDate(up.startDate)}</td>
+                                  <td style={{ padding: '10px 12px', color: upActive ? '#0f172a' : '#ef4444', fontWeight: 600 }}>{fmtDate(up.expiryDate)}</td>
+                                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                                    {upActive
+                                      ? <span className={upDaysLeft <= 7 ? 'badge-expiring' : 'badge-active'} style={{ fontSize: 11 }}>{upDaysLeft <= 7 ? `⚠ ${upDaysLeft}d` : '✓ Active'}</span>
+                                      : <span className="badge-expired" style={{ fontSize: 11 }}>Expired</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
 
-                    {/* Renew button */}
-                    {!isActive && up.product?.slug && (
-                      <div style={{ marginTop: '1rem' }}>
-                        <Link href={`/subscribe/${up.product.slug}`} className="btn btn-primary btn-sm">Renew Subscription →</Link>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -289,7 +288,7 @@ export default function SubscriptionsPage() {
         </div>
       )}
 
-      {/* ── Invoice Modal (same as transactions page) ── */}
+      {/* ── Invoice Modal ── */}
       {invoiceOrder && (
         <div className="inv-overlay" onClick={() => setInvoiceOrder(null)}>
           <div className="inv-modal" onClick={e => e.stopPropagation()}>

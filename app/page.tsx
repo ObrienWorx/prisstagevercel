@@ -172,7 +172,7 @@ export default async function HomePage() {
         <div className="container position-relative">
           <div className="row align-items-start g-5">
             <div className="col-lg-6">
-              <h1 className="homepage-hero-title">Invest with Insights.</h1>
+              <h1 className="homepage-hero-title">Invest with <br/>Insights.</h1>
               <p className="homepage-hero-lead">Navigate the ASX stock market with confidence.</p>
               <ul className="homepage-hero-list">
                 <li>General Buy, Hold &amp; Sell insights on ASX-listed companies</li>
@@ -238,7 +238,7 @@ export default async function HomePage() {
 
             <div className="col-lg-4">
               <div className="home-section-head">
-                <h2>Recent Picks from our Experts</h2>
+                <h2>Current Opportunities from our experts</h2>
                 <button className="home-view-link" type="button">View All ↗</button>
               </div>
               <div className="home-title-rule" />
@@ -298,7 +298,7 @@ export default async function HomePage() {
           <div className="row g-3 text-center">
             {[
               { num: '500+', lbl: 'Research Reports' },
-              { num: '12+', lbl: 'Market Sectors' },
+              { num: '12+', lbl: 'Top Research Analyst' },
               { num: 'Daily', lbl: 'Market Updates' },
               { num: '100%', lbl: 'Australian Focus' },
             ].map(s => (
@@ -353,7 +353,7 @@ export default async function HomePage() {
 
               <div className="col-lg-4">
                 <div className="home-plans-media">
-                  <img src="/a02674da6018f68b1022c8f9a0d09a7e.png" alt="Pristine Gaze research workspace" />
+                  <img src="/Untitled.png" alt="Pristine Gaze research workspace" />
                 </div>
               </div>
             </div>

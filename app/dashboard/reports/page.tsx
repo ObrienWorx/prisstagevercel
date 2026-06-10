@@ -208,6 +208,14 @@ export default function ReportsPage() {
               </div>
               <div className="modal-body">
                 {err && <div className="alert alert-danger mb-3">{err}</div>}
+                <div className="col-md-12 mb-3">
+                    <label className="form-label">Publish Status</label>
+                    <select className="form-select" value={form.publishStatus}
+                      onChange={(e) => setForm(prev => ({ ...prev, publishStatus: e.target.value as 'draft' | 'published' }))}>
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                    </select>
+                  </div>
                 <div className="row g-3">
                   <div className="col-md-8">
                     <label className="form-label">Title <span className="text-danger">*</span></label>
@@ -297,16 +305,6 @@ export default function ReportsPage() {
 
                   <div className="col-12">
                     <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm(prev => ({ ...prev, featuredImage: url }))} />
-                  </div>
-
-
-                  <div className="col-md-4">
-                    <label className="form-label">Publish Status</label>
-                    <select className="form-select" value={form.publishStatus}
-                      onChange={(e) => setForm(prev => ({ ...prev, publishStatus: e.target.value as 'draft' | 'published' }))}>
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                    </select>
                   </div>
 
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">SEO Settings</div></div>

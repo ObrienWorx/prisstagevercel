@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import LeadCaptureForm from './LeadCaptureForm';
 
 interface Item {
   _id: string;
@@ -141,7 +143,7 @@ function BlogCategorySidebar({ categories }: Pick<Props, 'categories'>) {
   );
 }
 
-function BlogReportPromo() {
+function BlogReportPromo({ onClaim }: { onClaim: () => void }) {
   return (
     <aside className="blog-report-promo" aria-labelledby="blog-report-promo-title">
       <h2 id="blog-report-promo-title">Some ASX Opportunities Are Still Flying Under the Radar.</h2>
@@ -156,59 +158,97 @@ function BlogReportPromo() {
         <li>Key business highlights, sector trends, and growth drivers</li>
         <li>Insights designed to help investors make more informed decisions</li>
       </ul>
-      <Link href="/contact-us" className="blog-report-promo-btn">
+      <button type="button" className="blog-report-promo-btn" onClick={onClaim}>
         Claim your Free Copy
-      </Link>
+      </button>
     </aside>
   );
 }
 
 function BlogCategoryListing({ title, items, categories, emptyMessage }: Pick<Props, 'title' | 'items' | 'categories' | 'emptyMessage'>) {
+  const [showModal, setShowModal] = useState(false);
+
   return (
-    <div className="blog-list-page">
-      <div className="container blog-list-shell">
-        <div className="blog-list-layout">
-          <div className="blog-list-main">
-            <h1 className="blog-list-heading">{title}</h1>
-            {items.length === 0 ? (
-              <div className="blog-list-empty">{emptyMessage || 'No articles published yet. Check back soon.'}</div>
-            ) : (
-              <div className="blog-list">
-                {items.map(item => (
-                  <article className="blog-list-row" key={item._id}>
-                    <Link href={item.href} className="blog-list-image" aria-label={item.title}>
-                      {item.featuredImage
-                        ? <img src={item.featuredImage} alt="" />
-                        : <span className="blog-list-placeholder" />}
-                    </Link>
-                    <div className="blog-list-copy">
-                      {formatBlogTags(item.tags).length > 0 && (
-                        <div className="blog-list-tags">{formatBlogTags(item.tags).join(' | ')}</div>
-                      )}
-                      <Link href={item.href} className="blog-list-title">{item.title}</Link>
-                      {(item.date || item.authorName) && (
-                        <div className="blog-list-meta">
-                          {item.date}
-                          {item.date && item.authorName && <span aria-hidden="true"> | </span>}
-                          {item.authorName && <span>{item.authorName}</span>}
-                        </div>
-                      )}
-                      {item.excerpt && <p>{item.excerpt}</p>}
-                      <Link href={item.href} className="blog-list-more">Read more <span aria-hidden="true">&raquo;</span></Link>
-                    </div>
-                    <BlogShareButton item={item} />
-                  </article>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="blog-list-aside">
-            <BlogReportPromo />
-            <BlogCategorySidebar categories={categories} />
+    <>
+      <div className="blog-list-page">
+        <div className="container blog-list-shell">
+          <div className="blog-list-layout">
+            <div className="blog-list-main">
+              <h1 className="blog-list-heading">{title}</h1>
+              {items.length === 0 ? (
+                <div className="blog-list-empty">{emptyMessage || 'No articles published yet. Check back soon.'}</div>
+              ) : (
+                <div className="blog-list">
+                  {items.map(item => (
+                    <article className="blog-list-row" key={item._id}>
+                      <Link href={item.href} className="blog-list-image" aria-label={item.title}>
+                        {item.featuredImage
+                          ? <img src={item.featuredImage} alt="" />
+                          : <span className="blog-list-placeholder" />}
+                      </Link>
+                      <div className="blog-list-copy">
+                        {formatBlogTags(item.tags).length > 0 && (
+                          <div className="blog-list-tags">{formatBlogTags(item.tags).join(' | ')}</div>
+                        )}
+                        <Link href={item.href} className="blog-list-title">{item.title}</Link>
+                        {(item.date || item.authorName) && (
+                          <div className="blog-list-meta">
+                            {item.date}
+                            {item.date && item.authorName && <span aria-hidden="true"> | </span>}
+                            {item.authorName && <span>{item.authorName}</span>}
+                          </div>
+                        )}
+                        {item.excerpt && <p>{item.excerpt}</p>}
+                        <Link href={item.href} className="blog-list-more">Read more <span aria-hidden="true">&raquo;</span></Link>
+                      </div>
+                      <BlogShareButton item={item} />
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="blog-list-aside">
+              <BlogReportPromo onClaim={() => setShowModal(true)} />
+              <BlogCategorySidebar categories={categories} />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {showModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(10,15,30,0.72)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}
+        >
+          <div style={{ position: 'relative', width: '100%', maxWidth: 480 }}>
+            <button
+              onClick={() => setShowModal(false)}
+              style={{
+                position: 'absolute', top: -12, right: -12, zIndex: 1,
+                background: '#fff', border: 'none', borderRadius: '50%',
+                width: 32, height: 32, cursor: 'pointer',
+                fontSize: 18, lineHeight: '32px', textAlign: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+              aria-label="Close"
+            >×</button>
+            <LeadCaptureForm
+              source="unlock-ticker"
+              badge=""
+              title="Please fill the details to Unlock the Exclusive ASX Stock Report"
+              buttonText="Unlock the Ticker"
+              successText="You will receive the detailed Stock Report on your submitted email."
+              onSuccess={() => setShowModal(false)}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

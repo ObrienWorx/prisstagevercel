@@ -8,6 +8,8 @@ interface Pick {
   convictionLevel: 'High' | 'Medium' | 'Low';
   potentialReturn: number;
   capType: string;
+  ticker: string;
+  entryPrice: number;
 }
 
 const CONVICTION_COLOR: Record<string, string> = {
@@ -16,7 +18,6 @@ const CONVICTION_COLOR: Record<string, string> = {
   Low: '#22c55e',
 };
 
-/* Simple inline SVG gauge icon — needle position varies by level */
 function GaugeIcon({ level }: { level: string }) {
   const angle = level === 'High' ? 130 : level === 'Medium' ? 90 : 50;
   const rad = (angle * Math.PI) / 180;
@@ -39,18 +40,31 @@ const PLACEHOLDER: Pick[] = Array(4).fill(null).map((_, i) => ({
   convictionLevel: 'High',
   potentialReturn: 6.0,
   capType: 'Small-Cap',
+  ticker: 'XXX',
+  entryPrice: 0,
 }));
+
+const LS_KEY = 'pg_ticker_unlocked';
 
 export default function HomePicks() {
   const [picks, setPicks] = useState<Pick[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem(LS_KEY) === '1') {
+      setUnlocked(true);
+    }
     fetch('/api/public/picks')
       .then(r => r.json())
       .then(d => { if (d.success && d.data.length > 0) setPicks(d.data); })
       .catch(() => {});
   }, []);
+
+  const handleUnlocked = () => {
+    if (typeof window !== 'undefined') localStorage.setItem(LS_KEY, '1');
+    setUnlocked(true);
+  };
 
   const display = picks.length > 0 ? picks : PLACEHOLDER;
 
@@ -66,10 +80,14 @@ export default function HomePicks() {
             </div>
 
             <div className="home-pick-body">
-              {/* Unlock button */}
-              <button className="home-pick-unlock-btn" onClick={() => setShowModal(true)}>
-                🔒 Unlock Ticker
-              </button>
+              {/* Ticker: locked or unlocked */}
+              {unlocked ? (
+                <div className="home-pick-ticker">{pick.ticker}</div>
+              ) : (
+                <button className="home-pick-unlock-btn" onClick={() => setShowModal(true)}>
+                  🔒 Unlock Ticker
+                </button>
+              )}
 
               {/* Potential return box */}
               <div className="home-pick-return-box">
@@ -83,7 +101,11 @@ export default function HomePicks() {
 
             {/* Entry price strip */}
             <div className="home-pick-bottom">
-              Entry Price :&nbsp;&nbsp;🔒
+              {unlocked ? (
+                <>Entry Price :&nbsp;&nbsp;<strong>A${pick.entryPrice.toFixed(2)}</strong></>
+              ) : (
+                <>Entry Price :&nbsp;&nbsp;🔒</>
+              )}
             </div>
           </div>
         ))}
@@ -116,8 +138,10 @@ export default function HomePicks() {
             <LeadCaptureForm
               source="unlock-ticker"
               badge=""
-              title="Almost There! Let's Get to Know Each Other Better"
-              buttonText="Unlock My Ticker"
+              title="Please fill the details to Unlock the Exclusive ASX Stock Report"
+              buttonText="Unlock the Ticker"
+              successText="You will receive the detailed Stock Report on your submitted email."
+              onSuccess={handleUnlocked}
             />
           </div>
         </div>

@@ -47,9 +47,9 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
 
   return (
     <div className="pc-card">
-      {saleEndDate && !saleExpired && (
+      {/* {saleEndDate && !saleExpired && (
         <SaleCountdownBanner endDate={saleEndDate} onExpired={() => setSaleExpired(true)} compact />
-      )}
+      )} */}
 
       {hasMultiplePlans && (
         <div className="pc-plan-wrap">

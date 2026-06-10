@@ -69,7 +69,6 @@ export default function MarketScan() {
 
       <div className="home-scan-desc-row">
         <p className="home-scan-desc">{TAB_DESC[activeTab]}</p>
-        <a href="/past-recommendations" className="home-scan-viewall-btn">View All &gt;</a>
       </div>
 
       <div className="home-scan-table-wrap">

@@ -42,16 +42,35 @@ export async function POST(req: NextRequest) {
   const productDocs = await Product.find({ _id: { $in: rawLines.map(l => l.productId) } });
   const pMap = new Map(productDocs.map(p => [p._id.toString(), p]));
 
-  const resolved = rawLines.map(l => {
+  const now = new Date();
+  const resolvedPromises = rawLines.map(async l => {
     const prod = pMap.get(l.productId);
     if (!prod) throw new Error(`Product ${l.productId} not found`);
-    const start = l.startDate ? new Date(l.startDate) : new Date();
+    let start: Date;
+    if (l.startDate) {
+      start = new Date(l.startDate);
+    } else {
+      // Stack after the latest active subscription for this product + subscriber
+      const existing = await UserProduct.findOne({
+        subscriber: subscriberId,
+        product: l.productId,
+        isActive: true,
+        expiryDate: { $gt: now },
+      }).sort({ expiryDate: -1 });
+      if (existing) {
+        start = new Date(existing.expiryDate);
+        start.setDate(start.getDate() + 1);
+      } else {
+        start = now;
+      }
+    }
     const dv = l.durationValue ? Number(l.durationValue) : prod.durationValue;
     const dt = l.durationType || prod.durationType;
     const expiry = calculateExpiryDate(start, dt as 'years' | 'months' | 'days', dv);
     const price = l.pricePaid !== undefined ? Number(l.pricePaid) : (prod.salePrice ?? prod.regularPrice);
     return { prod, productId: l.productId, start, expiry, price, dv, dt };
   });
+  const resolved = await Promise.all(resolvedPromises);
 
   const totalPrice = resolved.reduce((s, r) => s + r.price, 0);
   const first = resolved[0];
