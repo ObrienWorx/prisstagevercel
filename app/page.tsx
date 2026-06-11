@@ -1,4 +1,5 @@
 import HomePicks from '@/components/HomePicks';
+import TickerTape from '@/components/TickerTape';
 import MarketScan from '@/components/MarketScan';
 import connectDB from '@/lib/mongoose';
 import Product from '@/models/Product';
@@ -202,6 +203,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <TickerTape />
 
       {/* MARKET NEWS */}
       <section className="home-market-section">
