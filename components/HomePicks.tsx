@@ -44,26 +44,52 @@ const PLACEHOLDER: Pick[] = Array(4).fill(null).map((_, i) => ({
   entryPrice: 0,
 }));
 
-const LS_KEY = 'pg_ticker_unlocked';
+const LS_REGISTERED = 'pg_ticker_registered';
+const LS_UNLOCKED_IDS = 'pg_ticker_unlocked_ids';
 
 export default function HomePicks() {
   const [picks, setPicks] = useState<Pick[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [unlocked, setUnlocked] = useState(false);
+  const [pendingPickId, setPendingPickId] = useState<string | null>(null);
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
+  const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem(LS_KEY) === '1') {
-      setUnlocked(true);
-    }
+    if (typeof window === 'undefined') return;
+    if (localStorage.getItem(LS_REGISTERED) === '1') setRegistered(true);
+    const saved = localStorage.getItem(LS_UNLOCKED_IDS);
+    if (saved) setUnlockedIds(new Set(saved.split(',').filter(Boolean)));
+
     fetch('/api/public/picks')
       .then(r => r.json())
       .then(d => { if (d.success && d.data.length > 0) setPicks(d.data); })
       .catch(() => {});
   }, []);
 
-  const handleUnlocked = () => {
-    if (typeof window !== 'undefined') localStorage.setItem(LS_KEY, '1');
-    setUnlocked(true);
+  const handleUnlockClick = (pickId: string) => {
+    if (registered) {
+      // Already registered — unlock this card directly, no form
+      const next = new Set(unlockedIds);
+      next.add(pickId);
+      setUnlockedIds(next);
+      localStorage.setItem(LS_UNLOCKED_IDS, Array.from(next).join(','));
+    } else {
+      setPendingPickId(pickId);
+      setShowModal(true);
+    }
+  };
+
+  const handleFormSuccess = () => {
+    localStorage.setItem(LS_REGISTERED, '1');
+    setRegistered(true);
+    if (pendingPickId) {
+      const next = new Set(unlockedIds);
+      next.add(pendingPickId);
+      setUnlockedIds(next);
+      localStorage.setItem(LS_UNLOCKED_IDS, Array.from(next).join(','));
+    }
+    setShowModal(false);
+    setPendingPickId(null);
   };
 
   const display = picks.length > 0 ? picks : PLACEHOLDER;
@@ -71,48 +97,45 @@ export default function HomePicks() {
   return (
     <>
       <div className="home-picks-panel">
-        {display.map((pick) => (
-          <div className="home-pick-card" key={pick._id}>
-            {/* Conviction badge */}
-            <div className="home-pick-conviction">
-              <GaugeIcon level={pick.convictionLevel} />
-              <span style={{ color: CONVICTION_COLOR[pick.convictionLevel] }}>{pick.convictionLevel}</span>
-            </div>
-
-            <div className="home-pick-body">
-              {/* Ticker: locked or unlocked */}
-              {unlocked ? (
-                <div className="home-pick-ticker">{pick.ticker}</div>
-              ) : (
-                <button className="home-pick-unlock-btn" onClick={() => setShowModal(true)}>
-                  🔒 Unlock Ticker
-                </button>
-              )}
-
-              {/* Potential return box */}
-              <div className="home-pick-return-box">
-                <span className="home-pick-value">{pick.potentialReturn.toFixed(2)}%</span>
-                <span className="home-pick-label">Potential Left</span>
+        {display.map((pick) => {
+          const isUnlocked = unlockedIds.has(pick._id);
+          return (
+            <div className="home-pick-card" key={pick._id}>
+              <div className="home-pick-conviction">
+                <GaugeIcon level={pick.convictionLevel} />
+                <span style={{ color: CONVICTION_COLOR[pick.convictionLevel] }}>{pick.convictionLevel}</span>
               </div>
 
-              {/* Cap type */}
-              <div className="home-pick-cap">{pick.capType}</div>
-            </div>
+              <div className="home-pick-body">
+                {isUnlocked ? (
+                  <div className="home-pick-ticker">{pick.ticker}</div>
+                ) : (
+                  <button className="home-pick-unlock-btn" onClick={() => handleUnlockClick(pick._id)}>
+                    🔒 Unlock Ticker
+                  </button>
+                )}
 
-            {/* Entry price strip */}
-            <div className="home-pick-bottom">
-              {unlocked ? (
-                <>Entry Price :&nbsp;&nbsp;<strong>A${pick.entryPrice.toFixed(2)}</strong></>
-              ) : (
-                <>Entry Price :&nbsp;&nbsp;🔒</>
-              )}
+                <div className="home-pick-return-box">
+                  <span className="home-pick-value">{pick.potentialReturn.toFixed(2)}%</span>
+                  <span className="home-pick-label">Potential Left</span>
+                </div>
+
+                <div className="home-pick-cap">{pick.capType}</div>
+              </div>
+
+              <div className="home-pick-bottom">
+                {isUnlocked ? (
+                  <>Entry Price :&nbsp;&nbsp;<strong>A${pick.entryPrice.toFixed(2)}</strong></>
+                ) : (
+                  <>Entry Price :&nbsp;&nbsp;🔒</>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <p className="home-picks-note">Performance visuals shown as a preview. Data source can be connected later.</p>
       </div>
 
-      {/* Unlock Ticker Modal */}
       {showModal && (
         <div
           style={{
@@ -141,7 +164,7 @@ export default function HomePicks() {
               title="Please fill the details to Unlock the Exclusive ASX Stock Report"
               buttonText="Unlock the Ticker"
               successText="You will receive the detailed Stock Report on your submitted email."
-              onSuccess={handleUnlocked}
+              onSuccess={handleFormSuccess}
             />
           </div>
         </div>
