@@ -16,6 +16,7 @@ interface Report {
   pastStockRecommendation: ReportRef | string | null;
   upsellTicker: string; ticker: string; price: number; recommendation: string;
   publishStatus: 'draft' | 'published';
+  featured: boolean;
   metaTitle: string; metaDescription: string; metaImage: string;
 }
 
@@ -31,6 +32,7 @@ const empty = {
   category: '', sector: '', product: '', pastStockRecommendation: '',
   upsellTicker: '', ticker: '', price: '', recommendation: '',
   publishStatus: 'draft' as 'draft' | 'published',
+  featured: false,
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
@@ -87,6 +89,7 @@ export default function ReportsPage() {
         category: target.category?._id || '', sector: target.sector?._id || '', product: target.product?._id || '', pastStockRecommendation: refId(target.pastStockRecommendation),
         upsellTicker: target.upsellTicker, ticker: target.ticker || '', price: String(target.price ?? ''), recommendation: target.recommendation || '',
         publishStatus: target.publishStatus,
+        featured: target.featured ?? false,
         metaTitle: target.metaTitle, metaDescription: target.metaDescription, metaImage: target.metaImage,
       });
       setErr('');
@@ -105,6 +108,7 @@ export default function ReportsPage() {
       category: item.category?._id || '', sector: item.sector?._id || '', product: item.product?._id || '', pastStockRecommendation: refId(item.pastStockRecommendation),
       upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), recommendation: item.recommendation || '',
       publishStatus: item.publishStatus,
+      featured: item.featured ?? false,
       metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
     setErr(''); setShowModal(true);
@@ -164,7 +168,7 @@ export default function ReportsPage() {
           <div className="table-responsive">
             <table className="table">
               <thead>
-                <tr><th>Title</th><th>Category</th><th>Sector</th><th>Product</th><th>Recommendation</th><th>Status</th><th style={{ width: 120 }}>Actions</th></tr>
+                <tr><th>Title</th><th>Category</th><th>Sector</th><th>Product</th><th>Recommendation</th><th>Status</th><th>Featured</th><th style={{ width: 120 }}>Actions</th></tr>
               </thead>
               <tbody>
                 {items.map((item) => (
@@ -185,6 +189,11 @@ export default function ReportsPage() {
                       <span className={`badge ${item.publishStatus === 'published' ? 'bg-success' : 'bg-secondary'}`}>
                         {item.publishStatus}
                       </span>
+                    </td>
+                    <td>
+                      {item.featured
+                        ? <span className="badge bg-warning text-dark">Featured</span>
+                        : <span className="text-muted small">—</span>}
                     </td>
                     <td className="d-flex">
                       <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
@@ -208,7 +217,8 @@ export default function ReportsPage() {
               </div>
               <div className="modal-body">
                 {err && <div className="alert alert-danger mb-3">{err}</div>}
-                <div className="col-md-12 mb-3">
+                <div className="row g-3 mb-3">
+                  <div className="col-md-6">
                     <label className="form-label">Publish Status</label>
                     <select className="form-select" value={form.publishStatus}
                       onChange={(e) => setForm(prev => ({ ...prev, publishStatus: e.target.value as 'draft' | 'published' }))}>
@@ -216,6 +226,17 @@ export default function ReportsPage() {
                       <option value="published">Published</option>
                     </select>
                   </div>
+                  <div className="col-md-6 d-flex align-items-end">
+                    <div className="form-check">
+                      <input className="form-check-input" type="checkbox" id="featuredCheck"
+                        checked={form.featured}
+                        onChange={(e) => setForm(prev => ({ ...prev, featured: e.target.checked }))} />
+                      <label className="form-check-label fw-semibold" htmlFor="featuredCheck">
+                        Featured <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>(shown on /reports page)</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
                 <div className="row g-3">
                   <div className="col-md-8">
                     <label className="form-label">Title <span className="text-danger">*</span></label>

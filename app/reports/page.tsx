@@ -59,7 +59,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   // Fetch reports
   const filter: Record<string, unknown> = { publishStatus: 'published' };
-  if (filterProduct) filter.product = filterProduct._id;
+  if (filterProduct) {
+    filter.product = filterProduct._id;
+  } else {
+    filter.featured = true;
+  }
 
   const reports = await Report.find(filter)
     .select('title slug featuredImage ticker recommendation category sector product createdAt content')
