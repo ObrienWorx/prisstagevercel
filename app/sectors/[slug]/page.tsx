@@ -39,8 +39,8 @@ export default async function SectorPage({ params }: P) {
       .sort({ createdAt: -1 })
       .limit(5)
       .lean() as Promise<any[]>,
-    Sector.find({}).select('name slug').sort({ name: 1 }).lean(),
-    ReportCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean(),
+    Sector.find({}).select('name slug icon').sort({ name: 1 }).lean(),
+    ReportCategory.find({ status: 'active' }).select('name slug icon').sort({ name: 1 }).lean(),
   ]);
 
   const items = reports.map(toReportListItem);
@@ -61,8 +61,8 @@ export default async function SectorPage({ params }: P) {
         latestItems={latestItems}
         sidebarType="report"
         latestLabel="Latest Reports"
-        sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }))}
-        categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+        sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}`, icon: s.icon }))}
+        categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}`, icon: c.icon }))}
         loadMore={{ endpoint: '/api/public/reports', query: { sector: sector.slug }, total, perPage: LISTING_PER_PAGE }}
       />
     </SiteLayout>

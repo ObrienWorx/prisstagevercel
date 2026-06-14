@@ -37,6 +37,7 @@ interface NavLink {
   name: string;
   slug: string;
   href: string;
+  icon?: string;
 }
 
 interface Props {

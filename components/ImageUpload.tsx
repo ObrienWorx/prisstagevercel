@@ -71,7 +71,7 @@ export default function ImageUpload({ value, onChange, label = 'Image' }: Props)
               <>
                 <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
                 <div className="fw-medium" style={{ fontSize: 13 }}>Click to upload</div>
-                <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>JPG, PNG, WebP — max 5MB</div>
+                <div className="text-muted" style={{ fontSize: 11, marginTop: 2 }}>JPG, PNG, WebP, SVG — max 5MB</div>
               </>
             )}
           </div>

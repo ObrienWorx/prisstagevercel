@@ -26,6 +26,7 @@ export async function PUT(req: NextRequest, { params }: P) {
     if (await ReportCategory.findOne({ slug: s, _id: { $ne: id } })) return errorResponse('Slug already exists');
     item.slug = s;
   }
+  if (body.icon !== undefined) item.icon = body.icon;
   if (body.description !== undefined) item.description = body.description;
   if (body.status) item.status = body.status;
   if (body.metaTitle !== undefined) item.metaTitle = body.metaTitle;

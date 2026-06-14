@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { slugify } from '@/lib/slugify';
 import ImageUpload from '@/components/ImageUpload';
 
-interface Sector { _id: string; name: string; slug: string; featuredImage: string; description: string; }
-const empty = { name: '', slug: '', featuredImage: '', description: '' };
+interface Sector { _id: string; name: string; slug: string; featuredImage: string; icon: string; description: string; }
+const empty = { name: '', slug: '', featuredImage: '', icon: '', description: '' };
 
 export default function SectorsPage() {
   const [items, setItems] = useState<Sector[]>([]);
@@ -34,7 +34,7 @@ export default function SectorsPage() {
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
   const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowModal(true); };
-  const openEdit = (item: Sector) => { setEditing(item); setForm({ name: item.name, slug: item.slug, featuredImage: item.featuredImage || '', description: item.description || '' }); setErr(''); setShowModal(true); };
+  const openEdit = (item: Sector) => { setEditing(item); setForm({ name: item.name, slug: item.slug, featuredImage: item.featuredImage || '', icon: item.icon || '', description: item.description || '' }); setErr(''); setShowModal(true); };
 
   const save = async () => {
     if (!form.name.trim()) { setErr('Name is required'); return; }
@@ -126,9 +126,13 @@ export default function SectorsPage() {
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                       placeholder="Brief description of this sector..." />
                   </div>
-                  <div className="col-12">
+                  <div className="col-md-6">
                     <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
                     <div className="form-text">Shown in the header dropdown and sector hero page</div>
+                  </div>
+                  <div className="col-md-6">
+                    <ImageUpload label="Icon" value={form.icon} onChange={(url) => setForm({ ...form, icon: url })} />
+                    <div className="form-text">PNG/SVG shown next to the sector in report sidebars</div>
                   </div>
                 </div>
               </div>

@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (error) return error;
 
   await connectDB();
-  const { name, slug, featuredImage, description } = await req.json();
+  const { name, slug, featuredImage, icon, description } = await req.json();
 
   if (!name) return errorResponse('Name is required');
 
@@ -27,6 +27,6 @@ export async function POST(req: NextRequest) {
   const existing = await Sector.findOne({ slug: finalSlug });
   if (existing) return errorResponse('A sector with this slug already exists');
 
-  const sector = await Sector.create({ name, slug: finalSlug, featuredImage: featuredImage || '', description: description || '' });
+  const sector = await Sector.create({ name, slug: finalSlug, featuredImage: featuredImage || '', icon: icon || '', description: description || '' });
   return successResponse(sector, 'Sector created successfully', 201);
 }

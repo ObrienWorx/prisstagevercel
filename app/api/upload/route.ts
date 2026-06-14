@@ -15,9 +15,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
     }
 
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
     if (!allowed.includes(file.type)) {
-      return NextResponse.json({ success: false, error: 'Only images are allowed (jpg, png, webp, gif)' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Only images are allowed (jpg, png, webp, gif, svg)' }, { status: 400 });
     }
 
     if (file.size > 5 * 1024 * 1024) {

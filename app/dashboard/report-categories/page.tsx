@@ -3,8 +3,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { slugify } from '@/lib/slugify';
 import ImageUpload from '@/components/ImageUpload';
 
-interface Item { _id: string; name: string; slug: string; description: string; status: string; metaTitle: string; metaDescription: string; metaImage: string; }
-const empty = { name: '', slug: '', description: '', status: 'active', metaTitle: '', metaDescription: '', metaImage: '' };
+interface Item { _id: string; name: string; slug: string; icon: string; description: string; status: string; metaTitle: string; metaDescription: string; metaImage: string; }
+const empty = { name: '', slug: '', icon: '', description: '', status: 'active', metaTitle: '', metaDescription: '', metaImage: '' };
 
 export default function ReportCategoriesPage() {
   const [items, setItems] = useState<Item[]>([]); const [loading, setLoading] = useState(true);
@@ -17,7 +17,7 @@ export default function ReportCategoriesPage() {
   useEffect(() => { load(); }, [load]);
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };
   const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowModal(true); };
-  const openEdit = (x: Item) => { setEditing(x); setForm({ name: x.name, slug: x.slug, description: x.description, status: x.status, metaTitle: x.metaTitle, metaDescription: x.metaDescription, metaImage: x.metaImage }); setErr(''); setShowModal(true); };
+  const openEdit = (x: Item) => { setEditing(x); setForm({ name: x.name, slug: x.slug, icon: x.icon || '', description: x.description, status: x.status, metaTitle: x.metaTitle, metaDescription: x.metaDescription, metaImage: x.metaImage }); setErr(''); setShowModal(true); };
   const save = async () => {
     if (!form.name.trim()) { setErr('Name is required'); return; }
     setErr(''); setSaving(true);
@@ -58,6 +58,7 @@ export default function ReportCategoriesPage() {
                 <div className="col-md-6"><label className="form-label">Slug</label><input className="form-control" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></div>
                 <div className="col-md-8"><label className="form-label">Description</label><textarea className="form-control" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
                 <div className="col-md-4"><label className="form-label">Status</label><select className="form-select" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+                <div className="col-12"><ImageUpload label="Icon" value={form.icon} onChange={(u) => setForm({ ...form, icon: u })} /><div className="form-text">PNG/SVG shown next to the category in report sidebars</div></div>
                 <div className="col-12"><hr className="my-1" /><div className="form-section-title">SEO</div></div>
                 <div className="col-md-6"><label className="form-label">Meta Title</label><input className="form-control" value={form.metaTitle} onChange={(e) => setForm({ ...form, metaTitle: e.target.value })} /></div>
                 <div className="col-md-6"><label className="form-label">Meta Description</label><input className="form-control" value={form.metaDescription} onChange={(e) => setForm({ ...form, metaDescription: e.target.value })} /></div>

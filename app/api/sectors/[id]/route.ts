@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   await connectDB();
   const { id } = await params;
-  const { name, slug, featuredImage, description } = await req.json();
+  const { name, slug, featuredImage, icon, description } = await req.json();
 
   const sector = await Sector.findById(id);
   if (!sector) return errorResponse('Sector not found', 404);
@@ -37,6 +37,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     sector.slug = finalSlug;
   }
   if (featuredImage !== undefined) sector.featuredImage = featuredImage;
+  if (icon !== undefined) sector.icon = icon;
   if (description !== undefined) sector.description = description;
 
   await sector.save();

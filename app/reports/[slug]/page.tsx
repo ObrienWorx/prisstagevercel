@@ -53,8 +53,8 @@ export default async function ReportSlugPage({ params }: P) {
         .sort({ createdAt: -1 })
         .limit(5)
         .lean() as Promise<any[]>,
-      Sector.find({}).select('name slug').sort({ name: 1 }).lean(),
-      ReportCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean(),
+      Sector.find({}).select('name slug icon').sort({ name: 1 }).lean(),
+      ReportCategory.find({ status: 'active' }).select('name slug icon').sort({ name: 1 }).lean(),
     ]);
 
     const items = reports.map(toReportListItem);
@@ -75,8 +75,8 @@ export default async function ReportSlugPage({ params }: P) {
           sidebarType="report"
           latestLabel="Latest Reports"
           emptyMessage="No reports published for this product yet."
-          sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }))}
-          categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+          sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}`, icon: s.icon }))}
+          categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}`, icon: c.icon }))}
           loadMore={{ endpoint: '/api/public/reports', query: { product: String(product._id) }, total, perPage: LISTING_PER_PAGE }}
         />
       </SiteLayout>
@@ -117,12 +117,12 @@ export default async function ReportSlugPage({ params }: P) {
 
   // Sidebar nav data (same widgets as the sector/category listing pages)
   const [allSectors, allReportCats, latestReports] = await Promise.all([
-    Sector.find({}).select('name slug').sort({ name: 1 }).lean() as Promise<any[]>,
-    ReportCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean() as Promise<any[]>,
+    Sector.find({}).select('name slug icon').sort({ name: 1 }).lean() as Promise<any[]>,
+    ReportCategory.find({ status: 'active' }).select('name slug icon').sort({ name: 1 }).lean() as Promise<any[]>,
     Report.find({ publishStatus: 'published' }).select('title slug featuredImage createdAt').sort({ createdAt: -1 }).limit(5).lean() as Promise<any[]>,
   ]);
-  const sidebarSectors = allSectors.map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }));
-  const sidebarCategories = allReportCats.map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }));
+  const sidebarSectors = allSectors.map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}`, icon: s.icon }));
+  const sidebarCategories = allReportCats.map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}`, icon: c.icon }));
   const sidebarLatest = latestReports.map((r: any) => ({ _id: r._id.toString(), title: r.title, featuredImage: r.featuredImage, href: `/reports/${r.slug}` }));
 
   return (
