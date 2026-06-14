@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Pagination from '@/components/Pagination';
+
+const PER_PAGE = 20;
 
 interface Sub { _id: string; name: string; email: string; }
 interface Prod { _id: string; name: string; regularPrice: number; salePrice: number | null; durationValue: number; durationType: string; }
@@ -37,6 +40,11 @@ export default function OrdersPage() {
   const [editOrder, setEditOrder] = useState<Order | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const pages = Math.max(1, Math.ceil(orders.length / PER_PAGE));
+  const safePage = Math.min(page, pages); // clamp during render (e.g. after a delete)
+  const paged = orders.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
   const [cForm, setCForm] = useState({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '', sellingPrice: '' });
   const [lines, setLines] = useState<LineItem[]>([defaultLine()]);
@@ -203,7 +211,7 @@ export default function OrdersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o) => (
+                    {paged.map((o) => (
                       <tr key={o._id}>
                         <td>
                           <span className="fw-semibold" style={{ color: 'var(--primary)' }}>{o.orderNumber}</span>
@@ -251,6 +259,8 @@ export default function OrdersPage() {
               </div>
             )}
       </div>
+
+      <Pagination page={safePage} pages={pages} total={orders.length} onChange={setPage} />
 
       {/* ── Create Order Modal ─────────────────────────────── */}
       {showCreate && (

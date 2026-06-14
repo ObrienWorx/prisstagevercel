@@ -12,11 +12,25 @@ export async function GET(req: NextRequest) {
   const { error } = await authenticate(req); if (error) return error;
   try {
     await connectDB();
-    const blogs = await Blog.find({})
-      .populate('category', 'name slug')
-      .populate('categories', 'name slug')
-      .sort({ createdAt: -1 });
-    return successResponse(blogs);
+    const sp = req.nextUrl.searchParams;
+    const page = Math.max(1, parseInt(sp.get('page') ?? '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(sp.get('limit') ?? '20', 10)));
+    const search = sp.get('search')?.trim();
+    const filter = search
+      ? { title: new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
+      : {};
+    const [items, total] = await Promise.all([
+      Blog.find(filter)
+        .select('-content') // omit heavy HTML body; fetched on demand via /api/blogs/[id]
+        .populate('category', 'name slug')
+        .populate('categories', 'name slug')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Blog.countDocuments(filter),
+    ]);
+    return successResponse({ items, total, page, pages: Math.ceil(total / limit) });
   } catch (e) {
     return errorResponse(String(e), 500);
   }

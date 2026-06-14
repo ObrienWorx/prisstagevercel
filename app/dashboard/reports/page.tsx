@@ -5,8 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
+import Pagination from '@/components/Pagination';
 
 const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false });
+const PER_PAGE = 20;
 
 interface Ref { _id: string; name: string; }
 interface ReportRef { _id: string; title: string; slug: string; }
@@ -14,11 +16,13 @@ interface Report {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
   category: Ref | null; sector: Ref | null; product: Ref | null;
   pastStockRecommendation: ReportRef | string | null;
-  upsellTicker: string; ticker: string; price: number; recommendation: string;
+  upsellTicker: string; ticker: string; price: number; recommendation: string; recommendations?: string[];
   publishStatus: 'draft' | 'published';
   featured: boolean;
   metaTitle: string; metaDescription: string; metaImage: string;
 }
+
+const RECOMMENDATION_OPTIONS = ['BUY', 'SELL', 'HOLD', 'SPECULATIVE BUY', 'REFRAIN', 'Security Under Review'];
 
 const RECOM_COLOR: Record<string, string> = {
   'BUY': '#16a34a', 'HOLD': '#d97706', 'SELL': '#dc2626',
@@ -30,7 +34,7 @@ const refId = (ref: ReportRef | string | null | undefined) => typeof ref === 'st
 const empty = {
   title: '', slug: '', content: '', featuredImage: '',
   category: '', sector: '', product: '', pastStockRecommendation: '',
-  upsellTicker: '', ticker: '', price: '', recommendation: '',
+  upsellTicker: '', ticker: '', price: '', recommendations: [] as string[],
   publishStatus: 'draft' as 'draft' | 'published',
   featured: false,
   metaTitle: '', metaDescription: '', metaImage: '',
@@ -50,6 +54,11 @@ export default function ReportsPage() {
   const [editing, setEditing] = useState<Report | null>(null);
   const [form, setForm] = useState(empty);
   const [del, setDel] = useState<Report | null>(null);
+  const [page, setPage] = useState(1);
+
+  const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
+  const safePage = Math.min(page, pages); // clamp during render (e.g. after a delete)
+  const paged = items.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
@@ -87,7 +96,7 @@ export default function ReportsPage() {
       setForm({
         title: target.title, slug: target.slug, content: target.content, featuredImage: target.featuredImage,
         category: target.category?._id || '', sector: target.sector?._id || '', product: target.product?._id || '', pastStockRecommendation: refId(target.pastStockRecommendation),
-        upsellTicker: target.upsellTicker, ticker: target.ticker || '', price: String(target.price ?? ''), recommendation: target.recommendation || '',
+        upsellTicker: target.upsellTicker, ticker: target.ticker || '', price: String(target.price ?? ''), recommendations: target.recommendations?.length ? target.recommendations : (target.recommendation ? [target.recommendation] : []),
         publishStatus: target.publishStatus,
         featured: target.featured ?? false,
         metaTitle: target.metaTitle, metaDescription: target.metaDescription, metaImage: target.metaImage,
@@ -106,7 +115,7 @@ export default function ReportsPage() {
     setForm({
       title: item.title, slug: item.slug, content: item.content, featuredImage: item.featuredImage,
       category: item.category?._id || '', sector: item.sector?._id || '', product: item.product?._id || '', pastStockRecommendation: refId(item.pastStockRecommendation),
-      upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), recommendation: item.recommendation || '',
+      upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), recommendations: item.recommendations?.length ? item.recommendations : (item.recommendation ? [item.recommendation] : []),
       publishStatus: item.publishStatus,
       featured: item.featured ?? false,
       metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaImage: item.metaImage,
@@ -171,7 +180,7 @@ export default function ReportsPage() {
                 <tr><th>Title</th><th>Category</th><th>Sector</th><th>Product</th><th>Recommendation</th><th>Status</th><th>Featured</th><th style={{ width: 120 }}>Actions</th></tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {paged.map((item) => (
                   <tr key={item._id}>
                     <td className="fw-semibold" style={{ maxWidth: 240 }}>
                       <div className="text-truncate">{item.title}</div>
@@ -206,6 +215,8 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+
+      <Pagination page={safePage} pages={pages} total={items.length} onChange={setPage} />
 
       {showModal && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
@@ -305,18 +316,23 @@ export default function ReportsPage() {
                       onChange={(e) => setForm(prev => ({ ...prev, price: e.target.value }))}
                       placeholder="0.00" />
                   </div>
-                  <div className="col-md-3">
-                    <label className="form-label">Recommendation</label>
-                    <select className="form-select" value={form.recommendation}
-                      onChange={(e) => setForm(prev => ({ ...prev, recommendation: e.target.value }))}>
-                      <option value="">— None —</option>
-                      <option value="BUY">BUY</option>
-                      <option value="HOLD">HOLD</option>
-                      <option value="SELL">SELL</option>
-                      <option value="SPECULATIVE BUY">SPECULATIVE BUY</option>
-                      <option value="REFRAIN">REFRAIN</option>
-                      <option value="Security Under Review">Security Under Review</option>
-                    </select>
+                  <div className="col-12">
+                    <label className="form-label">Recommendation <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>(select one or more)</span></label>
+                    <div className="d-flex flex-wrap gap-3">
+                      {RECOMMENDATION_OPTIONS.map((opt) => (
+                        <div className="form-check" key={opt}>
+                          <input className="form-check-input" type="checkbox" id={`reco-${opt}`}
+                            checked={form.recommendations.includes(opt)}
+                            onChange={(e) => setForm(prev => ({
+                              ...prev,
+                              recommendations: e.target.checked
+                                ? [...prev.recommendations, opt]
+                                : prev.recommendations.filter((r) => r !== opt),
+                            }))} />
+                          <label className="form-check-label" htmlFor={`reco-${opt}`}>{opt}</label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="col-12">

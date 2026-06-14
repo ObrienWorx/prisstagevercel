@@ -9,7 +9,7 @@ import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ContentListing from '@/components/ContentListing';
-import { normalizeBlogTags } from '@/lib/blogTags';
+import { toReportListItem, toBlogListItem, LISTING_PER_PAGE } from '@/lib/listItems';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,24 +39,6 @@ export async function generateMetadata({ params }: P) {
   };
 
   return { title: 'Not Found – PristineGaze' };
-}
-
-function fmtDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-function excerpt(html: string, len = 160) {
-  return html ? html.replace(/<[^>]+>/g, '').slice(0, len) + '…' : '';
-}
-
-function cleanExcerpt(html: string, len = 160) {
-  if (!html) return '';
-
-  const text = html
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return text.length > len ? `${text.slice(0, len).trim()}...` : text;
 }
 
 export default async function CatchAllPage({ params }: P) {
@@ -189,14 +171,17 @@ export default async function CatchAllPage({ params }: P) {
   // ── 2. Blog category listing ──────────────────────────────────────────────
   const blogCat = await BlogCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
   if (blogCat) {
-    const [blogs, latestBlogs, allBlogCats] = await Promise.all([
-      Blog.find({
-        publishStatus: 'published',
-        $or: [{ category: blogCat._id }, { categories: blogCat._id }],
-      })
+    const blogFilter: Record<string, unknown> = {
+      publishStatus: 'published',
+      $or: [{ category: blogCat._id }, { categories: blogCat._id }],
+    };
+    const [blogs, total, latestBlogs, allBlogCats] = await Promise.all([
+      Blog.find(blogFilter)
         .select('title slug featuredImage tags authorName createdAt metaDescription content')
         .sort({ createdAt: -1 })
+        .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,
+      Blog.countDocuments(blogFilter),
       Blog.find({ publishStatus: 'published' })
         .populate('category', 'slug')
         .populate('categories', 'slug')
@@ -207,18 +192,7 @@ export default async function CatchAllPage({ params }: P) {
       BlogCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean(),
     ]);
 
-    const items = blogs.map((b: any) => ({
-      _id: b._id.toString(),
-      title: b.title,
-      slug: b.slug,
-      featuredImage: b.featuredImage,
-      tags: normalizeBlogTags(b.tags),
-      authorName: b.authorName || '',
-      date: fmtDate(b.createdAt),
-      excerpt: b.metaDescription || cleanExcerpt(b.content || '', 120),
-      href: `/${blogCat.slug}/${b.slug}`,
-      cta: `Read ${blogCat.name} »`,
-    }));
+    const items = blogs.map((b: any) => toBlogListItem(b, blogCat.slug, blogCat.name));
 
     const latestItems = latestBlogs.map((b: any) => ({
       _id: b._id.toString(),
@@ -241,6 +215,7 @@ export default async function CatchAllPage({ params }: P) {
           sidebarType="blog"
           latestLabel={`Latest ${blogCat.name}`}
           categories={(allBlogCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+          loadMore={{ endpoint: '/api/public/blogs', query: { category: blogCat.slug }, total, perPage: LISTING_PER_PAGE }}
         />
       </SiteLayout>
     );
@@ -249,12 +224,15 @@ export default async function CatchAllPage({ params }: P) {
   // ── 3. Report category listing ────────────────────────────────────────────
   const reportCat = await ReportCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
   if (reportCat) {
-    const [reports, latestReports, allSectors, allReportCats] = await Promise.all([
-      Report.find({ category: reportCat._id, publishStatus: 'published' })
+    const reportFilter: Record<string, unknown> = { category: reportCat._id, publishStatus: 'published' };
+    const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
+      Report.find(reportFilter)
         .populate('sector', 'name slug')
         .select('title slug featuredImage createdAt sector recommendation')
         .sort({ createdAt: -1 })
+        .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,
+      Report.countDocuments(reportFilter),
       Report.find({ publishStatus: 'published' })
         .select('title slug featuredImage createdAt')
         .sort({ createdAt: -1 })
@@ -264,16 +242,7 @@ export default async function CatchAllPage({ params }: P) {
       ReportCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean(),
     ]);
 
-    const items = reports.map((r: any) => ({
-      _id: r._id.toString(),
-      title: r.title,
-      slug: r.slug,
-      featuredImage: r.featuredImage,
-      date: fmtDate(r.createdAt),
-      href: `/reports/${r.slug}`,
-      cta: 'Read Report »',
-      recommendation: r.recommendation || '',
-    }));
+    const items = reports.map(toReportListItem);
 
     const latestItems = latestReports.map((r: any) => ({
       _id: r._id.toString(),
@@ -293,6 +262,7 @@ export default async function CatchAllPage({ params }: P) {
           latestLabel="Latest Reports"
           sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }))}
           categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+          loadMore={{ endpoint: '/api/public/reports', query: { category: reportCat.slug }, total, perPage: LISTING_PER_PAGE }}
         />
       </SiteLayout>
     );

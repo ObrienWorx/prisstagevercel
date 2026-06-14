@@ -29,7 +29,7 @@ export default function DashboardPage() {
       .then(([r, b, c, p, s, u]) => {
         setStats({
           reports: r.success ? r.data.length : 0,
-          blogs: b.success ? b.data.length : 0,
+          blogs: b.success ? (b.data.total ?? b.data.length ?? 0) : 0,
           categories: c.success ? c.data.length : 0,
           products: p.success ? p.data.length : 0,
           sectors: s.success ? s.data.length : 0,

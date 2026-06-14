@@ -12,10 +12,11 @@ export interface IReport extends Document {
   upsellTicker: string;
   ticker: string;
   price: number;
+  recommendation: string;       // primary (= recommendations[0]); used by /past-recommendations
+  recommendations: string[];    // multi-select tags: BUY / SELL / HOLD / SPECULATIVE BUY / REFRAIN / Security Under Review
   currentPrice: number;
   currentPriceCurrency: string;
   currentPriceUpdatedAt: Date | null;
-  recommendation: string;
   publishStatus: 'draft' | 'published';
   featured: boolean;
   metaTitle: string;
@@ -38,6 +39,7 @@ const ReportSchema = new Schema<IReport>(
     upsellTicker: { type: String, default: '' },
     ticker: { type: String, default: '', trim: true },
     price: { type: Number, default: 0 },
+    recommendations: { type: [String], default: [] },
     currentPrice: { type: Number, default: 0 },
     currentPriceCurrency: { type: String, default: '' },
     currentPriceUpdatedAt: { type: Date, default: null },
@@ -69,6 +71,10 @@ if (mongoose.models.Report) {
 
   if (!cachedReportSchema.path('price')) {
     missingPaths.price = { type: Number, default: 0 };
+  }
+
+  if (!cachedReportSchema.path('recommendations')) {
+    missingPaths.recommendations = { type: [String], default: [] };
   }
 
   if (!cachedReportSchema.path('currentPrice')) {

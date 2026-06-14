@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getYouTubeId } from '@/lib/orderHelpers';
+import Pagination from '@/components/Pagination';
+
+const PER_PAGE = 20;
 
 interface Video { _id: string; title: string; youtubeUrl: string; isActive: boolean; }
 const empty = { title: '', youtubeUrl: '', isActive: true };
@@ -12,6 +15,11 @@ export default function VideosPage() {
   const [err, setErr] = useState(''); const [ok, setOk] = useState('');
   const [showModal, setShowModal] = useState(false); const [editing, setEditing] = useState<Video | null>(null);
   const [form, setForm] = useState(empty); const [del, setDel] = useState<Video | null>(null);
+  const [page, setPage] = useState(1);
+
+  const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
+  const safePage = Math.min(page, pages); // clamp during render (e.g. after a delete)
+  const paged = items.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
@@ -67,7 +75,7 @@ export default function VideosPage() {
         {loading ? <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
           : items.length === 0 ? <div className="empty-state"><div className="empty-icon">🎥</div><p>No videos yet. Add your first YouTube video.</p></div>
           : <div className="table-responsive"><table className="table"><thead><tr><th>Preview</th><th>Title</th><th>URL</th><th>Active</th><th>Actions</th></tr></thead><tbody>
-            {items.map(v => {
+            {paged.map(v => {
               const vid = getYouTubeId(v.youtubeUrl);
               return (
                 <tr key={v._id}>
@@ -89,6 +97,8 @@ export default function VideosPage() {
             })}
           </tbody></table></div>}
       </div>
+
+      <Pagination page={safePage} pages={pages} total={items.length} onChange={setPage} />
 
       {showModal && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>

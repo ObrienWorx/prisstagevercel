@@ -5532,7 +5532,7 @@ body {
 .homepage-hero {
   background: #001a33;
   color: #fff;
-  padding: clamp(1rem, 6vw, 1.5rem) 0;
+  padding: clamp(1rem, 6vw, 3.5rem) 0;
   overflow: hidden;
 }
 
@@ -8670,4 +8670,11 @@ a.cu-info-value:hover {
   .home-scan-recs-section {
     padding: 2rem 0 40px;
   }
+}
+
+.has-vivid-red-color {
+  color:red;
+}
+.wp-block-heading {
+  color: var(--primary)
 }

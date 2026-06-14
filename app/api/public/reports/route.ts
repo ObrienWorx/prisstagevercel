@@ -5,6 +5,7 @@ import Sector from '@/models/Sector';
 import '@/models/Product';
 import '@/models/ReportCategory';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
+import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,22 +51,36 @@ export async function GET(req: NextRequest) {
       return successResponse(preview);
     }
 
+    const paged = searchParams.has('page');
+    const emptyResult = paged ? { items: [], total: 0, page: 1, pages: 0 } : [];
+
     const filter: Record<string, unknown> = { publishStatus: 'published' };
 
     if (sectorSlug) {
-      const Sector = (await import('@/models/Sector')).default;
       const sector = await Sector.findOne({ slug: sectorSlug });
       if (sector) filter.sector = sector._id;
+      else return successResponse(emptyResult);
     }
 
     if (categorySlug) {
       const ReportCategory = (await import('@/models/ReportCategory')).default;
       const cat = await ReportCategory.findOne({ slug: categorySlug, status: 'active' });
       if (cat) filter.category = cat._id;
-      else return successResponse([]);
+      else return successResponse(emptyResult);
     }
 
     if (productId) filter.product = productId;
+
+    // Paginated, shaped output for the public "load more" UI.
+    if (paged) {
+      const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+      const limit = Math.min(48, Math.max(1, parseInt(searchParams.get('limit') || String(LISTING_PER_PAGE), 10)));
+      const [docs, total] = await Promise.all([
+        Report.find(filter).select('title slug featuredImage createdAt recommendation').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+        Report.countDocuments(filter),
+      ]);
+      return successResponse({ items: docs.map(toReportListItem), total, page, pages: Math.ceil(total / limit) });
+    }
 
     const reports = await Report.find(filter)
       .populate('sector', 'name slug')

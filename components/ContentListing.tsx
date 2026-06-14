@@ -1,8 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import LeadCaptureForm from './LeadCaptureForm';
+import ReportSidebar from './ReportSidebar';
+
+interface LoadMore {
+  endpoint: string;                  // '/api/public/reports' | '/api/public/blogs'
+  query: Record<string, string>;     // e.g. { product: '<id>' } | { category: '<slug>' } | { sector: '<slug>' }
+  total: number;                     // total matching items
+  perPage: number;                   // batch size (matches the server's first page)
+}
 
 interface Item {
   _id: string;
@@ -40,6 +48,54 @@ interface Props {
   categories?: NavLink[];
   sectors?: NavLink[];
   emptyMessage?: string;
+  loadMore?: LoadMore;
+}
+
+// Merges the server-rendered first page with client-fetched batches.
+function useLoadMore(initial: Item[], loadMore?: LoadMore) {
+  const [extra, setExtra] = useState<Item[]>([]);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  // Reset when the listing context changes (soft navigation between pages).
+  // Render-phase state adjustment is the React-recommended pattern for this.
+  const key = loadMore ? `${loadMore.endpoint}?${new URLSearchParams(loadMore.query)}` : '';
+  const [prevKey, setPrevKey] = useState(key);
+  if (prevKey !== key) {
+    setPrevKey(key);
+    setExtra([]);
+    setPage(1);
+  }
+
+  const displayItems = useMemo(() => [...initial, ...extra], [initial, extra]);
+  const hasMore = !!loadMore && displayItems.length < loadMore.total;
+
+  const onLoadMore = async () => {
+    if (!loadMore || loading) return;
+    setLoading(true);
+    try {
+      const next = page + 1;
+      const qs = new URLSearchParams({ ...loadMore.query, page: String(next), limit: String(loadMore.perPage) });
+      const res = await fetch(`${loadMore.endpoint}?${qs.toString()}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data?.items)) {
+        setExtra((prev) => [...prev, ...data.data.items]);
+        setPage(next);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const button = hasMore ? (
+    <div style={{ textAlign: 'center', marginTop: 28 }}>
+      <button type="button" className="btn btn-outline-primary px-4" onClick={onLoadMore} disabled={loading}>
+        {loading ? 'Loading…' : 'Load more'}
+      </button>
+    </div>
+  ) : null;
+
+  return { displayItems, button };
 }
 
 const RECOM_COLORS: Record<string, string> = {
@@ -49,17 +105,6 @@ const RECOM_COLORS: Record<string, string> = {
   'SPECULATIVE BUY': '#0049AC',
   'REFRAIN': '#64748b',
   'Security Under Review': '#9333ea',
-};
-
-const SECTOR_ICONS: Record<string, string> = {
-  Technology: '🖥',
-  Healthcare: '🏥',
-  'Health Care': '🏥',
-  'Financial Services': '🏦',
-  Energy: '⚡',
-  Discretionary: '🛒',
-  'Consumer Discretionary': '🛒',
-  'USA Equity Report': '🇺🇸',
 };
 
 function formatBlogTags(tags?: string[] | string) {
@@ -165,7 +210,7 @@ function BlogReportPromo({ onClaim }: { onClaim: () => void }) {
   );
 }
 
-function BlogCategoryListing({ title, items, categories, emptyMessage }: Pick<Props, 'title' | 'items' | 'categories' | 'emptyMessage'>) {
+function BlogCategoryListing({ title, items, categories, emptyMessage, footer }: Pick<Props, 'title' | 'items' | 'categories' | 'emptyMessage'> & { footer?: React.ReactNode }) {
   const [showModal, setShowModal] = useState(false);
 
   return (
@@ -206,6 +251,7 @@ function BlogCategoryListing({ title, items, categories, emptyMessage }: Pick<Pr
                   ))}
                 </div>
               )}
+              {footer}
             </div>
             <div className="blog-list-aside">
               <BlogReportPromo onClaim={() => setShowModal(true)} />
@@ -252,66 +298,11 @@ function BlogCategoryListing({ title, items, categories, emptyMessage }: Pick<Pr
   );
 }
 
-function ReportSidebar({ latestItems, latestLabel, sectors, categories }: {
-  latestItems: LatestItem[];
-  latestLabel?: string;
-  sectors?: NavLink[];
-  categories?: NavLink[];
-}) {
-  return (
-    <div className="cl-sidebar">
-      {sectors && sectors.length > 0 && (
-        <div className="cl-sidebar-widget">
-          <h5 className="cl-sidebar-heading">Sector Wise Reports</h5>
-          <div className="cl-sidebar-nav-list">
-            {sectors.map(s => (
-              <Link key={s.slug} href={s.href} className="cl-sidebar-nav-item">
-                <span className="cl-sidebar-nav-icon">{SECTOR_ICONS[s.name] || '📊'}</span>
-                <span>{s.name}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage, loadMore }: Props) {
+  const { displayItems, button } = useLoadMore(items, loadMore);
 
-      {categories && categories.length > 0 && (
-        <div className="cl-sidebar-widget">
-          <h5 className="cl-sidebar-heading">Stock Advisory</h5>
-          <div className="cl-sidebar-nav-list">
-            {categories.map(c => (
-              <Link key={c.slug} href={c.href} className="cl-sidebar-nav-item">
-                <span className="cl-sidebar-nav-icon">📋</span>
-                <span>{c.name}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {latestItems.length > 0 && (
-        <div className="cl-sidebar-widget">
-          <h5 className="cl-sidebar-heading">{latestLabel || 'Latest Reports'}</h5>
-          <div className="cl-sidebar-list">
-            {latestItems.map(item => (
-              <Link key={item._id} href={item.href} className="cl-sidebar-item">
-                <div className="cl-sidebar-thumb">
-                  {item.featuredImage
-                    ? <img src={item.featuredImage} alt={item.title} />
-                    : <div className="cl-sidebar-placeholder" />}
-                </div>
-                <span className="cl-sidebar-title">{item.title}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage }: Props) {
   if (sidebarType === 'blog') {
-    return <BlogCategoryListing title={title} items={items} categories={categories} emptyMessage={emptyMessage} />;
+    return <BlogCategoryListing title={title} items={displayItems} categories={categories} emptyMessage={emptyMessage} footer={button} />;
   }
 
   return (
@@ -330,20 +321,21 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
           <div className="row g-4">
             {/* Grid */}
             <div className="col-lg-8">
-              {items.length === 0 ? (
+              {displayItems.length === 0 ? (
                 <div className="text-center py-5">
                   <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
                   <p style={{ color: '#64748b', fontSize: 15 }}>{emptyMessage || 'No content published yet. Check back soon.'}</p>
                 </div>
               ) : (
                 <div className="cl-grid">
-                  {items.map(item => (
+                  {displayItems.map(item => (
                     <div key={item._id} className="cl-grid-col">
                       <ItemCard item={item} />
                     </div>
                   ))}
                 </div>
               )}
+              {button}
             </div>
 
             {/* Sidebar */}

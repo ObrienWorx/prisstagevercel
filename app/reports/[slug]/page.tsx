@@ -7,6 +7,8 @@ import UserProduct from '@/models/UserProduct';
 import SiteLayout from '@/components/SiteLayout';
 import ContentListing from '@/components/ContentListing';
 import SidebarLoginForm from '@/components/SidebarLoginForm';
+import ReportSidebar from '@/components/ReportSidebar';
+import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
@@ -38,11 +40,14 @@ export default async function ReportSlugPage({ params }: P) {
   const product = await Product.findOne({ slug, isActive: true }).lean() as any;
 
   if (product) {
-    const [reports, latestReports, allSectors, allReportCats] = await Promise.all([
-      Report.find({ product: product._id, publishStatus: 'published' })
+    const reportFilter: Record<string, unknown> = { product: product._id, publishStatus: 'published' };
+    const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
+      Report.find(reportFilter)
         .select('title slug featuredImage createdAt recommendation')
         .sort({ createdAt: -1 })
+        .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,
+      Report.countDocuments(reportFilter),
       Report.find({ publishStatus: 'published' })
         .select('title slug featuredImage createdAt')
         .sort({ createdAt: -1 })
@@ -52,16 +57,7 @@ export default async function ReportSlugPage({ params }: P) {
       ReportCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean(),
     ]);
 
-    const items = reports.map((r: any) => ({
-      _id: r._id.toString(),
-      title: r.title,
-      slug: r.slug,
-      featuredImage: r.featuredImage,
-      date: fmtDate(r.createdAt),
-      href: `/reports/${r.slug}`,
-      cta: 'Read Report »',
-      recommendation: r.recommendation || '',
-    }));
+    const items = reports.map(toReportListItem);
 
     const latestItems = latestReports.map((r: any) => ({
       _id: r._id.toString(),
@@ -81,6 +77,7 @@ export default async function ReportSlugPage({ params }: P) {
           emptyMessage="No reports published for this product yet."
           sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }))}
           categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+          loadMore={{ endpoint: '/api/public/reports', query: { product: String(product._id) }, total, perPage: LISTING_PER_PAGE }}
         />
       </SiteLayout>
     );
@@ -118,38 +115,36 @@ export default async function ReportSlugPage({ params }: P) {
 
   const excerpt = report.content ? report.content.replace(/<[^>]+>/g, '').slice(0, 400) : '';
 
+  // Sidebar nav data (same widgets as the sector/category listing pages)
+  const [allSectors, allReportCats, latestReports] = await Promise.all([
+    Sector.find({}).select('name slug').sort({ name: 1 }).lean() as Promise<any[]>,
+    ReportCategory.find({ status: 'active' }).select('name slug').sort({ name: 1 }).lean() as Promise<any[]>,
+    Report.find({ publishStatus: 'published' }).select('title slug featuredImage createdAt').sort({ createdAt: -1 }).limit(5).lean() as Promise<any[]>,
+  ]);
+  const sidebarSectors = allSectors.map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }));
+  const sidebarCategories = allReportCats.map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }));
+  const sidebarLatest = latestReports.map((r: any) => ({ _id: r._id.toString(), title: r.title, featuredImage: r.featuredImage, href: `/reports/${r.slug}` }));
+
   return (
     <SiteLayout>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', color: '#fff', padding: '4rem 0 3rem' }}>
+      <div className="text-white py-5" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)' }}>
         <div className="container">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            {report.sector && (
-              <Link href={`/sectors/${report.sector.slug}`} style={{ fontSize: 12, color: '#93c5fd', textDecoration: 'none', fontWeight: 600 }}>
-                ← {report.sector.name}
-              </Link>
-            )}
+          <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
             {report.category && (
-              <span style={{ fontSize: 11, background: 'rgba(59,130,246,0.2)', color: '#93c5fd', padding: '2px 10px', borderRadius: 5, fontWeight: 600 }}>
-                {report.category.name}
-              </span>
+              <span className="badge rounded-pill text-bg-info">{report.category.name}</span>
+            )}
+            {report.upsellTicker && (
+              <span className="badge rounded-pill text-bg-success">📈 {report.upsellTicker}</span>
             )}
           </div>
 
-          {report.upsellTicker && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(34,197,94,0.2)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac', fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 100, marginBottom: 16, letterSpacing: '0.5px' }}>
-              📈 {report.upsellTicker}
-            </div>
-          )}
+          <h1 className="display-6 fw-bold mb-3">{report.title}</h1>
 
-          <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.5px', margin: '0 0 1rem', lineHeight: 1.2 }}>
-            {report.title}
-          </h1>
-
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div className="d-flex align-items-center flex-wrap gap-2 small text-white-50">
             <span>Published {fmtDate(report.createdAt)}</span>
             {report.product && (
-              <Link href={`/reports/${report.product.slug}`} style={{ background: 'rgba(59,130,246,0.2)', color: '#93c5fd', padding: '2px 10px', borderRadius: 5, fontWeight: 500, fontSize: 12, textDecoration: 'none' }}>
+              <Link href={`/reports/${report.product.slug}`} className="badge rounded-pill text-bg-light text-decoration-none">
                 {report.product.name}
               </Link>
             )}
@@ -163,28 +158,28 @@ export default async function ReportSlugPage({ params }: P) {
           <div className="row">
             <div className="col-lg-8">
               {report.featuredImage && hasAccess && (
-                <img src={report.featuredImage} alt={report.title} style={{ width: '100%', borderRadius: 14, marginBottom: '2rem', maxHeight: 400, objectFit: 'cover' }} />
+                <img src={report.featuredImage} alt={report.title} className="img-fluid w-100 rounded-3 mb-4" style={{ maxHeight: 400, objectFit: 'cover' }} />
               )}
 
               {hasAccess ? (
-                <div className="tiptap-prose" style={{ fontSize: 16, lineHeight: 1.85, color: '#1e293b' }} dangerouslySetInnerHTML={{ __html: report.content }} />
+                <div className="tiptap-prose" dangerouslySetInnerHTML={{ __html: report.content }} />
               ) : (
                 <div>
                   {excerpt && (
-                    <div style={{ position: 'relative', marginBottom: '2rem', overflow: 'hidden', maxHeight: 180 }}>
-                      <div style={{ filter: 'blur(3px)', userSelect: 'none', pointerEvents: 'none', fontSize: 15, lineHeight: 1.8, color: '#374151' }}>
+                    <div className="position-relative overflow-hidden mb-4" style={{ maxHeight: 180 }}>
+                      <div className="text-secondary" style={{ filter: 'blur(3px)', userSelect: 'none', pointerEvents: 'none' }}>
                         {excerpt}
                       </div>
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 0%, #f1f5f9 80%)' }} />
+                      <div className="position-absolute top-0 start-0 w-100 h-100" style={{ background: 'linear-gradient(to bottom, transparent 0%, #f1f5f9 80%)' }} />
                     </div>
                   )}
 
-                  <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', borderRadius: 20, padding: '2.5rem', color: '#fff', textAlign: 'center' }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-                    <h3 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>
+                  <div className="text-white text-center rounded-4 p-4 p-md-5" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)' }}>
+                    <div className="display-4 mb-3">🔒</div>
+                    <h3 className="fw-bold mb-3">
                       {isLoggedIn ? 'Subscription required' : 'Subscribers only'}
                     </h3>
-                    <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 15, maxWidth: 420, margin: '0 auto 2rem', lineHeight: 1.6 }}>
+                    <p className="text-white-50 mx-auto mb-4" style={{ maxWidth: 420 }}>
                       {isLoggedIn
                         ? report.product
                           ? `You need an active ${report.product.name} subscription to read this report.`
@@ -193,27 +188,24 @@ export default async function ReportSlugPage({ params }: P) {
                     </p>
 
                     {report.product && (
-                      <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'inline-block' }}>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 3 }}>Required subscription</div>
-                        <div style={{ fontSize: 18, fontWeight: 700 }}>{report.product.name}</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: '#93c5fd', marginTop: 4 }}>
+                      <div className="d-inline-block rounded-3 px-4 py-3 mb-4" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                        <div className="small text-white-50 mb-1">Required subscription</div>
+                        <div className="fs-5 fw-bold">{report.product.name}</div>
+                        <div className="fs-4 fw-bold text-info mt-1">
                           A${((report.product.salePrice ?? report.product.regularPrice) || 0).toFixed(2)}
                         </div>
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <div className="d-flex gap-2 justify-content-center flex-wrap">
                       <Link
                         href={report.product ? `/subscribe/${report.product.slug}` : '/subscribe'}
-                        style={{ background: '#3b82f6', color: '#fff', padding: '0.75rem 2rem', borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}
+                        className="btn btn-primary fw-bold px-4"
                       >
                         {isLoggedIn ? 'Subscribe Now →' : 'View Plans →'}
                       </Link>
                       {!isLoggedIn && (
-                        <Link
-                          href="/auth/login"
-                          style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '0.75rem 2rem', borderRadius: 10, fontWeight: 600, fontSize: 15, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}
-                        >
+                        <Link href="/auth/login" className="btn btn-outline-light fw-semibold px-4">
                           Sign In
                         </Link>
                       )}
@@ -225,27 +217,17 @@ export default async function ReportSlugPage({ params }: P) {
 
             {/* Sidebar */}
             <div className="col-lg-4 d-none d-lg-block">
-              <div style={{ position: 'sticky', top: 80 }}>
-                {report.sector && (
-                  <div style={{ background: '#f8fafc', borderRadius: 14, padding: '1.25rem', border: '1px solid #e2e8f0', marginBottom: 16 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#94a3b8', marginBottom: 8 }}>Sector</div>
-                    <Link href={`/sectors/${report.sector.slug}`} style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      {report.sector.name} <span style={{ color: '#3b82f6' }}>→</span>
-                    </Link>
-                    <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 4 }}>View all reports in this sector</div>
-                  </div>
-                )}
-
+              <div className="position-sticky" style={{ top: 80 }}>
                 {!hasAccess && (
                   <>
                     {!isLoggedIn && (
-                      <div style={{ marginBottom: 16 }}>
+                      <div className="mb-3">
                         <SidebarLoginForm redirectPath={`/reports/${report.slug}`} />
                       </div>
                     )}
 
                     {(report.product?.saleOverBanner || report.product?.saleBanner) && (
-                      <div style={{ marginBottom: 16 }}>
+                      <div className="mb-3">
                         <img
                           src={
                             report.product.saleEndDate && new Date(report.product.saleEndDate) < new Date()
@@ -253,77 +235,84 @@ export default async function ReportSlugPage({ params }: P) {
                               : (report.product.saleBanner || report.product.saleOverBanner)
                           }
                           alt={`${report.product.name} promotion`}
-                          style={{ width: '100%', borderRadius: 12, display: 'block' }}
+                          className="img-fluid w-100 rounded-3 d-block"
                         />
                       </div>
                     )}
 
                     {report.product ? (
-                      <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', borderRadius: 14, padding: '1.5rem', color: '#fff', border: '1px solid rgba(59,130,246,0.2)' }}>
+                      <div className="text-white rounded-3 p-4" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)' }}>
                         {report.product.featuredImage && (
-                          <img src={report.product.featuredImage} alt={report.product.name} style={{ width: '100%', borderRadius: 9, marginBottom: 12, maxHeight: 120, objectFit: 'cover' }} />
+                          <img src={report.product.featuredImage} alt={report.product.name} className="img-fluid w-100 rounded-2 mb-3" style={{ maxHeight: 120, objectFit: 'cover' }} />
                         )}
-                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#93c5fd', marginBottom: 6 }}>
+                        <div className="text-uppercase fw-bold text-info mb-2" style={{ fontSize: 11, letterSpacing: 1 }}>
                           {isLoggedIn ? 'Upgrade to access' : 'Required subscription'}
                         </div>
-                        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 6 }}>{report.product.name}</div>
+                        <div className="fw-bold fs-5 mb-2">{report.product.name}</div>
 
                         {report.product.shortDescription && (
-                          <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.65)', marginBottom: 12, lineHeight: 1.5 }}>
+                          <div className="small text-white-50 mb-3">
                             {report.product.shortDescription}
                           </div>
                         )}
 
                         {report.product.features?.length > 0 && (
-                          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                          <ul className="list-unstyled d-flex flex-column gap-1 mb-3">
                             {report.product.features.slice(0, 4).map((f: string, i: number) => (
-                              <li key={i} style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-                                <span style={{ color: '#4ade80', flexShrink: 0 }}>✓</span> {f}
+                              <li key={i} className="small text-white-50 d-flex gap-2 align-items-start">
+                                <span className="text-success flex-shrink-0">✓</span> {f}
                               </li>
                             ))}
                           </ul>
                         )}
 
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 14 }}>
+                        <div className="d-flex align-items-baseline gap-2 mb-3">
                           {report.product.salePrice != null && report.product.salePrice < report.product.regularPrice ? (
                             <>
-                              <span style={{ fontSize: 24, fontWeight: 800, color: '#4ade80' }}>A${report.product.salePrice.toFixed(2)}</span>
-                              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', textDecoration: 'line-through' }}>A${report.product.regularPrice.toFixed(2)}</span>
+                              <span className="fw-bold fs-4 text-success">A${report.product.salePrice.toFixed(2)}</span>
+                              <span className="text-white-50 text-decoration-line-through">A${report.product.regularPrice.toFixed(2)}</span>
                             </>
                           ) : (
-                            <span style={{ fontSize: 24, fontWeight: 800, color: '#93c5fd' }}>A${(report.product.regularPrice || 0).toFixed(2)}</span>
+                            <span className="fw-bold fs-4 text-info">A${(report.product.regularPrice || 0).toFixed(2)}</span>
                           )}
-                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>/ {report.product.durationValue} {report.product.durationType}</span>
+                          <span className="small text-white-50">/ {report.product.durationValue} {report.product.durationType}</span>
                         </div>
 
                         {report.product.riskRating && (
-                          <div style={{ fontSize: 11, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ color: 'rgba(255,255,255,0.4)' }}>Risk:</span>
-                            <span style={{ padding: '2px 8px', borderRadius: 100, fontWeight: 700, background: report.product.riskRating === 'Low' ? 'rgba(74,222,128,0.15)' : report.product.riskRating === 'Medium' ? 'rgba(251,191,36,0.15)' : 'rgba(248,113,113,0.15)', color: report.product.riskRating === 'Low' ? '#4ade80' : report.product.riskRating === 'Medium' ? '#fbbf24' : '#f87171' }}>
+                          <div className="d-flex align-items-center gap-2 small mb-3">
+                            <span className="text-white-50">Risk:</span>
+                            <span className={`badge rounded-pill ${report.product.riskRating === 'Low' ? 'text-bg-success' : report.product.riskRating === 'Medium' ? 'text-bg-warning' : 'text-bg-danger'}`}>
                               {report.product.riskRating}
                             </span>
                           </div>
                         )}
 
-                        <Link href={`/subscribe/${report.product.slug}`} style={{ display: 'block', background: '#3b82f6', color: '#fff', padding: '0.7rem', borderRadius: 9, fontWeight: 700, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}>
+                        <Link href={`/subscribe/${report.product.slug}`} className="btn btn-primary w-100 fw-bold">
                           Subscribe Now →
                         </Link>
                       </div>
                     ) : (
-                      <div style={{ background: 'linear-gradient(135deg, #1e3a5f, #0f4c81)', borderRadius: 14, padding: '1.5rem', color: '#fff' }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#93c5fd', marginBottom: 8 }}>
+                      <div className="text-white rounded-3 p-4" style={{ background: 'linear-gradient(135deg, #1e3a5f, #0f4c81)' }}>
+                        <div className="fw-semibold text-info mb-2">
                           {isLoggedIn ? 'Upgrade to access' : 'Subscribe to read'}
                         </div>
-                        <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.7)', marginBottom: 16 }}>
+                        <div className="small text-white-50 mb-3">
                           Get access to all research reports with any PristineGaze subscription.
                         </div>
-                        <Link href="/subscribe" style={{ display: 'block', background: '#3b82f6', color: '#fff', padding: '0.65rem', borderRadius: 9, fontWeight: 700, textAlign: 'center', textDecoration: 'none', fontSize: 14 }}>
+                        <Link href="/subscribe" className="btn btn-primary w-100 fw-bold">
                           View Plans →
                         </Link>
                       </div>
                     )}
                   </>
                 )}
+
+                <ReportSidebar
+                  latestItems={sidebarLatest}
+                  latestLabel="Latest Reports"
+                  sectors={sidebarSectors}
+                  categories={sidebarCategories}
+                />
               </div>
             </div>
           </div>

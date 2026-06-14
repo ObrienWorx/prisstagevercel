@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, type ClipboardEvent, type FocusEvent,
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
+import Pagination from '@/components/Pagination';
 
 const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false });
 
@@ -25,6 +26,11 @@ const empty = {
 export default function BlogsPage() {
   const [items, setItems] = useState<Blog[]>([]);
   const [categories, setCategories] = useState<Ref[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -41,24 +47,32 @@ export default function BlogsPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
-  const loadAll = useCallback(async () => {
+  const load = useCallback(async (p = 1, q = '') => {
     setLoading(true);
     try {
       const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
       const [bR, cR] = await Promise.all([
-        fetch('/api/blogs', { headers }),
+        fetch(`/api/blogs?page=${p}&search=${encodeURIComponent(q)}`, { headers }),
         fetch('/api/blog-categories', { headers }),
       ]);
       const [b, c] = await Promise.all([bR.json(), cR.json()]);
-      if (b.success) setItems(b.data);
+      if (b.success) {
+        setItems(b.data.items);
+        setPage(b.data.page);
+        setPages(b.data.pages);
+        setTotal(b.data.total);
+      }
       if (c.success) setCategories(c.data);
     } finally { setLoading(false); }
   }, [token]);
 
+  // Reload list whenever the committed search term changes (and on first mount).
   useEffect(() => {
-    const initialLoad = window.setTimeout(() => { void loadAll(); }, 0);
+    const initialLoad = window.setTimeout(() => { void load(1, search); }, 0);
     return () => window.clearTimeout(initialLoad);
-  }, [loadAll]);
+  }, [load, search]);
+
+  const goToPage = (p: number) => { void load(p, search); };
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
 
@@ -72,15 +86,22 @@ export default function BlogsPage() {
     setErr('');
     setShowModal(true);
   };
-  const openEdit = (item: Blog) => {
-    setEditing(item);
+  const openEdit = async (item: Blog) => {
+    // The list omits `content` for payload size; fetch the full document for editing.
+    let full = item;
+    try {
+      const r = await fetch(`/api/blogs/${item._id}`, { headers: h });
+      const d = await r.json();
+      if (d.success) full = d.data;
+    } catch { /* fall back to the list row (content may be blank) */ }
+    setEditing(full);
     setForm({
-      title: item.title, slug: item.slug, content: item.content, featuredImage: item.featuredImage,
-      tags: item.tags?.join(', ') || '', authorName: item.authorName || '',
-      categories: item.categories?.map(category => category._id) || (item.category?._id ? [item.category._id] : []),
-      publishStatus: item.publishStatus,
-      metaTitle: item.metaTitle,
-      metaDescription: item.metaDescription, metaImage: item.metaImage,
+      title: full.title, slug: full.slug, content: full.content || '', featuredImage: full.featuredImage,
+      tags: full.tags?.join(', ') || '', authorName: full.authorName || '',
+      categories: full.categories?.map(category => category._id) || (full.category?._id ? [full.category._id] : []),
+      publishStatus: full.publishStatus,
+      metaTitle: full.metaTitle,
+      metaDescription: full.metaDescription, metaImage: full.metaImage,
     });
     setCategoryQuery('');
     setCategoryOpen(false);
@@ -97,7 +118,7 @@ export default function BlogsPage() {
       const url = editing ? `/api/blogs/${editing._id}` : '/api/blogs';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
       const d = await r.json();
-      if (d.success) { flash(d.message); setShowModal(false); loadAll(); }
+      if (d.success) { flash(d.message); setShowModal(false); load(page, search); }
       else setErr(d.error || 'Something went wrong');
     } finally { setSaving(false); }
   };
@@ -191,7 +212,7 @@ export default function BlogsPage() {
     try {
       const r = await fetch(`/api/blogs/${del._id}`, { method: 'DELETE', headers: h });
       const d = await r.json();
-      if (d.success) { flash('Blog deleted'); setDel(null); loadAll(); }
+      if (d.success) { flash('Blog deleted'); setDel(null); load(page, search); }
       else { setErr(d.error || 'Delete failed'); setDel(null); }
     } finally { setSaving(false); }
   };
@@ -209,11 +230,32 @@ export default function BlogsPage() {
       {ok && <div className="alert alert-success mb-4">✓ {ok}</div>}
       {err && !showModal && <div className="alert alert-danger mb-4">{err}</div>}
 
+      <form
+        className="d-flex gap-2 mb-3"
+        style={{ maxWidth: 420 }}
+        onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); }}
+      >
+        <input
+          className="form-control"
+          placeholder="Search blogs by title..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+        <button className="btn btn-outline-secondary" type="submit">Search</button>
+        {search && (
+          <button
+            className="btn btn-outline-secondary"
+            type="button"
+            onClick={() => { setSearchInput(''); setSearch(''); }}
+          >Clear</button>
+        )}
+      </form>
+
       <div className="card">
         {loading ? (
           <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
         ) : items.length === 0 ? (
-          <div className="empty-state"><div className="empty-icon">✍️</div><p>No blogs yet. Write your first post.</p></div>
+          <div className="empty-state"><div className="empty-icon">✍️</div><p>{search ? `No blogs match “${search}”.` : 'No blogs yet. Write your first post.'}</p></div>
         ) : (
           <div className="table-responsive">
             <table className="table">
@@ -256,6 +298,8 @@ export default function BlogsPage() {
           </div>
         )}
       </div>
+
+      <Pagination page={page} pages={pages} total={total} onChange={goToPage} />
 
       {showModal && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>

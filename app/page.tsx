@@ -256,7 +256,7 @@ export default async function HomePage() {
         <div className="container">
           <div className="home-section-head">
             <h2>Daily Analysis</h2>
-            <Link href="/daily-analysis" className="home-view-link">View All ↗</Link>
+            <Link href="/editorials" className="home-view-link">View All ↗</Link>
           </div>
           <div className="home-title-rule" />
           {dailyAnalysisPosts.length > 0 ? (
