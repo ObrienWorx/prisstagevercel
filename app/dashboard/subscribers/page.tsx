@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Pagination from '@/components/Pagination';
+
+const PER_PAGE = 20;
 
 interface Product { _id: string; name: string; durationType: string; durationValue: number; regularPrice: number; salePrice: number | null; }
 interface UserProd { _id: string; product: Product; startDate: string; expiryDate: string; isActive: boolean; order?: { orderNumber: string; pricePaid: number; }; }
@@ -52,24 +55,41 @@ export default function SubscribersPage() {
   const [activitySub, setActivitySub]   = useState<Sub | null>(null);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loadingLogs, setLoadingLogs]   = useState(false);
+  const [search, setSearch]             = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage]                 = useState(1);
+  const [total, setTotal]               = useState(0);
+  const [pages, setPages]               = useState(1);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
-  const loadAll = useCallback(async () => {
+  const loadSubscribers = useCallback(async () => {
     setLoading(true);
     try {
-      const [sR, pR] = await Promise.all([
-        fetch('/api/subscribers', { headers: h }),
-        fetch('/api/products', { headers: h }),
-      ]);
-      const [s, p] = await Promise.all([sR.json(), pR.json()]);
-      if (s.success) setItems(s.data);
-      if (p.success) setProducts(p.data);
+      const params = new URLSearchParams({ page: String(page), limit: String(PER_PAGE) });
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+      const r = await fetch(`/api/subscribers?${params.toString()}`, { headers: h });
+      const d = await r.json();
+      if (d.success) { setItems(d.data); setTotal(d.total ?? d.data.length); setPages(d.pages ?? 1); }
     } finally { setLoading(false); }
+  }, [page, debouncedSearch]);
+
+  // debounce the search box; reset to page 1 on a new query
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { loadSubscribers(); }, [loadSubscribers]);
+
+  // product catalog loads once (for the assign-product dropdowns)
+  useEffect(() => {
+    fetch('/api/products', { headers: h }).then(r => r.json()).then(d => { if (d.success) setProducts(d.data); }).catch(() => {});
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  // keep page in range when the result set shrinks (e.g. after a delete)
+  useEffect(() => { if (page > pages) setPage(pages); }, [pages, page]);
 
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };
 
@@ -115,7 +135,7 @@ export default function SubscribersPage() {
       if (form.password) payload.password = form.password;
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
       const d = await r.json();
-      if (d.success) { flash(d.message || 'Saved'); setShowModal(false); loadAll(); }
+      if (d.success) { flash(d.message || 'Saved'); setShowModal(false); loadSubscribers(); }
       else setErr(d.error || 'Error');
     } finally { setSaving(false); }
   };
@@ -124,7 +144,7 @@ export default function SubscribersPage() {
     if (!del) return; setSaving(true);
     try {
       await fetch(`/api/subscribers/${del._id}`, { method: 'DELETE', headers: h });
-      flash('Deleted'); setDel(null); loadAll();
+      flash('Deleted'); setDel(null); loadSubscribers();
     } finally { setSaving(false); }
   };
 
@@ -209,11 +229,23 @@ export default function SubscribersPage() {
       {ok && <div className="alert alert-success mb-4">✓ {ok}</div>}
       {err && !showModal && !viewSub && <div className="alert alert-danger mb-4">{err}</div>}
 
+      <div className="mb-3">
+        <input
+          className="form-control"
+          style={{ maxWidth: 360 }}
+          placeholder="Search by name, email, or phone…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+
       <div className="card">
         {loading ? (
           <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
-        ) : items.length === 0 ? (
-          <div className="empty-state"><div className="empty-icon">👤</div><p>No subscribers yet.</p></div>
+        ) : total === 0 ? (
+          debouncedSearch
+            ? <div className="empty-state"><div className="empty-icon">🔍</div><p>No subscribers match “{debouncedSearch}”.</p></div>
+            : <div className="empty-state"><div className="empty-icon">👤</div><p>No subscribers yet.</p></div>
         ) : (
           <div className="table-responsive">
             <table className="table">
@@ -242,6 +274,8 @@ export default function SubscribersPage() {
           </div>
         )}
       </div>
+
+      <Pagination page={page} pages={pages} total={total} onChange={setPage} />
 
       {/* ── Create / Edit Subscriber Modal ── */}
       {showModal && (

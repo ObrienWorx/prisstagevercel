@@ -41,10 +41,10 @@ export default function OrdersPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [page, setPage] = useState(1);
-
-  const pages = Math.max(1, Math.ceil(orders.length / PER_PAGE));
-  const safePage = Math.min(page, pages); // clamp during render (e.g. after a delete)
-  const paged = orders.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
 
   const [cForm, setCForm] = useState({ subscriberId: '', paymentStatus: 'completed', orderStatus: 'completed', paymentGateway: 'Manual', notes: '', sellingPrice: '' });
   const [lines, setLines] = useState<LineItem[]>([defaultLine()]);
@@ -54,22 +54,35 @@ export default function OrdersPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
-  const loadAll = useCallback(async () => {
+  const loadOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const [oR, sR, pR] = await Promise.all([
-        fetch('/api/orders', { headers: h }),
-        fetch('/api/subscribers', { headers: h }),
-        fetch('/api/products', { headers: h }),
-      ]);
-      const [o, s, p] = await Promise.all([oR.json(), sR.json(), pR.json()]);
-      if (o.success) setOrders(o.data);
-      if (s.success) setSubscribers(s.data);
-      if (p.success) setProducts(p.data);
+      const params = new URLSearchParams({ page: String(page), limit: String(PER_PAGE) });
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+      const r = await fetch(`/api/orders?${params.toString()}`, { headers: h });
+      const d = await r.json();
+      if (d.success) { setOrders(d.data); setTotal(d.total ?? d.data.length); setPages(d.pages ?? 1); }
     } finally { setLoading(false); }
+  }, [page, debouncedSearch]);
+
+  // debounce the search box; reset to page 1 on a new query
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { loadOrders(); }, [loadOrders]);
+
+  // subscribers + products for the create-order dropdowns (loaded once)
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/subscribers', { headers: h }).then(r => r.json()),
+      fetch('/api/products', { headers: h }).then(r => r.json()),
+    ]).then(([s, p]) => { if (s.success) setSubscribers(s.data); if (p.success) setProducts(p.data); }).catch(() => {});
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  // keep page in range when the result set shrinks (e.g. after a delete)
+  useEffect(() => { if (page > pages) setPage(pages); }, [pages, page]);
 
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };
 
@@ -143,7 +156,7 @@ export default function OrdersPage() {
         }),
       });
       const d = await r.json();
-      if (d.success) { flash('Order created'); setShowCreate(false); loadAll(); }
+      if (d.success) { flash('Order created'); setShowCreate(false); loadOrders(); }
       else setErr(d.error || 'Error');
     } finally { setSaving(false); }
   };
@@ -156,7 +169,7 @@ export default function OrdersPage() {
         method: 'PUT', headers: h, body: JSON.stringify(eForm),
       });
       const d = await r.json();
-      if (d.success) { flash('Order updated'); setEditOrder(null); loadAll(); }
+      if (d.success) { flash('Order updated'); setEditOrder(null); loadOrders(); }
       else setErr(d.error || 'Error');
     } finally { setSaving(false); }
   };
@@ -167,7 +180,7 @@ export default function OrdersPage() {
     try {
       const r = await fetch(`/api/orders/${deleteId}`, { method: 'DELETE', headers: h });
       const d = await r.json();
-      if (d.success) { flash('Order deleted'); setDeleteId(null); loadAll(); }
+      if (d.success) { flash('Order deleted'); setDeleteId(null); loadOrders(); }
       else setErr(d.error || 'Error');
     } finally { setDeleting(false); }
   };
@@ -190,11 +203,23 @@ export default function OrdersPage() {
       {ok && <div className="alert alert-success mb-4">✓ {ok}</div>}
       {err && !showCreate && !editOrder && <div className="alert alert-danger mb-4">{err}</div>}
 
+      <div className="mb-3">
+        <input
+          className="form-control"
+          style={{ maxWidth: 360 }}
+          placeholder="Search by order #, subscriber, or product…"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setPage(1); }}
+        />
+      </div>
+
       <div className="card">
         {loading
           ? <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
-          : orders.length === 0
-            ? <div className="empty-state"><div className="empty-icon">🛍️</div><p>No orders yet.</p></div>
+          : total === 0
+            ? (debouncedSearch
+              ? <div className="empty-state"><div className="empty-icon">🔍</div><p>No orders match “{debouncedSearch}”.</p></div>
+              : <div className="empty-state"><div className="empty-icon">🛍️</div><p>No orders yet.</p></div>)
             : (
               <div className="table-responsive">
                 <table className="table">
@@ -211,7 +236,7 @@ export default function OrdersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paged.map((o) => (
+                    {orders.map((o) => (
                       <tr key={o._id}>
                         <td>
                           <span className="fw-semibold" style={{ color: 'var(--primary)' }}>{o.orderNumber}</span>
@@ -260,7 +285,7 @@ export default function OrdersPage() {
             )}
       </div>
 
-      <Pagination page={safePage} pages={pages} total={orders.length} onChange={setPage} />
+      <Pagination page={page} pages={pages} total={total} onChange={setPage} />
 
       {/* ── Create Order Modal ─────────────────────────────── */}
       {showCreate && (

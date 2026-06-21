@@ -3,23 +3,53 @@ import { Types } from 'mongoose';
 import connectDB from '@/lib/mongoose';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
+import Subscriber from '@/models/Subscriber';
 import Transaction from '@/models/Transaction';
 import UserProduct from '@/models/UserProduct';
 import { requireAdmin } from '@/middleware/authMiddleware';
-import { successResponse, errorResponse } from '@/lib/apiResponse';
+import { successResponse, errorResponse, paginatedResponse, escapeRegex } from '@/lib/apiResponse';
 import { calculateExpiryDate } from '@/lib/orderHelpers';
 
 export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req);
   if (error) return error;
   await connectDB();
-  const orders = await Order.find({})
+
+  const { searchParams } = new URL(req.url);
+  const search = (searchParams.get('search') || '').trim();
+  const pageParam = searchParams.get('page');
+
+  const filter: Record<string, unknown> = {};
+  if (search) {
+    const rx = new RegExp(escapeRegex(search), 'i');
+    const [subIds, prodIds] = await Promise.all([
+      Subscriber.find({ $or: [{ name: rx }, { email: rx }] }).distinct('_id'),
+      Product.find({ name: rx }).distinct('_id'),
+    ]);
+    filter.$or = [
+      { orderNumber: rx },
+      { subscriber: { $in: subIds } },
+      { product: { $in: prodIds } },
+      { 'items.product': { $in: prodIds } },
+    ];
+  }
+
+  const baseQuery = () => Order.find(filter)
     .populate('subscriber', 'name email')
     .populate('product', 'name regularPrice salePrice durationType durationValue')
     .populate('items.product', 'name')
-    .sort({ createdAt: -1 })
-    .lean();
-  return successResponse(orders);
+    .sort({ createdAt: -1 });
+
+  // No page param → full list (legacy callers)
+  if (!pageParam) {
+    return successResponse(await baseQuery().lean());
+  }
+
+  const page = Math.max(1, parseInt(pageParam, 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
+  const total = await Order.countDocuments(filter);
+  const orders = await baseQuery().skip((page - 1) * limit).limit(limit).lean();
+  return paginatedResponse(orders, { total, page, pages: Math.max(1, Math.ceil(total / limit)) });
 }
 
 export async function POST(req: NextRequest) {
