@@ -1,0 +1,307 @@
+// scripts/migrate-wp-daily-digest.mjs
+// One-off migration: WordPress "Daily Newsletter" (service-category id 203) posts
+// -> our Report collection, gated behind the "Daily Digest" Product.
+//
+// These posts were EXCLUDED from migrate-wp-reports.mjs and handled here because
+// they come in two title shapes:
+//
+//   NEW / single  "Daily Digest – ASX: IPH"            -> one Report.
+//                 "Security Under Review – NYSE: NVYY"   (prefix carries the call)
+//        ticker + index come from the TITLE; the body is already a single report.
+//
+//   OLD / multi   "Daily Digest – 11 Feb"              -> several Reports in ONE post.
+//        each sub-report is an Elementor block starting with
+//          <h2 class="pxl-item--title …">ASX: <…>SFR</…></h2>
+//        ticker + index come from that heading; we split one post into N Reports.
+//
+// Per sub-report we read the call/company/price/date from the body line:
+//   'As per Pristine Gaze, you may consider a "Refrain" on "Sandfire Resources
+//    Limited" at the closing price of "$10.72" (As of 11 February 2025).'
+//   -> recommendation = REFRAIN, title = "Sandfire Resources Limited", price = 10.72
+//
+// The common Disclaimer→Terms-and-Policies block is extracted once and appended to
+// EVERY report (the old multi-posts only carry it once, at the very end).
+//
+// Brings: title, slug, content (HTML + disclaimer), featuredImage, product (Daily Digest),
+//         upsellTicker (index), ticker, price, recommendation, recommendations,
+//         publishStatus=published, createdAt (original WP date).
+//
+// Usage:
+//   node scripts/migrate-wp-daily-digest.mjs              # import ALL Daily Newsletter posts
+//   DRY=1 node scripts/migrate-wp-daily-digest.mjs        # parse + print, write NOTHING
+//   LIMIT=20 node scripts/migrate-wp-daily-digest.mjs     # only the 20 latest posts
+//   ONLY=32572 DRY=1 node scripts/migrate-wp-daily-digest.mjs   # one post (debug)
+//
+// Re-running is safe: reports already present (matched by slug) are skipped.
+
+import mongoose from 'mongoose';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const WP_BASE = 'https://pristinegaze.com.au';
+const DAILY_NEWSLETTER_TERM = 203; // service-category "Daily Newsletter"
+const PRODUCT_NAME = 'Daily Digest';
+
+const DRY = !!process.env.DRY;
+const LIMIT = Number(process.env.LIMIT || 0);
+const ONLY = process.env.ONLY ? String(process.env.ONLY) : '';
+
+// reco phrase -> canonical label. Order matters: longer/qualified keys first.
+const RECO_RULES = [
+  [/speculative\s+buy/i, 'SPECULATIVE BUY'],
+  [/securit(?:y|ies)\s+under\s+review/i, 'Security Under Review'],
+  [/refrain/i, 'REFRAIN'],
+  [/\bhold\b/i, 'HOLD'],
+  [/\bsell\b/i, 'SELL'],
+  [/\bbuy\b/i, 'BUY'],
+];
+function mapReco(phrase = '') {
+  for (const [re, label] of RECO_RULES) if (re.test(phrase)) return label;
+  return '';
+}
+
+// --- env ----------------------------------------------------------------
+function loadEnv() {
+  const raw = readFileSync(path.join(__dirname, '..', '.env'), 'utf8');
+  for (const line of raw.split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/i);
+    if (!m) continue;
+    const val = m[2].trim().replace(/^["']|["']$/g, '');
+    if (!(m[1] in process.env)) process.env[m[1]] = val;
+  }
+}
+
+// --- schemas (match existing collections) -------------------------------
+const Report = mongoose.model('Report', new mongoose.Schema({
+  title: String, slug: { type: String, unique: true }, content: String, featuredImage: String,
+  category: mongoose.Schema.Types.ObjectId, sector: mongoose.Schema.Types.ObjectId, product: mongoose.Schema.Types.ObjectId,
+  upsellTicker: String, ticker: String, price: Number, recommendation: String,
+  recommendations: [String], publishStatus: String, featured: Boolean,
+}, { timestamps: true, strict: false }));
+const Product = mongoose.model('Product', new mongoose.Schema({}, { strict: false }));
+
+// --- html helpers -------------------------------------------------------
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#8217': '’', '#8216': '‘', '#8220': '“', '#8221': '”', '#8211': '–', '#8212': '—', '#8230': '…', '#038': '&' };
+function decodeEntities(str = '') {
+  return str.replace(/&(#?\w+);/g, (full, code) => {
+    if (code in ENTITIES) return ENTITIES[code];
+    if (/^#\d+$/.test(code)) return String.fromCodePoint(parseInt(code.slice(1), 10));
+    if (/^#x[0-9a-f]+$/i.test(code)) return String.fromCodePoint(parseInt(code.slice(2), 16));
+    return full;
+  });
+}
+const stripTags = (s = '') => decodeEntities(s.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+
+// quote-agnostic class: straight and curly
+const Q = '["“”‘’]';
+
+// Pull the recommendation sentence -> { reco, company, price, asOf }
+function parseRecLine(html) {
+  const text = stripTags(html);
+  // company/phrase are delimited by DOUBLE quotes only, so apostrophes (Domino’s) are allowed inside.
+  const re = new RegExp(
+    `you may consider\\s*(?:placing\\s+)?an?\\s*${Q}\\s*([^"“”]+?)\\s*${Q}\\s*on\\s*${Q}\\s*([^"“”]+?)\\s*${Q}\\s*at the\\s*(?:closing\\s+)?price of\\s*${Q}?\\s*\\$?\\s*([\\d,]+(?:\\.\\d+)?)\\s*${Q}?\\s*\\(As of\\s*([^)]+)\\)`,
+    'i'
+  );
+  const m = text.match(re);
+  if (!m) return null;
+  return {
+    reco: mapReco(m[1]),
+    company: m[2].replace(/\s+/g, ' ').trim(),
+    price: parseFloat(m[3].replace(/,/g, '')),
+    asOf: m[4].trim(),
+  };
+}
+
+// Content of a block = the <p> and <img>/<figure> nodes in document order.
+function blockContent(slice) {
+  const nodes = slice.match(/<p\b[^>]*>[\s\S]*?<\/p>|<figure\b[^>]*>[\s\S]*?<\/figure>|<img\b[^>]*?\/?>/gi) || [];
+  return nodes
+    .map((n) => n.trim())
+    .filter((n) => stripTags(n).length > 0 || /<img/i.test(n)) // keep images even with no text
+    .join('\n');
+}
+function firstImage(slice) {
+  const m = slice.match(/<img\b[^>]*?\bsrc="([^"]+)"[^>]*?>/i);
+  return m ? m[1] : '';
+}
+
+// The shared Disclaimer→Terms paragraph, cleaned of editor-only class/style noise.
+function extractDisclaimer(html) {
+  const start = html.search(new RegExp('<p[^>]*>(?:(?!<\\/p>)[\\s\\S])*?Disclaimer:', 'i'));
+  if (start === -1) return '';
+  const end = html.indexOf('</p>', start);
+  if (end === -1) return '';
+  let p = html.slice(start, end + 4);
+  p = p.replace(/\sclass="[^"]*"/gi, '').replace(/\sstyle="[^"]*"/gi, '');
+  return p;
+}
+function disclaimerStart(html) {
+  const i = html.search(new RegExp('<p[^>]*>(?:(?!<\\/p>)[\\s\\S])*?Disclaimer:', 'i'));
+  return i === -1 ? html.length : i;
+}
+
+// Title -> { prefix, index, ticker } for the NEW/single shape, else null.
+function parseTitle(title) {
+  const t = decodeEntities(title).trim();
+  const m = t.match(/^(.*?)\s*[–—-]\s*([A-Za-z][A-Za-z .]*?):\s*([A-Za-z0-9.]+)\s*$/);
+  if (!m) return null;
+  return { prefix: m[1].trim(), index: m[2].trim().toUpperCase(), ticker: m[3].toUpperCase() };
+}
+
+// Old/multi heading: "ASX: SFR" inside a pxl title. Returns [{index,ticker,start,end}]
+function findHeadings(html) {
+  const re = /<h2[^>]*pxl-item--title[^>]*>\s*([A-Za-z][A-Za-z .]*?):\s*<span class="pxl-title--highlight">[\s\S]*?<span class="pxl-item--text active">\s*([A-Za-z0-9.]+)\s*<\/span>[\s\S]*?<\/h2>/gi;
+  const out = [];
+  let m;
+  while ((m = re.exec(html))) {
+    out.push({ index: m[1].trim().toUpperCase(), ticker: m[2].toUpperCase(), start: m.index, end: re.lastIndex });
+  }
+  return out;
+}
+
+function slugify(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+async function uniqueSlug(base) {
+  let slug = base || 'daily-digest';
+  let n = 2;
+  while (await Report.exists({ slug })) slug = `${base}-${n++}`;
+  return slug;
+}
+
+// --- build report objects from one WP post ------------------------------
+function buildReports(post, disclaimer, productId) {
+  const html = post?.content?.rendered || '';
+  const postSlug = (post?.slug || '').toLowerCase();
+  const postDate = post?.date ? new Date(post.date) : null;
+  const titled = parseTitle(post?.title?.rendered || '');
+  const reports = [];
+
+  if (titled) {
+    // NEW / single report. ticker+index from title; body is one report.
+    const cut = disclaimerStart(html);
+    const body = html.slice(0, cut);
+    const rec = parseRecLine(html) || {};
+    const acf = readAcf(post);
+    const reco = rec.reco || mapReco(titled.prefix) || acf[0] || '';
+    reports.push({
+      title: rec.company || `${titled.index}: ${titled.ticker}`,
+      baseSlug: postSlug || slugify(`daily-digest-${titled.ticker}`),
+      content: `${blockContent(body)}\n${disclaimer}`,
+      featuredImage: firstImage(body),
+      index: titled.index, ticker: titled.ticker,
+      price: rec.price ?? 0, recommendation: reco,
+      recommendations: reco ? [reco] : [],
+      createdAt: postDate,
+    });
+    return reports;
+  }
+
+  // OLD / multi: split by ASX headings.
+  const heads = findHeadings(html);
+  const cut = disclaimerStart(html);
+  for (let i = 0; i < heads.length; i++) {
+    const h = heads[i];
+    const sliceEnd = i + 1 < heads.length ? heads[i + 1].start : cut;
+    const slice = html.slice(h.end, sliceEnd);
+    const rec = parseRecLine(slice) || {};
+    reports.push({
+      title: rec.company || `${h.index}: ${h.ticker}`,
+      baseSlug: `${postSlug || 'daily-digest'}-${h.ticker.toLowerCase()}`,
+      content: `${blockContent(slice)}\n${disclaimer}`,
+      featuredImage: firstImage(slice),
+      index: h.index, ticker: h.ticker,
+      price: rec.price ?? 0, recommendation: rec.reco || '',
+      recommendations: rec.reco ? [rec.reco] : [],
+      createdAt: postDate,
+    });
+  }
+  return reports;
+}
+
+function readAcf(post) {
+  const raw = post?.acf?.tagss;
+  const arr = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+  const RECO_MAP = { buy: 'BUY', sell: 'SELL', hold: 'HOLD', 'speculative buy': 'SPECULATIVE BUY', refrain: 'REFRAIN', 'security under review': 'Security Under Review' };
+  return arr.map((t) => RECO_MAP[String(t).trim().toLowerCase()] || '').filter(Boolean);
+}
+
+// --- main ---------------------------------------------------------------
+async function main() {
+  loadEnv();
+  if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not found in .env');
+  await mongoose.connect(process.env.MONGODB_URI, { bufferCommands: false });
+  console.log('Connected to MongoDB' + (DRY ? '  (DRY RUN — no writes)' : ''));
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // relax only for the public WP fetch
+
+  const productDoc = await Product.findOne({ name: PRODUCT_NAME }).lean();
+  if (!productDoc) throw new Error(`Product "${PRODUCT_NAME}" not found`);
+  const productId = productDoc._id;
+
+  // grab a disclaimer once (from the first post that has one)
+  let disclaimer = '';
+
+  let created = 0, skipped = 0, postsSeen = 0, page = 1;
+  const noReco = [];
+
+  const handlePost = async (p) => {
+    postsSeen++;
+    if (!disclaimer) disclaimer = extractDisclaimer(p?.content?.rendered || '') || disclaimer;
+    const reports = buildReports(p, disclaimer, productId);
+    for (const r of reports) {
+      if (await Report.exists({ slug: r.baseSlug })) { skipped++; continue; }
+      if (!r.recommendation) noReco.push(`${p.id}:${r.ticker}`);
+      const slug = await uniqueSlug(r.baseSlug);
+      if (DRY) {
+        console.log(`  [${p.id}] ${r.index}: ${r.ticker} | ${r.recommendation || '—'} | $${r.price} | "${r.title}" | slug=${slug} | img=${r.featuredImage ? 'y' : 'n'} | len=${r.content.length}`);
+      } else {
+        await Report.create({
+          title: r.title, slug, content: r.content, featuredImage: r.featuredImage,
+          product: productId, upsellTicker: r.index, ticker: r.ticker,
+          price: r.price, recommendation: r.recommendation, recommendations: r.recommendations,
+          publishStatus: 'published', createdAt: r.createdAt || undefined,
+        });
+      }
+      created++;
+    }
+  };
+
+  if (ONLY) {
+    const res = await fetch(`${WP_BASE}/wp-json/wp/v2/service/${ONLY}?_embed=wp:featuredmedia&_fields=id,date,slug,title,content,acf`, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`post ${ONLY} -> HTTP ${res.status}`);
+    await handlePost(await res.json());
+  } else {
+    while (true) {
+      const url = `${WP_BASE}/wp-json/wp/v2/service?service-category=${DAILY_NEWSLETTER_TERM}&per_page=50&page=${page}&status=publish&orderby=date&order=desc&_fields=id,date,slug,title,content,acf`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (res.status === 400) break;
+      if (!res.ok) throw new Error(`service page ${page} -> HTTP ${res.status}`);
+      const batch = await res.json();
+      if (!Array.isArray(batch) || batch.length === 0) break;
+      const totalPages = Number(res.headers.get('x-wp-totalpages') || 0);
+      for (const p of batch) {
+        await handlePost(p);
+        if (LIMIT && postsSeen >= LIMIT) break;
+      }
+      process.stdout.write(`\r  page ${page}/${totalPages} — posts ${postsSeen}, reports created ${created}, skipped ${skipped}`);
+      if (LIMIT && postsSeen >= LIMIT) break;
+      if (totalPages && page >= totalPages) break;
+      page++;
+    }
+    process.stdout.write('\n');
+  }
+
+  console.log(`\nDone: ${created} reports ${DRY ? 'WOULD BE created' : 'created'} from ${postsSeen} posts, ${skipped} skipped (existing slug)`);
+  if (noReco.length) console.log(`No recommendation parsed (${noReco.length}):`, noReco.slice(0, 20));
+  await mongoose.disconnect();
+}
+
+// Only run the migration when invoked directly (`node scripts/migrate-wp-daily-digest.mjs`),
+// never on `import` — importing is used by tests to exercise the parsers without touching the DB.
+const isMain = import.meta.url === pathToFileURL(process.argv[1] || '').href;
+if (isMain) main().catch((e) => { console.error('\nMIGRATION FAILED:', e); process.exit(1); });
+
+export { parseTitle, parseRecLine, findHeadings, buildReports, mapReco, extractDisclaimer };

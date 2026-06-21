@@ -46,3 +46,8 @@ pristinegaze-server.zip
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# WP migration: member export contains PII — never commit
+members-export.json
+*.export.json
+.scratch/
