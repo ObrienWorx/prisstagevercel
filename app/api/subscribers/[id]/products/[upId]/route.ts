@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: P) {
   const updated = await UserProduct.findByIdAndUpdate(
     upId,
     { startDate: start, expiryDate: expiry, ...(isActive !== undefined ? { isActive } : {}) },
-    { new: true }
+    { returnDocument: 'after' }
   )
     .populate('product', 'name regularPrice salePrice durationType durationValue')
     .populate('order', 'orderNumber pricePaid paymentStatus');

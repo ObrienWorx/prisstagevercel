@@ -69,7 +69,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     ...(metaImage           !== undefined && { metaImage }),
   };
 
-  const updated = await Report.findByIdAndUpdate(id, { $set: update }, { new: true, runValidators: true })
+  const updated = await Report.findByIdAndUpdate(id, { $set: update }, { returnDocument: 'after', runValidators: true })
     .populate('category', 'name slug')
     .populate('sector', 'name slug')
     .populate('product', 'name')

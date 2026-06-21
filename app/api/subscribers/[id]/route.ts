@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: P) {
     update.plainPassword = password;
   }
 
-  const updated = await Subscriber.findByIdAndUpdate(id, { $set: update }, { new: true }).select('-password');
+  const updated = await Subscriber.findByIdAndUpdate(id, { $set: update }, { returnDocument: 'after' }).select('-password');
 
   if (changes.length > 0) {
     await ActivityLog.insertMany(changes.map(c => ({

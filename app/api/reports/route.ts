@@ -13,7 +13,9 @@ export async function GET(req: NextRequest) {
   try {
     await connectDB();
 
-    const q = req.nextUrl.searchParams.get('q')?.trim();
+    const sp = req.nextUrl.searchParams;
+
+    const q = sp.get('q')?.trim();
     if (q) {
       const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       const matchingSectors = await Sector.find({ name: regex }, '_id');
@@ -28,13 +30,37 @@ export async function GET(req: NextRequest) {
       return successResponse(reports);
     }
 
-    const reports = await Report.find({})
-      .populate('category', 'name slug')
-      .populate('sector', 'name slug')
-      .populate('product', 'name regularPrice salePrice')
-      .populate('pastStockRecommendation', 'title slug')
-      .sort({ createdAt: -1 });
-    return successResponse(reports);
+    // Lightweight id+title list for picker dropdowns (e.g. "Past Stock Recommendations").
+    if (sp.get('titles')) {
+      const titles = await Report.find({}, 'title upsellTicker ticker').sort({ createdAt: -1 }).lean();
+      return successResponse(titles);
+    }
+
+    const page = Math.max(1, parseInt(sp.get('page') ?? '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(sp.get('limit') ?? '20', 10)));
+    const search = sp.get('search')?.trim();
+    const category = sp.get('category')?.trim();
+    const sector = sp.get('sector')?.trim();
+    const product = sp.get('product')?.trim();
+    const filter: Record<string, unknown> = {};
+    if (search) filter.title = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (category) filter.category = category;
+    if (sector) filter.sector = sector;
+    if (product) filter.product = product;
+    const [items, total] = await Promise.all([
+      Report.find(filter)
+        .select('-content') // omit heavy HTML body; fetched on demand via /api/reports/[id]
+        .populate('category', 'name slug')
+        .populate('sector', 'name slug')
+        .populate('product', 'name regularPrice salePrice')
+        .populate('pastStockRecommendation', 'title slug')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Report.countDocuments(filter),
+    ]);
+    return successResponse({ items, total, page, pages: Math.ceil(total / limit) });
   } catch (e) {
     return errorResponse(String(e), 500);
   }

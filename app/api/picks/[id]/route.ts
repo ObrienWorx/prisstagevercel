@@ -12,7 +12,7 @@ export async function PUT(req: NextRequest, { params }: P) {
   await connectDB();
   const { id } = await params;
   const body = await req.json();
-  const pick = await Pick.findByIdAndUpdate(id, { $set: body }, { new: true });
+  const pick = await Pick.findByIdAndUpdate(id, { $set: body }, { returnDocument: 'after' });
   if (!pick) return errorResponse('Pick not found', 404);
   return successResponse(pick, 'Pick updated');
 }

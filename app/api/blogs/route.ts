@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(sp.get('page') ?? '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(sp.get('limit') ?? '20', 10)));
     const search = sp.get('search')?.trim();
-    const filter = search
-      ? { title: new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') }
-      : {};
+    const category = sp.get('category')?.trim();
+    const filter: Record<string, unknown> = {};
+    if (search) filter.title = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    if (category) filter.$or = [{ category }, { categories: category }];
     const [items, total] = await Promise.all([
       Blog.find(filter)
         .select('-content') // omit heavy HTML body; fetched on demand via /api/blogs/[id]

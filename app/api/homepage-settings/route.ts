@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const settings = await HomepageSetting.findOneAndUpdate(
     { key: 'homepage' },
     { $setOnInsert: { key: 'homepage' } },
-    { new: true, upsert: true }
+    { returnDocument: 'after', upsert: true }
   );
 
   return successResponse(settings);
@@ -43,7 +43,7 @@ export async function PUT(req: NextRequest) {
         videoSectionButtonHref,
         videoSectionYoutubeUrl,
       },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: 'after', upsert: true, runValidators: true }
     );
 
     return successResponse(settings, 'Homepage settings saved');

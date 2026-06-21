@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const sub = await Subscriber.findOneAndUpdate(
     { email: email.toLowerCase() },
     { isEmailVerified: true },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!sub) return NextResponse.json({ success: false, error: 'Account not found' }, { status: 404 });
   if (!sub.isActive) return NextResponse.json({ success: false, error: 'Account deactivated. Contact support.' }, { status: 403 });

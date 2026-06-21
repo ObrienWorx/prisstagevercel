@@ -49,10 +49,10 @@ export default function BlogSidebarPromo() {
               aria-label="Close"
             >×</button>
             <LeadCaptureForm
-              source="unlock-ticker"
+              source="editorial"
               badge=""
               title="Please fill the details to Unlock the Exclusive ASX Stock Report"
-              buttonText="Unlock the Ticker"
+              buttonText="Unlock the Report"
               successText="You will receive the detailed Stock Report on your submitted email."
               onSuccess={() => setShowModal(false)}
             />

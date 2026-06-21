@@ -31,6 +31,7 @@ export default function BlogsPage() {
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -47,12 +48,12 @@ export default function BlogsPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
-  const load = useCallback(async (p = 1, q = '') => {
+  const load = useCallback(async (p = 1, q = '', cat = '') => {
     setLoading(true);
     try {
       const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
       const [bR, cR] = await Promise.all([
-        fetch(`/api/blogs?page=${p}&search=${encodeURIComponent(q)}`, { headers }),
+        fetch(`/api/blogs?page=${p}&search=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}`, { headers }),
         fetch('/api/blog-categories', { headers }),
       ]);
       const [b, c] = await Promise.all([bR.json(), cR.json()]);
@@ -66,13 +67,13 @@ export default function BlogsPage() {
     } finally { setLoading(false); }
   }, [token]);
 
-  // Reload list whenever the committed search term changes (and on first mount).
+  // Reload list whenever the committed search term or category filter changes (and on first mount).
   useEffect(() => {
-    const initialLoad = window.setTimeout(() => { void load(1, search); }, 0);
+    const initialLoad = window.setTimeout(() => { void load(1, search, category); }, 0);
     return () => window.clearTimeout(initialLoad);
-  }, [load, search]);
+  }, [load, search, category]);
 
-  const goToPage = (p: number) => { void load(p, search); };
+  const goToPage = (p: number) => { void load(p, search, category); };
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
 
@@ -118,7 +119,7 @@ export default function BlogsPage() {
       const url = editing ? `/api/blogs/${editing._id}` : '/api/blogs';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
       const d = await r.json();
-      if (d.success) { flash(d.message); setShowModal(false); load(page, search); }
+      if (d.success) { flash(d.message); setShowModal(false); load(page, search, category); }
       else setErr(d.error || 'Something went wrong');
     } finally { setSaving(false); }
   };
@@ -212,7 +213,7 @@ export default function BlogsPage() {
     try {
       const r = await fetch(`/api/blogs/${del._id}`, { method: 'DELETE', headers: h });
       const d = await r.json();
-      if (d.success) { flash('Blog deleted'); setDel(null); load(page, search); }
+      if (d.success) { flash('Blog deleted'); setDel(null); load(page, search, category); }
       else { setErr(d.error || 'Delete failed'); setDel(null); }
     } finally { setSaving(false); }
   };
@@ -230,26 +231,37 @@ export default function BlogsPage() {
       {ok && <div className="alert alert-success mb-4">✓ {ok}</div>}
       {err && !showModal && <div className="alert alert-danger mb-4">{err}</div>}
 
-      <form
-        className="d-flex gap-2 mb-3"
-        style={{ maxWidth: 420 }}
-        onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); }}
-      >
-        <input
-          className="form-control"
-          placeholder="Search blogs by title..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-        <button className="btn btn-outline-secondary" type="submit">Search</button>
-        {search && (
-          <button
-            className="btn btn-outline-secondary"
-            type="button"
-            onClick={() => { setSearchInput(''); setSearch(''); }}
-          >Clear</button>
-        )}
-      </form>
+      <div className="d-flex flex-wrap gap-2 mb-3 align-items-center">
+        <form
+          className="d-flex gap-2"
+          style={{ maxWidth: 420 }}
+          onSubmit={(e) => { e.preventDefault(); setSearch(searchInput.trim()); }}
+        >
+          <input
+            className="form-control"
+            placeholder="Search blogs by title..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <button className="btn btn-outline-secondary" type="submit">Search</button>
+          {search && (
+            <button
+              className="btn btn-outline-secondary"
+              type="button"
+              onClick={() => { setSearchInput(''); setSearch(''); }}
+            >Clear</button>
+          )}
+        </form>
+        <select
+          className="form-select"
+          style={{ maxWidth: 240 }}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="">All categories</option>
+          {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
+        </select>
+      </div>
 
       <div className="card">
         {loading ? (
