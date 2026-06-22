@@ -15,8 +15,8 @@ const RISK_COLORS: Record<string, { bg: string; text: string }> = {
 
 export default async function SubscribePage() {
   await connectDB();
-  const products = await Product.find({ status: 'published', isActive: true })
-    .sort({ regularPrice: 1 })
+  const products = await Product.find({ status: 'published', isActive: true, showOnFrontend: { $ne: false } })
+    .sort({ sortOrder: 1, regularPrice: 1 })
     .lean() as any[];
 
   const fmtPrice = (p: any) => (p.regularPrice ?? 0).toFixed(2);

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { effectivePrice as computePrice } from '@/lib/effectivePrice';
 
 interface Product {
   _id: string; name: string; slug: string; regularPrice: number; salePrice?: number;
@@ -23,6 +24,7 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(true);
   const [payMethod, setPayMethod] = useState<'paypal' | 'cod'>('paypal');
   const [codLoading, setCodLoading] = useState(false);
+  const [freeLoading, setFreeLoading] = useState(false);
   const [paypalReady, setPaypalReady] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -34,20 +36,21 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (!planSlug) { router.replace('/subscribe'); return; }
-    fetch('/api/public/products')
+    // Fetch the single product by slug (NOT the filtered list) so hidden/unlisted
+    // products can still be purchased via a direct link.
+    fetch(`/api/public/products/${planSlug}`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) {
-          const p = d.data.find((x: Product) => x.slug === planSlug);
-          if (!p) router.replace('/subscribe');
-          else setProduct(p);
-        }
+        if (d.success && d.data) setProduct(d.data);
+        else router.replace('/subscribe');
       })
+      .catch(() => router.replace('/subscribe'))
       .finally(() => setLoading(false));
   }, [planSlug, router]);
 
   useEffect(() => {
     if (payMethod !== 'paypal' || !product || paypalRendered.current) return;
+    if (computePrice(product, saleOffer) <= 0) return; // free product — no PayPal needed
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
     if (!clientId) { setErr('PayPal is not configured. Please choose another payment method.'); return; }
     const scriptId = 'paypal-sdk';
@@ -95,6 +98,21 @@ function CheckoutContent() {
     }).render(paypalRef.current);
   }
 
+  const claimFree = async () => {
+    setErr(''); setFreeLoading(true);
+    try {
+      const res = await fetch('/api/checkout/free', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ planSlug, saleOffer }),
+      });
+      const d = await res.json();
+      if (d.success) router.push('/user/dashboard?success=1');
+      else setErr(d.error || 'Failed to activate free access');
+    } catch { setErr('Network error. Please try again.'); }
+    finally { setFreeLoading(false); }
+  };
+
   const placeCOD = async () => {
     setErr(''); setCodLoading(true);
     try {
@@ -128,6 +146,7 @@ function CheckoutContent() {
       ? product.saleOverPrice
       : product.regularPrice;
   const price = effectivePrice.toFixed(2);
+  const isFree = effectivePrice <= 0;
   const savings = saleOffer && effectivePrice < product.regularPrice
     ? (product.regularPrice - effectivePrice).toFixed(2) : null;
 
@@ -182,8 +201,9 @@ function CheckoutContent() {
         {/* Payment */}
         <div className="col-lg-7">
           <div className="checkout-panel">
-            <div className="checkout-panel-title">Payment Method</div>
+            <div className="checkout-panel-title">{isFree ? 'Free Subscription' : 'Payment Method'}</div>
 
+            {!isFree && (
             <div className="d-flex gap-2 mb-4">
               {([{ id: 'paypal', icon: '💳', label: 'PayPal' }, { id: 'cod', icon: '💵', label: 'Cash on Delivery' }] as const).map(m => (
                 <button
@@ -195,11 +215,23 @@ function CheckoutContent() {
                 </button>
               ))}
             </div>
+            )}
 
             {err && <div className="alert-inline alert-inline-danger mb-3">{err}</div>}
             {msg && <div className="alert-inline alert-inline-success mb-3">{msg}</div>}
 
-            {payMethod === 'paypal' && (
+            {isFree && (
+              <div>
+                <p className="small text-muted mb-3">
+                  This subscription is <strong>free</strong> — no payment needed. Click below to activate instant access.
+                </p>
+                <button onClick={claimFree} disabled={freeLoading} className="checkout-place-btn">
+                  {freeLoading ? 'Activating...' : 'Get Free Access'}
+                </button>
+              </div>
+            )}
+
+            {!isFree && payMethod === 'paypal' && (
               <div>
                 <p className="small text-muted mb-3">
                   You will be redirected to PayPal to complete your secure payment of <strong>A${price}</strong>.
@@ -209,7 +241,7 @@ function CheckoutContent() {
               </div>
             )}
 
-            {payMethod === 'cod' && (
+            {!isFree && payMethod === 'cod' && (
               <div>
                 <div className="checkout-cod-box">
                   <div className="checkout-cod-title">📦 Cash on Delivery</div>

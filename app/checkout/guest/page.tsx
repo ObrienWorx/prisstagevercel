@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
+import { effectivePrice as computePrice } from '@/lib/effectivePrice';
 
 interface Product {
   _id: string; name: string; slug: string; regularPrice: number; salePrice?: number;
@@ -27,25 +28,29 @@ function GuestCheckoutContent() {
   const [err, setErr] = useState('');
   const [success, setSuccess] = useState<{ name: string; email: string; isNewAccount: boolean } | null>(null);
   const [savedToken, setSavedToken] = useState('');
+  const [freeName, setFreeName] = useState('');
+  const [freeEmail, setFreeEmail] = useState('');
+  const [freeLoading, setFreeLoading] = useState(false);
   const paypalRef = useRef<HTMLDivElement>(null);
   const paypalRendered = useRef(false);
 
   useEffect(() => {
     if (!planSlug) { router.replace('/subscribe'); return; }
-    fetch('/api/public/products')
+    // Fetch the single product by slug (NOT the filtered list) so hidden/unlisted
+    // products can still be purchased via a direct link.
+    fetch(`/api/public/products/${planSlug}`)
       .then(r => r.json())
       .then(d => {
-        if (d.success) {
-          const p = d.data.find((x: Product) => x.slug === planSlug);
-          if (!p) router.replace('/subscribe');
-          else setProduct(p);
-        }
+        if (d.success && d.data) setProduct(d.data);
+        else router.replace('/subscribe');
       })
+      .catch(() => router.replace('/subscribe'))
       .finally(() => setLoading(false));
   }, [planSlug, router]);
 
   useEffect(() => {
     if (!product || paypalRendered.current) return;
+    if (computePrice(product, saleOffer) <= 0) return; // free product — no PayPal needed
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
     if (!clientId) { setErr('PayPal is not configured.'); return; }
     const scriptId = 'paypal-sdk';
@@ -108,6 +113,27 @@ function GuestCheckoutContent() {
     }).render(paypalRef.current);
   }
 
+  const claimFree = async () => {
+    setErr('');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(freeEmail.trim())) { setErr('Please enter a valid email address.'); return; }
+    setFreeLoading(true);
+    try {
+      const res = await fetch('/api/checkout/guest/free', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planSlug, saleOffer, email: freeEmail, name: freeName }),
+      });
+      const d = await res.json();
+      if (d.success) {
+        if (d.data.token) { localStorage.setItem('subscriber_token', d.data.token); setSavedToken(d.data.token); }
+        setSuccess({ name: d.data.subscriber.name, email: d.data.subscriber.email, isNewAccount: d.data.isNewAccount });
+      } else {
+        setErr(d.error || 'Failed to activate free access');
+      }
+    } catch { setErr('Network error. Please try again.'); }
+    finally { setFreeLoading(false); }
+  };
+
   if (loading) return (
     <SiteLayout>
       <div className="page-loading">Loading checkout...</div>
@@ -131,6 +157,7 @@ function GuestCheckoutContent() {
       ? product.saleOverPrice
       : product.regularPrice;
   const price = effectivePrice.toFixed(2);
+  const isFree = effectivePrice <= 0;
   const savings = saleOffer && effectivePrice < product.regularPrice
     ? (product.regularPrice - effectivePrice).toFixed(2) : null;
 
@@ -239,16 +266,36 @@ function GuestCheckoutContent() {
               {/* Payment */}
               <div className="col-lg-7">
                 <div className="checkout-panel">
-                  <div className="checkout-panel-title">Pay with PayPal</div>
+                  <div className="checkout-panel-title">{isFree ? 'Get Free Access' : 'Pay with PayPal'}</div>
                   <p className="small text-muted mb-3">
-                    Complete your payment of <strong>A${price}</strong> via PayPal. Your subscription activates instantly.
+                    {isFree
+                      ? <>This subscription is <strong>free</strong>. Enter your email and we&apos;ll set up your account and activate access instantly.</>
+                      : <>Complete your payment of <strong>A${price}</strong> via PayPal. Your subscription activates instantly.</>}
                   </p>
 
                   {err && <div className="alert-inline alert-inline-danger mb-3">{err}</div>}
                   {msg && <div className="alert-inline alert-inline-success mb-3">{msg}</div>}
 
+                  {isFree ? (
+                    <div className="d-flex flex-column gap-3">
+                      <div>
+                        <label className="form-label small fw-semibold">Your Name</label>
+                        <input className="form-control" value={freeName} onChange={e => setFreeName(e.target.value)} placeholder="Optional" />
+                      </div>
+                      <div>
+                        <label className="form-label small fw-semibold">Email Address <span className="text-danger">*</span></label>
+                        <input type="email" className="form-control" value={freeEmail} onChange={e => setFreeEmail(e.target.value)} placeholder="you@example.com" />
+                      </div>
+                      <button onClick={claimFree} disabled={freeLoading} className="checkout-place-btn">
+                        {freeLoading ? 'Activating...' : 'Get Free Access'}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
                   {!paypalReady && <div className="text-center py-4 text-muted small">⏳ Loading PayPal...</div>}
                   <div ref={paypalRef} style={{ minHeight: paypalReady ? 48 : 0 }} />
+                    </>
+                  )}
 
                   <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: 8, fontSize: 12.5, color: '#64748b', lineHeight: 1.6 }}>
                     Already have an account?{' '}

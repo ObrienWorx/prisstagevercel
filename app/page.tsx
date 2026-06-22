@@ -66,9 +66,9 @@ function formatPostDate(date?: Date) {
 export default async function HomePage() {
   await connectDB();
 
-  const products = await Product.find({ status: 'published', isActive: true })
+  const products = await Product.find({ status: 'published', isActive: true, showOnFrontend: { $ne: false } })
     .select('name slug regularPrice salePrice durationType durationValue featuredImage features shortDescription')
-    .sort({ regularPrice: 1 })
+    .sort({ sortOrder: 1, regularPrice: 1 })
     .limit(6)
     .lean() as HomeProduct[];
 
@@ -171,8 +171,8 @@ export default async function HomePage() {
       {/* HERO */}
       <section className="homepage-hero">
         <div className="container position-relative">
-          <div className="row align-items-start g-5">
-            <div className="col-lg-6">
+          <div className="row align-items-start justify-content-center g-5">
+            <div className="col-lg-5">
               <h1 className="homepage-hero-title">Invest with <br/>Insights.</h1>
               <p className="homepage-hero-lead">Navigate the ASX stock market with confidence.</p>
               <ul className="homepage-hero-list">

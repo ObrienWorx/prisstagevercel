@@ -77,5 +77,23 @@ export async function createOrderRecord({
     isActive: paymentStatus === 'completed',
   });
 
+  // Bundle: grant access to any included products for the SAME period as the purchased product.
+  const bundled = (product.bundledProducts ?? [])
+    .map((id) => id.toString())
+    .filter((id) => id !== productId);
+  const uniqueBundled = [...new Set(bundled)];
+  if (uniqueBundled.length > 0) {
+    await UserProduct.insertMany(
+      uniqueBundled.map((bundledId) => ({
+        subscriber: subscriberId,
+        product: bundledId,
+        order: order._id,
+        startDate: start,
+        expiryDate: expiry,
+        isActive: paymentStatus === 'completed',
+      }))
+    );
+  }
+
   return order;
 }

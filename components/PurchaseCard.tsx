@@ -83,9 +83,6 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
         <div className="pc-skeleton" />
       ) : loggedIn ? (
         <>
-          <div className="pc-logged-badge">
-            <span>✓</span> You&apos;re logged in and ready to subscribe
-          </div>
           <Link href={`/user/checkout?plan=${checkoutSlug}${saleOfferQuery}`} className="btn-subscribe pc-btn-main">
             Proceed to Checkout →
           </Link>

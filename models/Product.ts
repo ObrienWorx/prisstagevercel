@@ -30,6 +30,9 @@ export interface IProduct extends Document {
   saleOverBanner: string;
   status: 'draft' | 'published';
   isActive: boolean;
+  showOnFrontend: boolean;
+  bundledProducts: mongoose.Types.ObjectId[];
+  sortOrder: number;
   metaTitle: string;
   metaDescription: string;
   metaImage: string;
@@ -70,6 +73,13 @@ const ProductSchema = new Schema<IProduct>(
     saleOverBanner: { type: String, default: '' },
     status: { type: String, enum: ['draft', 'published'], default: 'published' },
     isActive: { type: Boolean, default: true },
+    // Controls whether the product appears in public frontend listings (independent of publish/active).
+    // Hidden products are still reachable/purchasable by direct link if published.
+    showOnFrontend: { type: Boolean, default: true },
+    // Other products automatically granted (for the same duration as this product) when this one is purchased.
+    bundledProducts: { type: [{ type: Schema.Types.ObjectId, ref: 'Product' }], default: [] },
+    // Manual display order (lower = first) for all frontend listings & menus. Set via admin drag-and-drop.
+    sortOrder: { type: Number, default: 0, index: true },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },
     metaImage: { type: String, default: '' },

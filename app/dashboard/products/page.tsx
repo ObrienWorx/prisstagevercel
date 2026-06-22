@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -28,6 +28,8 @@ interface Product {
   features: string[];
   featuredImage: string; saleBanner: string; saleOverBanner: string;
   status: 'draft' | 'published'; isActive: boolean;
+  showOnFrontend?: boolean;
+  bundledProducts?: string[];
   metaTitle: string; metaDescription: string; metaImage: string;
 }
 
@@ -50,6 +52,8 @@ const empty = {
   features: [] as string[],
   featuredImage: '', saleBanner: '', saleOverBanner: '',
   status: 'published' as 'draft' | 'published', isActive: true,
+  showOnFrontend: true,
+  bundledProducts: [] as string[],
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
@@ -89,6 +93,9 @@ export default function ProductsPage() {
   const [form, setForm] = useState(empty);
   const [salePeriodOpen, setSalePeriodOpen] = useState(false);
   const [del, setDel] = useState<Product | null>(null);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
@@ -124,6 +131,8 @@ export default function ProductsPage() {
       features: item.features ?? [],
       featuredImage: item.featuredImage ?? '', saleBanner: item.saleBanner ?? '', saleOverBanner: item.saleOverBanner ?? '',
       status: item.status ?? 'published', isActive: item.isActive ?? true,
+      showOnFrontend: item.showOnFrontend ?? true,
+      bundledProducts: (item.bundledProducts ?? []).map(String),
       metaTitle: item.metaTitle ?? '', metaDescription: item.metaDescription ?? '', metaImage: item.metaImage ?? '',
     });
     setSalePeriodOpen(false);
@@ -139,6 +148,13 @@ export default function ProductsPage() {
   };
   const addPlan = () => setForm(f => ({ ...f, plans: [...f.plans, { ...emptyPlan }] }));
   const removePlan = (idx: number) => setForm(f => ({ ...f, plans: f.plans.filter((_, i) => i !== idx) }));
+
+  const toggleBundle = (id: string) => setForm(f => ({
+    ...f,
+    bundledProducts: f.bundledProducts.includes(id)
+      ? f.bundledProducts.filter(x => x !== id)
+      : [...f.bundledProducts, id],
+  }));
 
   const save = async () => {
     if (!form.name.trim()) { setErr('Name is required'); return; }
@@ -184,6 +200,31 @@ export default function ProductsPage() {
     } finally { setSaving(false); }
   };
 
+  const persistOrder = async (ordered: Product[]) => {
+    try {
+      const r = await fetch('/api/products/reorder', {
+        method: 'PUT', headers: h,
+        body: JSON.stringify({ ids: ordered.map(p => p._id) }),
+      });
+      const d = await r.json();
+      if (d.success) flash('Order saved');
+      else setErr(d.error || 'Failed to save order');
+    } catch { setErr('Failed to save order'); }
+  };
+
+  const handleDrop = () => {
+    const from = dragItem.current, to = dragOverItem.current;
+    dragItem.current = null; dragOverItem.current = null; setDragging(null);
+    if (from == null || to == null || from === to) return;
+    setItems(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      persistOrder(next);
+      return next;
+    });
+  };
+
   const isSaleActive = (item: Product) => {
     if (item.salePrice == null) return false;
     const now = new Date();
@@ -219,21 +260,33 @@ export default function ProductsPage() {
           <div className="empty-state"><div className="empty-icon">📦</div><p>No products yet.</p></div>
         ) : (
           <>
+            <div className="px-3 pt-3 text-muted" style={{ fontSize: 12 }}>
+              Tip: drag the <span style={{ color: '#94a3b8' }}>⋮⋮</span> handle to reorder how products appear on the homepage, subscribe page, header menu &amp; dashboard.
+            </div>
             <div className="table-responsive">
               <table className="table">
                 <thead>
                   <tr>
+                    <th style={{ width: 32 }} title="Drag rows to reorder"></th>
                     <th>Name</th><th>Price</th><th>Plans</th><th>Sale Period</th>
                     <th>Risk</th><th>Publish</th><th>Active</th>
                     <th style={{ width: 120 }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => {
+                  {items.map((item, index) => {
                     const onSale = isSaleActive(item);
                     const planCount = item.plans?.length ?? 0;
                     return (
-                      <tr key={item._id}>
+                      <tr key={item._id}
+                        draggable
+                        onDragStart={() => { dragItem.current = index; setDragging(index); }}
+                        onDragEnter={() => { dragOverItem.current = index; }}
+                        onDragEnd={handleDrop}
+                        onDragOver={(e) => e.preventDefault()}
+                        style={{ opacity: dragging === index ? 0.4 : 1 }}
+                      >
+                        <td style={{ cursor: 'move', color: '#94a3b8', textAlign: 'center', userSelect: 'none' }} title="Drag to reorder">⋮⋮</td>
                         <td>
                           <div className="fw-semibold">{item.name}</div>
                           <code style={{ fontSize: 11, color: 'var(--muted)' }}>{item.slug}</code>
@@ -480,6 +533,33 @@ export default function ProductsPage() {
                     <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
                   </div>
 
+                  {/* Bundle */}
+                  <div className="col-12"><hr className="my-1" /><div className="form-section-title">Bundle <span className="text-muted fw-normal" style={{ fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>— other products included free when this one is purchased (granted for the same period)</span></div></div>
+                  <div className="col-12">
+                    {items.filter(p => !editing || p._id !== editing._id).length === 0 ? (
+                      <div className="text-muted small">No other products available to bundle.</div>
+                    ) : (
+                      <div className="row g-2">
+                        {items.filter(p => !editing || p._id !== editing._id).map(p => (
+                          <div className="col-md-6" key={p._id}>
+                            <label className="form-check d-flex align-items-center gap-2 p-2 rounded mb-0"
+                              style={{ border: '1px solid #e2e8f0', cursor: 'pointer', background: form.bundledProducts.includes(p._id) ? '#eff6ff' : '#fff' }}>
+                              <input type="checkbox" className="form-check-input mt-0"
+                                checked={form.bundledProducts.includes(p._id)}
+                                onChange={() => toggleBundle(p._id)} />
+                              <span style={{ fontSize: 13 }}>
+                                {p.name} <span className="text-muted">· ${(p.regularPrice ?? 0).toFixed(2)}</span>
+                              </span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {form.bundledProducts.length > 0 && (
+                      <div className="form-text">Buyers also get access to {form.bundledProducts.length} bundled product{form.bundledProducts.length > 1 ? 's' : ''} for the same duration as this product.</div>
+                    )}
+                  </div>
+
                   {/* Status */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">Visibility</div></div>
                   <div className="col-md-4">
@@ -495,6 +575,13 @@ export default function ProductsPage() {
                       <input type="checkbox" className="form-check-input" id="isActive" checked={form.isActive}
                         onChange={(e) => setForm({ ...form, isActive: e.target.checked })} />
                       <label className="form-check-label" htmlFor="isActive">Product Active (available for purchase)</label>
+                    </div>
+                  </div>
+                  <div className="col-md-4 d-flex align-items-end">
+                    <div className="form-check form-switch mb-2">
+                      <input type="checkbox" className="form-check-input" id="showOnFrontend" checked={form.showOnFrontend}
+                        onChange={(e) => setForm({ ...form, showOnFrontend: e.target.checked })} />
+                      <label className="form-check-label" htmlFor="showOnFrontend">Show on frontend (uncheck to hide from public listings)</label>
                     </div>
                   </div>
 
