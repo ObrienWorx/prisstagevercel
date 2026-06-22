@@ -5544,7 +5544,7 @@ body {
 
 /* Homepage hero */
 .homepage-hero {
-  background: #001a33;
+  background: linear-gradient(135deg, #001a33 0%, #003a66 55%, #004f8a 100%);
   color: #fff;
   padding: clamp(1rem, 6vw, 5rem) 0;
   overflow: hidden;
