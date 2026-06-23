@@ -8,8 +8,6 @@ const PER_PAGE = 20;
 
 interface Sub { _id: string; name: string; email: string; }
 
-// Searchable subscriber picker — a native <select> can't host a search box, so this is a
-// custom combobox over the subscriber list (filter by name or email).
 function SubscriberSelect({ subscribers, value, onChange }: {
   subscribers: Sub[]; value: string; onChange: (id: string) => void;
 }) {

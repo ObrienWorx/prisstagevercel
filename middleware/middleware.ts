@@ -1,5 +1,3 @@
-// middleware.ts (root level — Next.js reads this automatically)
-// Protects admin pages from unauthenticated access
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';

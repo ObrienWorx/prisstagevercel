@@ -217,8 +217,6 @@ function BlogCategoryListing({ title, items, categories, emptyMessage, footer, l
   const [showModal, setShowModal] = useState(false);
   const autoShown = useRef(false);
 
-  // Auto-open the claim popup once — after 10s OR a small scroll, whichever comes first.
-  // Never auto-open for visitors who already submitted a lead (manual button still works).
   useEffect(() => {
     if (!autoOpenLead) return;
     if (typeof window !== 'undefined' && localStorage.getItem('pg_lead_submitted') === '1') return;

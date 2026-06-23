@@ -70,10 +70,6 @@ export async function sendOTPEmail(to: string, otp: string, purpose: 'email-veri
   });
 }
 
-// The lead-magnet email body is the project's template.html. Cache the file read and
-// MINIFY it: the builder export is ~290KB of indented nested tables, which exceeds
-// Gmail's ~102KB clipping limit ("[Message clipped]"). Collapsing whitespace between
-// tags drops it to ~66KB without changing how it renders.
 let cachedTemplate: string | null | undefined;
 function loadLeadTemplate(): string | null {
   if (cachedTemplate !== undefined) return cachedTemplate;
@@ -90,12 +86,8 @@ function loadLeadTemplate(): string | null {
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-// Sent automatically to a lead after they submit a capture form. The "Download PDF"
-// button DOWNLOADS the configured lead-magnet PDF (served with an attachment header).
 export async function sendLeadMagnetEmail(to: string, name: string, pdfUrl: string) {
   const base = (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://pristinegaze.com.au').replace(/\/$/, '');
-  // Route uploaded files through /api/download so they download instead of opening inline.
-  // External (absolute) URLs are linked as-is.
   const href = /^https?:\/\//i.test(pdfUrl)
     ? pdfUrl
     : `${base}/api/download?file=${encodeURIComponent(pdfUrl.startsWith('/') ? pdfUrl : `/${pdfUrl}`)}`;
@@ -106,9 +98,7 @@ export async function sendLeadMagnetEmail(to: string, name: string, pdfUrl: stri
   let html: string;
   if (template) {
     html = template
-      // Point both (mso + non-mso) "Download PDF" buttons at the download link.
       .replace(/https:\/\/pristinegaze\.com\.au\/subscribe"/g, `${href}"`)
-      // Personalise the greeting ("Dear Ryan," -> the submitted name).
       .replace(/Dear\s+Ryan,/g, `Dear ${safeName || 'Investor'},`);
   } else {
     const greeting = safeName ? `Dear ${safeName},` : 'Dear Investor,';

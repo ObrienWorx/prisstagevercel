@@ -5,8 +5,6 @@ import HomepageSetting from '@/models/HomepageSetting';
 import { sendLeadMagnetEmail } from '@/lib/email';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 
-// Two lead-magnet PDFs are configured in Homepage Settings: one for the homepage "Ticker"
-// unlock form, one for blog-category "claim your free copy" forms.
 async function resolveLeadMagnet(source: string) {
   const hp = await HomepageSetting.findOne({ key: 'homepage' }).select('tickerLeadPdf blogLeadPdf').lean() as
     | { tickerLeadPdf?: string; blogLeadPdf?: string } | null;
@@ -14,8 +12,6 @@ async function resolveLeadMagnet(source: string) {
   return { pdf: pdf || '' };
 }
 
-// Mirror the lead into the Pristine Alliance CRM (which also syncs it to Brevo).
-// Field names match the CRM controller's $request->*_1 keys. Best-effort.
 const CRM_HOOK_URL = 'https://pristinealliance.pristinegaze.com.au/api/hook-testing';
 async function pushToCrm(lead: { name: string; email: string; phone: string; postalCode: string; source: string; sourceUrl: string }) {
   await fetch(CRM_HOOK_URL, {
@@ -42,8 +38,6 @@ export async function POST(req: NextRequest) {
 
     const normalisedSource = source || 'general';
 
-    // One free report per person: block resubmission if this email OR phone already
-    // submitted a lead-magnet form. Contact-us is excluded (and never blocks others).
     if (normalisedSource !== 'contact-us') {
       const existing = await LeadSubmission.findOne({
         source: { $ne: 'contact-us' },
@@ -60,8 +54,6 @@ export async function POST(req: NextRequest) {
       consent,
     });
 
-    // Best-effort: email the lead the configured PDF for this source. Never fail the
-    // submission if the mail/config is missing.
     try {
       const { pdf } = await resolveLeadMagnet(normalisedSource);
       if (pdf) await sendLeadMagnetEmail(email, name, pdf);
@@ -69,7 +61,6 @@ export async function POST(req: NextRequest) {
       console.error('Lead magnet email failed:', mailErr);
     }
 
-    // Best-effort: mirror the new lead into the CRM / Brevo. Never fail the submission.
     try {
       await pushToCrm({ name, email, phone, postalCode, source: normalisedSource, sourceUrl: sourceUrl || '' });
     } catch (crmErr) {

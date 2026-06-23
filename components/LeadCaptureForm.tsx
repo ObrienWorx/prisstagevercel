@@ -63,10 +63,8 @@ export default function LeadCaptureForm({
       });
       const data = await res.json();
       if (data.success) {
-        // Remember this visitor submitted a lead so popups never auto-open again.
         try { localStorage.setItem('pg_lead_submitted', '1'); } catch {}
         if (data.data?.alreadyExists) {
-          // Email/phone already used — show the notice, don't trigger unlock.
           setSuccessMsg(data.message || 'We have already sent you the Free Report.');
           setSuccess(true);
         } else {

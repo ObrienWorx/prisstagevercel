@@ -8,8 +8,6 @@ interface Props {
   label?: string;
 }
 
-// Upload a PDF (reuses /api/upload, which now accepts application/pdf). Shows the
-// current file link with a remove button.
 export default function PdfUpload({ value, onChange, label = 'PDF' }: Props) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');

@@ -32,8 +32,6 @@ const HomepageSettingSchema = new Schema<IHomepageSetting>(
   { timestamps: true }
 );
 
-// Force re-registration so schema changes (e.g. new lead-magnet fields) take effect on
-// hot-reload instead of reusing a stale cached model that drops the new fields on save.
 delete (mongoose.models as Record<string, unknown>).HomepageSetting;
 const HomepageSetting: Model<IHomepageSetting> =
   mongoose.model<IHomepageSetting>('HomepageSetting', HomepageSettingSchema);

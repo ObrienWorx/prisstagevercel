@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-// Streams an uploaded PDF with an attachment disposition so browsers/email clients
-// DOWNLOAD it instead of opening it inline. Only files under /public/uploads are allowed.
 export async function GET(req: NextRequest) {
   const file = req.nextUrl.searchParams.get('file') || '';
   const m = file.match(/^\/?uploads\/([A-Za-z0-9._-]+\.pdf)$/i);

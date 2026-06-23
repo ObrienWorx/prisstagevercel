@@ -1,8 +1,5 @@
 'use client';
 
-// Shared tax-invoice modal used by both the admin order detail page and the subscriber
-// "My Subscriptions" page, so the invoice format lives in one place.
-
 export interface InvoiceItem {
   name: string;
   durationValue?: number;

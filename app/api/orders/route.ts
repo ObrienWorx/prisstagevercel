@@ -38,8 +38,6 @@ export async function GET(req: NextRequest) {
     .populate('subscriber', 'name email')
     .populate('product', 'name regularPrice salePrice durationType durationValue')
     .populate('items.product', 'name')
-    // Sort by _id (real insertion time) not createdAt: imported orders carry backdated/
-    // future createdAt values, so createdAt would float them above genuinely new orders.
     .sort({ _id: -1 });
 
   // No page param → full list (legacy callers)
@@ -131,7 +129,6 @@ export async function POST(req: NextRequest) {
   }));
   await Order.collection.updateOne({ _id: order._id }, { $set: { items: itemsPayload } });
 
-  // Access records — always one per product line.
   for (const r of resolved) {
     await UserProduct.create({
       subscriber: subscriberId, product: r.productId,
@@ -140,9 +137,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Financials: if an admin Selling Price was set, record ONE transaction for that amount
-  // so the selling price is what shows on the order, invoice and transactions. Otherwise
-  // record one transaction per product line (the price-paid breakdown).
   const sellAmt = (sellingPrice !== undefined && sellingPrice !== '' && Number(sellingPrice) > 0) ? Number(sellingPrice) : null;
   if (sellAmt !== null) {
     await Transaction.create({

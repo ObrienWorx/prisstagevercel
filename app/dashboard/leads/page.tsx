@@ -36,7 +36,6 @@ export default function LeadsPage() {
       .finally(() => setLoading(false));
   };
 
-  // Debounce search; reset to page 1 on each query change.
   useEffect(() => {
     const t = setTimeout(() => fetchLeads(1, search), 350);
     return () => clearTimeout(t);

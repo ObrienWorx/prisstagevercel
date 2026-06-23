@@ -64,22 +64,17 @@ export default function HomePicks() {
   }, []);
 
   const handleUnlockClick = (pickId: string) => {
-    // Every ticker needs its own form submission (with a different email) — there is no
-    // "unlock all" shortcut. The server blocks reuse of the same email/phone.
     setPendingPickId(pickId);
     setShowModal(true);
   };
 
   const handleFormSuccess = () => {
-    // Called only on a genuine new submission (not when the email/phone was already used).
-    // Unlock just the ticker this form was opened for.
     if (pendingPickId) {
       const next = new Set(unlockedIds);
       next.add(pendingPickId);
       setUnlockedIds(next);
       localStorage.setItem(LS_UNLOCKED_IDS, Array.from(next).join(','));
     }
-    // Keep the modal open so the "thank you" success card shows; user closes it manually.
     setPendingPickId(null);
   };
 
