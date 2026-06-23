@@ -4613,12 +4613,14 @@ body {
   width: 18px;
   height: 18px;
 }
+
 .cl-sidebar-nav-icon svg,
 .cl-sidebar-nav-icon img {
   width: 16px;
   height: 16px;
   object-fit: contain;
 }
+
 .cl-sidebar-nav-icon svg path {
   fill: currentColor;
 }
@@ -5544,7 +5546,10 @@ body {
 
 /* Homepage hero */
 .homepage-hero {
-  background: linear-gradient(135deg, #001a33 0%, #003a66 55%, #004f8a 100%);
+  background: radial-gradient(circle,
+      #004f8a 0,
+      #003a66 0%,
+      #001a33 47%);
   color: #fff;
   padding: clamp(1rem, 6vw, 5rem) 0;
   overflow: hidden;
@@ -6191,21 +6196,21 @@ body {
 
 /* Conviction badge — floats top-right, outside the card */
 .home-pick-conviction {
-    color: #0f172a;
-    white-space: nowrap;
-    background: #fff;
-    /* border-radius: 20px; */
-    align-items: center;
-    gap: 4px;
-    padding: 3px 10px 3px 8px;
-    font-size: .7rem;
-    font-weight: 700;
-    display: flex;
-    position: absolute;
-    top: 0;
-    right: 0;
-    box-shadow: 0 2px 8px #0000002e;
-    width: max-content;
+  color: #0f172a;
+  white-space: nowrap;
+  background: #fff;
+  /* border-radius: 20px; */
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px 3px 8px;
+  font-size: .7rem;
+  font-weight: 700;
+  display: flex;
+  position: absolute;
+  top: 0;
+  right: 0;
+  box-shadow: 0 2px 8px #0000002e;
+  width: max-content;
 }
 
 .home-pick-conviction .gauge-icon {
@@ -6236,7 +6241,10 @@ body {
   transition: background 0.15s;
   margin-top: 4px;
 }
-.home-pick-unlock-btn:hover { background: #e8f0fe; }
+
+.home-pick-unlock-btn:hover {
+  background: #e8f0fe;
+}
 
 /* Unlocked ticker display */
 .home-pick-ticker {
@@ -6386,7 +6394,7 @@ body {
 }
 
 .home-section-head-large h2 {
-  font-size: clamp(1.1rem,2vw,1.35rem);
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
 }
 
 .home-sector-grid {
@@ -7075,7 +7083,7 @@ body {
 
 .header-contact-card {
   gap: 0.15rem;
-  color: rgba(255, 255, 255, 0.66);
+  color: #fff;
 }
 
 .header-contact-card a {
@@ -7087,7 +7095,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  font-size: 1.05rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -7101,7 +7109,7 @@ body {
 }
 
 .header-contact-card a:hover {
-  color: #fff;
+  color: rgba(255, 255, 255, 0.66);
 }
 
 .header-nav {
@@ -7593,7 +7601,7 @@ body {
 .pc-access-label {
   font-size: 1.2rem;
   font-weight: 700;
-  text-align:center;
+  text-align: center;
   font-style: normal;
   color: rgb(217, 142, 9);
   margin-bottom: 0.4rem;
@@ -7619,7 +7627,7 @@ body {
 }
 
 .pc-duration {
-  text-align:center;
+  text-align: center;
   color: #d98e09;
   font-size: 1.2rem;
   font-style: normal;
@@ -8372,7 +8380,7 @@ a.cu-info-value:hover {
 .home-past-recs-card {
   background: #fff;
   border-radius: 10px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
   padding: 28px 32px 24px;
   max-width: 860px;
   margin: 0 auto;
@@ -8399,8 +8407,13 @@ a.cu-info-value:hover {
   margin-top: 2px;
 }
 
-.home-past-recs-avg.gain strong { color: #16a34a; }
-.home-past-recs-avg.loss strong { color: #dc2626; }
+.home-past-recs-avg.gain strong {
+  color: #16a34a;
+}
+
+.home-past-recs-avg.loss strong {
+  color: #dc2626;
+}
 
 .home-past-recs-viewall {
   flex-shrink: 0;
@@ -8497,7 +8510,7 @@ a.cu-info-value:hover {
 .home-scan-recs-row {
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
 }
 
 .home-scan-col {
@@ -8619,12 +8632,12 @@ a.cu-info-value:hover {
   letter-spacing: 0.04em;
   padding: 8px 10px 8px 0;
   text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
 
 .home-scan-table tbody tr {
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .home-scan-table tbody tr:last-child {
@@ -8650,18 +8663,27 @@ a.cu-info-value:hover {
   margin-top: 1px;
 }
 
-.scan-gain { color: #4ade80; font-weight: 500; }
-.scan-loss { color: #f87171; font-weight: 500; }
+.scan-gain {
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.scan-loss {
+  color: #f87171;
+  font-weight: 500;
+}
 
 .home-scan-powered {
   font-size: 0.75rem;
   color: #64748b;
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.home-scan-powered strong { color: #94a3b8; }
+.home-scan-powered strong {
+  color: #94a3b8;
+}
 
 /* ── Past Recs panel inside the two-col layout ───────────────────────────── */
 .home-recs-col .home-past-recs-card {
@@ -8675,20 +8697,24 @@ a.cu-info-value:hover {
   .home-scan-recs-row {
     border-radius: 8px;
   }
+
   .home-scan-widget {
     padding: 28px 20px 24px;
   }
+
   .home-recs-col .home-past-recs-card {
     padding: 28px 20px 24px;
   }
+
   .home-scan-recs-section {
     padding: 2rem 0 40px;
   }
 }
 
 .has-vivid-red-color {
-  color:red;
+  color: red;
 }
+
 .wp-block-heading {
   color: var(--primary)
 }

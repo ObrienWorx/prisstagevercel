@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
   const res = NextResponse.json({
     success: true,
     message: 'Login successful',
-    data: { token, subscriber: { id: sub._id, name: sub.name, email: sub.email } },
+    data: {
+      token,
+      subscriber: { id: sub._id, name: sub.name, email: sub.email },
+      requiresPasswordSetup: !sub.password,
+    },
   });
   res.cookies.set('subscriber_token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 60 * 60 * 24 * 30, path: '/' });
   return res;

@@ -27,6 +27,12 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
   const [otpMsg, setOtpMsg] = useState('');
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // First-time password setup (migrated users who logged in via OTP with no password yet)
+  const [setupMode, setSetupMode] = useState(false);
+  const [pending, setPending] = useState<{ token: string; subscriber: unknown } | null>(null);
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
+
   const destination = redirectPath || (plan ? `/subscribe/${plan}` : '/user/dashboard');
 
   useEffect(() => {
@@ -119,9 +125,40 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
       });
       const d = await r.json();
       if (d.success) {
-        finishLogin(d.data.token, d.data.subscriber);
+        if (d.data.requiresPasswordSetup) {
+          setPending({ token: d.data.token, subscriber: d.data.subscriber });
+          setSetupMode(true);
+          setErr('');
+        } else {
+          finishLogin(d.data.token, d.data.subscriber);
+        }
       } else {
         setErr(d.error || 'Verification failed');
+      }
+    } catch {
+      setErr('Network error. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const submitNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pending) return;
+    if (newPw.length < 6) { setErr('Password must be at least 6 characters'); return; }
+    if (newPw !== newPw2) { setErr('Passwords do not match'); return; }
+    setErr(''); setOtpLoading(true);
+    try {
+      const r = await fetch('/api/subscriber/auth/set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pending.token}` },
+        body: JSON.stringify({ password: newPw }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        finishLogin(pending.token, pending.subscriber);
+      } else {
+        setErr(d.error || 'Could not set password');
       }
     } catch {
       setErr('Network error. Please try again.');
@@ -185,12 +222,14 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
   return (
     <div className="auth-card">
       <div className="auth-logo">
-        <img src="/logo2.png" alt="Pristine Gaze" className="w-100" />
+        <img src="/logo2.png" alt="Pristine Gaze" className="w-75" />
       </div>
 
-      <h2 className="auth-title">Welcome back</h2>
+      <h2 className="auth-title">{setupMode ? 'Set your password' : 'Welcome back'}</h2>
       <p className="auth-sub">
-        {otpMode
+        {setupMode
+          ? 'Create a password so you can sign in directly next time'
+          : otpMode
           ? otpStep === 'email' ? 'Enter your email to receive a login code' : 'Enter the code sent to your email'
           : 'Sign in to access your research & insights'}
       </p>
@@ -203,7 +242,32 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
       {err && <div className="alert-inline alert-inline-danger">{err}</div>}
       {otpMsg && <div className="alert-inline alert-inline-success text-center">{otpMsg}</div>}
 
-      {!otpMode ? (
+      {setupMode ? (
+        <form onSubmit={submitNewPassword}>
+          <div className="auth-input-group">
+            <label className="auth-label">New Password</label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              className="auth-input" value={newPw} autoComplete="new-password"
+              onChange={e => setNewPw(e.target.value)}
+              placeholder="At least 6 characters"
+              autoFocus
+            />
+          </div>
+          <div className="auth-input-group">
+            <label className="auth-label">Confirm Password</label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              className="auth-input" value={newPw2} autoComplete="new-password"
+              onChange={e => setNewPw2(e.target.value)}
+              placeholder="Re-enter your password"
+            />
+          </div>
+          <button type="submit" className="auth-btn mt-2" disabled={otpLoading}>
+            {otpLoading ? 'Saving...' : 'Save Password & Continue ->'}
+          </button>
+        </form>
+      ) : !otpMode ? (
         <form onSubmit={submitPassword}>
           <div className="auth-input-group">
             <label className="auth-label">Email Address</label>
