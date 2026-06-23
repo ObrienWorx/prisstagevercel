@@ -20,7 +20,8 @@ export async function GET(req: NextRequest, { params }: P) {
   await connectDB();
   const { id } = await params;
   const order = await Order.findOne({ _id: id, subscriber: payload.subscriberId })
-    .populate('items.product', 'name durationValue durationType');
+    .populate('items.product', 'name durationValue durationType')
+    .populate('product', 'name durationValue durationType');
   if (!order) return errorResponse('Order not found', 404);
   return successResponse(order);
 }

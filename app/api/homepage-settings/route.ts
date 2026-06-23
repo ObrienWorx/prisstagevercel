@@ -31,6 +31,8 @@ export async function PUT(req: NextRequest) {
     const videoSectionButtonText = typeof body.videoSectionButtonText === 'string' ? body.videoSectionButtonText.trim() : '';
     const videoSectionButtonHref = typeof body.videoSectionButtonHref === 'string' ? body.videoSectionButtonHref.trim() : '';
     const videoSectionYoutubeUrl = typeof body.videoSectionYoutubeUrl === 'string' ? body.videoSectionYoutubeUrl.trim() : '';
+    const tickerLeadPdf = typeof body.tickerLeadPdf === 'string' ? body.tickerLeadPdf.trim() : '';
+    const blogLeadPdf = typeof body.blogLeadPdf === 'string' ? body.blogLeadPdf.trim() : '';
 
     const settings = await HomepageSetting.findOneAndUpdate(
       { key: 'homepage' },
@@ -42,6 +44,8 @@ export async function PUT(req: NextRequest) {
         videoSectionButtonText,
         videoSectionButtonHref,
         videoSectionYoutubeUrl,
+        tickerLeadPdf,
+        blogLeadPdf,
       },
       { returnDocument: 'after', upsert: true, runValidators: true }
     );

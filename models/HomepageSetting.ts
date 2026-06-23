@@ -8,6 +8,8 @@ export interface IHomepageSetting extends Document {
   videoSectionButtonText: string;
   videoSectionButtonHref: string;
   videoSectionYoutubeUrl: string;
+  tickerLeadPdf: string;    // report emailed to homepage "Ticker" unlock leads
+  blogLeadPdf: string;      // report emailed to blog-category "claim your free copy" leads
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,12 +26,16 @@ const HomepageSettingSchema = new Schema<IHomepageSetting>(
     videoSectionButtonText: { type: String, default: 'Show All Videos' },
     videoSectionButtonHref: { type: String, default: '/videos' },
     videoSectionYoutubeUrl: { type: String, default: '' },
+    tickerLeadPdf: { type: String, default: '' },
+    blogLeadPdf: { type: String, default: '' },
   },
   { timestamps: true }
 );
 
+// Force re-registration so schema changes (e.g. new lead-magnet fields) take effect on
+// hot-reload instead of reusing a stale cached model that drops the new fields on save.
+delete (mongoose.models as Record<string, unknown>).HomepageSetting;
 const HomepageSetting: Model<IHomepageSetting> =
-  (mongoose.models.HomepageSetting as Model<IHomepageSetting> | undefined) ||
   mongoose.model<IHomepageSetting>('HomepageSetting', HomepageSettingSchema);
 
 export default HomepageSetting;

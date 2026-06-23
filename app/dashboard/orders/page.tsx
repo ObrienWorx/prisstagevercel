@@ -1,17 +1,86 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Pagination from '@/components/Pagination';
 
 const PER_PAGE = 20;
 
 interface Sub { _id: string; name: string; email: string; }
+
+// Searchable subscriber picker — a native <select> can't host a search box, so this is a
+// custom combobox over the subscriber list (filter by name or email).
+function SubscriberSelect({ subscribers, value, onChange }: {
+  subscribers: Sub[]; value: string; onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selected = subscribers.find(s => s._id === value);
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? subscribers.filter(s => s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q))
+    : subscribers;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  const pick = (id: string) => { onChange(id); setOpen(false); setQuery(''); };
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        className="form-select text-start"
+        onClick={() => setOpen(o => !o)}
+        style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+      >
+        {selected ? `${selected.name} (${selected.email})` : <span style={{ color: 'var(--muted)' }}>— Select Subscriber —</span>}
+      </button>
+      {open && (
+        <div className="card" style={{ position: 'absolute', zIndex: 1056, top: '100%', left: 0, right: 0, marginTop: 4, maxHeight: 280, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: 8, borderBottom: '1px solid var(--border, #e5e7eb)' }}>
+            <input
+              className="form-control form-control-sm"
+              placeholder="Search by name or email…"
+              value={query}
+              autoFocus
+              onChange={e => setQuery(e.target.value)}
+            />
+          </div>
+          <div style={{ overflowY: 'auto' }}>
+            <button type="button" className="dropdown-item" style={{ width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', color: 'var(--muted)' }} onClick={() => pick('')}>
+              — Select Subscriber —
+            </button>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '6px 12px', color: 'var(--muted)', fontSize: 13 }}>No subscribers match.</div>
+            ) : filtered.map(s => (
+              <button
+                key={s._id}
+                type="button"
+                className="dropdown-item"
+                style={{ width: '100%', textAlign: 'left', padding: '6px 12px', background: s._id === value ? 'var(--bs-primary-bg-subtle, #e7f1ff)' : 'none', border: 'none', whiteSpace: 'normal' }}
+                onClick={() => pick(s._id)}
+              >
+                <span className="fw-semibold">{s.name}</span> <span style={{ color: 'var(--muted)', fontSize: 12 }}>({s.email})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 interface Prod { _id: string; name: string; regularPrice: number; salePrice: number | null; durationValue: number; durationType: string; }
 interface LineItem { productId: string; pricePaid: string; startDate: string; durationValue: string; durationType: string; }
 interface Order {
   _id: string; orderNumber: string; subscriber: Sub | null; product: Prod;
-  pricePaid: number; paymentStatus: string; orderStatus: string;
+  pricePaid: number; sellingPrice?: number; paymentStatus: string; orderStatus: string;
   purchaseDate: string; expiryDate: string;
   items?: { product: Prod; pricePaid: number }[];
 }
@@ -251,7 +320,7 @@ export default function OrdersPage() {
                             <div style={{ fontSize: 11, color: 'var(--muted)' }}>+{productCount(o) - 1} more</div>
                           )}
                         </td>
-                        <td className="fw-semibold" style={{ color: '#059669' }}>A${o.pricePaid.toFixed(2)}</td>
+                        <td className="fw-semibold" style={{ color: '#059669' }}>A${(o.sellingPrice ?? o.pricePaid).toFixed(2)}</td>
                         <td>
                           <span className={`badge ${STATUS_COLORS[o.paymentStatus] || 'bg-secondary'}`}>{o.paymentStatus}</span>
                         </td>
@@ -302,18 +371,14 @@ export default function OrdersPage() {
                 <div className="row g-3 mb-3">
                   <div className="col-md-5">
                     <label className="form-label fw-semibold">Subscriber *</label>
-                    <select
-                      className="form-select"
+                    <SubscriberSelect
+                      subscribers={subscribers}
                       value={cForm.subscriberId}
-                      onChange={e => {
-                        const sid = e.target.value;
+                      onChange={sid => {
                         setCForm(f => ({ ...f, subscriberId: sid }));
                         lines.forEach((l, i) => checkSubscription(sid, l.productId, i));
                       }}
-                    >
-                      <option value="">— Select Subscriber —</option>
-                      {subscribers.map(s => <option key={s._id} value={s._id}>{s.name} ({s.email})</option>)}
-                    </select>
+                    />
                   </div>
                   <div className="col-md-3">
                     <label className="form-label fw-semibold">Payment Status</label>

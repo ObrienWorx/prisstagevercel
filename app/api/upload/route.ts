@@ -15,13 +15,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
     }
 
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
-    if (!allowed.includes(file.type)) {
-      return NextResponse.json({ success: false, error: 'Only images are allowed (jpg, png, webp, gif, svg)' }, { status: 400 });
+    const images = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    const isPdf = file.type === 'application/pdf';
+    if (!images.includes(file.type) && !isPdf) {
+      return NextResponse.json({ success: false, error: 'Only images (jpg, png, webp, gif, svg) or PDF are allowed' }, { status: 400 });
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ success: false, error: 'File size must be under 5MB' }, { status: 400 });
+    const maxSize = isPdf ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      return NextResponse.json({ success: false, error: `File size must be under ${isPdf ? 20 : 5}MB` }, { status: 400 });
     }
 
     const bytes = await file.arrayBuffer();

@@ -44,7 +44,6 @@ const PLACEHOLDER: Pick[] = Array(4).fill(null).map((_, i) => ({
   entryPrice: 0,
 }));
 
-const LS_REGISTERED = 'pg_ticker_registered';
 const LS_UNLOCKED_IDS = 'pg_ticker_unlocked_ids';
 
 export default function HomePicks() {
@@ -52,11 +51,9 @@ export default function HomePicks() {
   const [showModal, setShowModal] = useState(false);
   const [pendingPickId, setPendingPickId] = useState<string | null>(null);
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
-  const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (localStorage.getItem(LS_REGISTERED) === '1') setRegistered(true);
     const saved = localStorage.getItem(LS_UNLOCKED_IDS);
     if (saved) setUnlockedIds(new Set(saved.split(',').filter(Boolean)));
 
@@ -67,28 +64,22 @@ export default function HomePicks() {
   }, []);
 
   const handleUnlockClick = (pickId: string) => {
-    if (registered) {
-      // Already registered — unlock this card directly, no form
-      const next = new Set(unlockedIds);
-      next.add(pickId);
-      setUnlockedIds(next);
-      localStorage.setItem(LS_UNLOCKED_IDS, Array.from(next).join(','));
-    } else {
-      setPendingPickId(pickId);
-      setShowModal(true);
-    }
+    // Every ticker needs its own form submission (with a different email) — there is no
+    // "unlock all" shortcut. The server blocks reuse of the same email/phone.
+    setPendingPickId(pickId);
+    setShowModal(true);
   };
 
   const handleFormSuccess = () => {
-    localStorage.setItem(LS_REGISTERED, '1');
-    setRegistered(true);
+    // Called only on a genuine new submission (not when the email/phone was already used).
+    // Unlock just the ticker this form was opened for.
     if (pendingPickId) {
       const next = new Set(unlockedIds);
       next.add(pendingPickId);
       setUnlockedIds(next);
       localStorage.setItem(LS_UNLOCKED_IDS, Array.from(next).join(','));
     }
-    setShowModal(false);
+    // Keep the modal open so the "thank you" success card shows; user closes it manually.
     setPendingPickId(null);
   };
 
@@ -159,7 +150,7 @@ export default function HomePicks() {
               aria-label="Close"
             >×</button>
             <LeadCaptureForm
-              source="unlock-ticker"
+              source="Ticker"
               badge=""
               title="Please fill the details to Unlock the Exclusive ASX Stock Report"
               buttonText="Unlock the Ticker"

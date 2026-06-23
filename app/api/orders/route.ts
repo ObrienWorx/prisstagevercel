@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
     .populate('subscriber', 'name email')
     .populate('product', 'name regularPrice salePrice durationType durationValue')
     .populate('items.product', 'name')
-    .sort({ createdAt: -1 });
+    // Sort by _id (real insertion time) not createdAt: imported orders carry backdated/
+    // future createdAt values, so createdAt would float them above genuinely new orders.
+    .sort({ _id: -1 });
 
   // No page param → full list (legacy callers)
   if (!pageParam) {
@@ -129,19 +131,35 @@ export async function POST(req: NextRequest) {
   }));
   await Order.collection.updateOne({ _id: order._id }, { $set: { items: itemsPayload } });
 
+  // Access records — always one per product line.
   for (const r of resolved) {
-    await Transaction.create({
-      order: order._id, subscriber: subscriberId, product: r.productId,
-      amount: r.price,
-      paymentGateway: paymentGateway || 'Manual',
-      paymentStatus: order.paymentStatus,
-      paymentDate: r.start,
-    });
     await UserProduct.create({
       subscriber: subscriberId, product: r.productId,
       order: order._id, startDate: r.start, expiryDate: r.expiry,
       isActive: order.orderStatus === 'completed',
     });
+  }
+
+  // Financials: if an admin Selling Price was set, record ONE transaction for that amount
+  // so the selling price is what shows on the order, invoice and transactions. Otherwise
+  // record one transaction per product line (the price-paid breakdown).
+  const sellAmt = (sellingPrice !== undefined && sellingPrice !== '' && Number(sellingPrice) > 0) ? Number(sellingPrice) : null;
+  if (sellAmt !== null) {
+    await Transaction.create({
+      order: order._id, subscriber: subscriberId, product: first.productId,
+      amount: sellAmt,
+      paymentGateway: paymentGateway || 'Manual',
+      paymentStatus: order.paymentStatus, paymentDate: first.start,
+    });
+  } else {
+    for (const r of resolved) {
+      await Transaction.create({
+        order: order._id, subscriber: subscriberId, product: r.productId,
+        amount: r.price,
+        paymentGateway: paymentGateway || 'Manual',
+        paymentStatus: order.paymentStatus, paymentDate: r.start,
+      });
+    }
   }
 
   const populated = await Order.findById(order._id)

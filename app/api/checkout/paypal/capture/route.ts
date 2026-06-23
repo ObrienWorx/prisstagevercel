@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       notes: `PayPal capture ID: ${capture?.id ?? paypalOrderId}`,
     });
 
-    return successResponse({ orderNumber: order.orderNumber }, 'Payment successful! Subscription activated.');
+    return successResponse({ orderNumber: order.orderNumber }, 'Subscription activated.');
   } catch (e) {
     return errorResponse('Capture failed: ' + String(e), 500);
   }

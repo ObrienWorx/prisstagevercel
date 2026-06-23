@@ -216,6 +216,8 @@ export default async function CatchAllPage({ params }: P) {
           latestLabel={`Latest ${blogCat.name}`}
           categories={(allBlogCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
           loadMore={{ endpoint: '/api/public/blogs', query: { category: blogCat.slug }, total, perPage: LISTING_PER_PAGE }}
+          leadSource={blogCat.slug}
+          autoOpenLead
         />
       </SiteLayout>
     );

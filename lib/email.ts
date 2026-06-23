@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -59,6 +61,63 @@ export async function sendOTPEmail(to: string, otp: string, purpose: 'email-veri
   </table>
 </body>
 </html>`;
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || 'PristineGaze <no-reply@pristinegaze.com.au>',
+    to,
+    subject,
+    html,
+  });
+}
+
+// The lead-magnet email body is the project's template.html. Cache the file read and
+// MINIFY it: the builder export is ~290KB of indented nested tables, which exceeds
+// Gmail's ~102KB clipping limit ("[Message clipped]"). Collapsing whitespace between
+// tags drops it to ~66KB without changing how it renders.
+let cachedTemplate: string | null | undefined;
+function loadLeadTemplate(): string | null {
+  if (cachedTemplate !== undefined) return cachedTemplate;
+  try {
+    cachedTemplate = readFileSync(path.join(process.cwd(), 'template.html'), 'utf8')
+      .replace(/>\s+</g, '><')   // drop whitespace between tags (incl. newlines)
+      .replace(/\s{2,}/g, ' ');  // collapse remaining runs of whitespace
+  } catch {
+    cachedTemplate = null;
+  }
+  return cachedTemplate;
+}
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// Sent automatically to a lead after they submit a capture form. The "Download PDF"
+// button DOWNLOADS the configured lead-magnet PDF (served with an attachment header).
+export async function sendLeadMagnetEmail(to: string, name: string, pdfUrl: string) {
+  const base = (process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://pristinegaze.com.au').replace(/\/$/, '');
+  // Route uploaded files through /api/download so they download instead of opening inline.
+  // External (absolute) URLs are linked as-is.
+  const href = /^https?:\/\//i.test(pdfUrl)
+    ? pdfUrl
+    : `${base}/api/download?file=${encodeURIComponent(pdfUrl.startsWith('/') ? pdfUrl : `/${pdfUrl}`)}`;
+  const safeName = escapeHtml((name || '').trim());
+  const subject = 'Your Free Report – PristineGaze';
+
+  const template = loadLeadTemplate();
+  let html: string;
+  if (template) {
+    html = template
+      // Point both (mso + non-mso) "Download PDF" buttons at the download link.
+      .replace(/https:\/\/pristinegaze\.com\.au\/subscribe"/g, `${href}"`)
+      // Personalise the greeting ("Dear Ryan," -> the submitted name).
+      .replace(/Dear\s+Ryan,/g, `Dear ${safeName || 'Investor'},`);
+  } else {
+    const greeting = safeName ? `Dear ${safeName},` : 'Dear Investor,';
+    html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;padding:24px;">
+      <p>${greeting}</p><p>Thank you for your interest. Download your complimentary report below.</p>
+      <p><a href="${href}" style="display:inline-block;background:#0049ac;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:bold;">Download PDF</a></p>
+      <p>Or copy this link: <a href="${href}">${href}</a></p>
+      <p style="color:#888;font-size:12px;">© Pristine Gaze Pty. Ltd.</p></body></html>`;
+  }
 
   await transporter.sendMail({
     from: process.env.SMTP_FROM || 'PristineGaze <no-reply@pristinegaze.com.au>',

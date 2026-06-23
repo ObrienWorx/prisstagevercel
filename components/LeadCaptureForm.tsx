@@ -31,6 +31,7 @@ export default function LeadCaptureForm({
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,12 +56,24 @@ export default function LeadCaptureForm({
       const res = await fetch('/api/public/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, phone, postalCode, consent, source }),
+        body: JSON.stringify({
+          ...form, phone, postalCode, consent, source,
+          sourceUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
       });
       const data = await res.json();
       if (data.success) {
-        setSuccess(true);
-        onSuccess?.();
+        // Remember this visitor submitted a lead so popups never auto-open again.
+        try { localStorage.setItem('pg_lead_submitted', '1'); } catch {}
+        if (data.data?.alreadyExists) {
+          // Email/phone already used — show the notice, don't trigger unlock.
+          setSuccessMsg(data.message || 'We have already sent you the Free Report.');
+          setSuccess(true);
+        } else {
+          setSuccessMsg(successText);
+          setSuccess(true);
+          onSuccess?.();
+        }
       } else {
         setError(data.error || 'Something went wrong. Please try again.');
       }
@@ -77,7 +90,7 @@ export default function LeadCaptureForm({
         <div className="lcf-success">
           <div className="lcf-success-icon">✓</div>
           <div className="lcf-success-title">Thank you!</div>
-          <div className="lcf-success-sub">{successText}</div>
+          <div className="lcf-success-sub">{successMsg || successText}</div>
         </div>
       </div>
     );

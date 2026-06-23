@@ -18,11 +18,12 @@ export default function LeadsPage() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
-  const fetchLeads = (p: number) => {
+  const fetchLeads = (p: number, q = search) => {
     setLoading(true);
     const token = localStorage.getItem('token') ?? '';
-    fetch(`/api/leads?page=${p}`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`/api/leads?page=${p}&search=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
         if (d.success) {
@@ -35,7 +36,12 @@ export default function LeadsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchLeads(1); }, []);
+  // Debounce search; reset to page 1 on each query change.
+  useEffect(() => {
+    const t = setTimeout(() => fetchLeads(1, search), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString('en-AU', {
@@ -45,11 +51,19 @@ export default function LeadsPage() {
 
   return (
     <div>
-      <div className="d-flex align-items-center justify-content-between mb-4">
+      <div className="d-flex align-items-center justify-content-between mb-4 gap-3 flex-wrap">
         <div>
           <h4 className="mb-1">Lead Submissions</h4>
           <p className="text-muted mb-0 small">{total} total submission{total !== 1 ? 's' : ''}</p>
         </div>
+        <input
+          type="search"
+          className="form-control"
+          style={{ maxWidth: 320 }}
+          placeholder="Search name, email, phone or source…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       {loading ? (

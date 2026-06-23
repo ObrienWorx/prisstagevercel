@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import LeadCaptureForm from './LeadCaptureForm';
 import ReportSidebar from './ReportSidebar';
@@ -50,6 +50,8 @@ interface Props {
   sectors?: NavLink[];
   emptyMessage?: string;
   loadMore?: LoadMore;
+  leadSource?: string;       // source tag stored on the captured lead (e.g. category slug)
+  autoOpenLead?: boolean;    // auto-open the claim popup after 10s or a small scroll
 }
 
 // Merges the server-rendered first page with client-fetched batches.
@@ -211,8 +213,27 @@ function BlogReportPromo({ onClaim }: { onClaim: () => void }) {
   );
 }
 
-function BlogCategoryListing({ title, items, categories, emptyMessage, footer }: Pick<Props, 'title' | 'items' | 'categories' | 'emptyMessage'> & { footer?: React.ReactNode }) {
+function BlogCategoryListing({ title, items, categories, emptyMessage, footer, leadSource = 'unlock-ticker', autoOpenLead = false }: Pick<Props, 'title' | 'items' | 'categories' | 'emptyMessage' | 'leadSource' | 'autoOpenLead'> & { footer?: React.ReactNode }) {
   const [showModal, setShowModal] = useState(false);
+  const autoShown = useRef(false);
+
+  // Auto-open the claim popup once — after 10s OR a small scroll, whichever comes first.
+  // Never auto-open for visitors who already submitted a lead (manual button still works).
+  useEffect(() => {
+    if (!autoOpenLead) return;
+    if (typeof window !== 'undefined' && localStorage.getItem('pg_lead_submitted') === '1') return;
+    const open = () => {
+      if (autoShown.current) return;
+      autoShown.current = true;
+      setShowModal(true);
+      cleanup();
+    };
+    const onScroll = () => { if (window.scrollY > 300) open(); };
+    const timer = setTimeout(open, 10000);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    function cleanup() { clearTimeout(timer); window.removeEventListener('scroll', onScroll); }
+    return cleanup;
+  }, [autoOpenLead]);
 
   return (
     <>
@@ -285,12 +306,11 @@ function BlogCategoryListing({ title, items, categories, emptyMessage, footer }:
               aria-label="Close"
             >×</button>
             <LeadCaptureForm
-              source="unlock-ticker"
+              source={leadSource}
               badge=""
               title="Please fill the details to Unlock the Exclusive ASX Stock Report"
               buttonText="Unlock the Ticker"
               successText="You will receive the detailed Stock Report on your submitted email."
-              onSuccess={() => setShowModal(false)}
             />
           </div>
         </div>
@@ -299,11 +319,11 @@ function BlogCategoryListing({ title, items, categories, emptyMessage, footer }:
   );
 }
 
-export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage, loadMore }: Props) {
+export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage, loadMore, leadSource, autoOpenLead }: Props) {
   const { displayItems, button } = useLoadMore(items, loadMore);
 
   if (sidebarType === 'blog') {
-    return <BlogCategoryListing title={title} items={displayItems} categories={categories} emptyMessage={emptyMessage} footer={button} />;
+    return <BlogCategoryListing title={title} items={displayItems} categories={categories} emptyMessage={emptyMessage} footer={button} leadSource={leadSource} autoOpenLead={autoOpenLead} />;
   }
 
   return (

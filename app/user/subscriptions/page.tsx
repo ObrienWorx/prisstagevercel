@@ -2,14 +2,15 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import InvoiceModal from '@/components/InvoiceModal';
 
 interface Product { _id: string; name: string; slug: string; featuredImage?: string; durationType: string; durationValue: number; regularPrice: number; salePrice?: number; }
-interface OrderRef { _id: string; orderNumber: string; pricePaid: number; paymentStatus: string; paymentGateway: string; }
+interface OrderRef { _id: string; orderNumber: string; pricePaid: number; sellingPrice?: number; paymentStatus: string; paymentGateway: string; }
 interface UserProduct { _id: string; product: Product; order: OrderRef; startDate: string; expiryDate: string; isActive: boolean; createdAt: string; }
-interface SubscriberUser { name: string; email: string; }
+interface SubscriberUser { name: string; email: string; phone?: string; }
 interface InvProduct { name: string; durationValue?: number; durationType?: string; }
 interface OrderItem { product: InvProduct; pricePaid: number; startDate: string; expiryDate: string; durationValue: number; durationType: string; }
-interface FullOrder { _id: string; orderNumber: string; pricePaid: number; purchaseDate: string; paymentStatus: string; orderStatus: string; items: OrderItem[]; product?: InvProduct; expiryDate: string; }
+interface FullOrder { _id: string; orderNumber: string; pricePaid: number; sellingPrice?: number; purchaseDate: string; paymentStatus: string; orderStatus: string; items: OrderItem[]; product?: InvProduct; expiryDate: string; }
 
 interface OrderGroup {
   orderId: string;
@@ -49,7 +50,13 @@ export default function SubscriptionsPage() {
     if (!token) return;
     fetch('/api/subscriber/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(d => { if (d.success) setProducts(d.data.products ?? []); })
+      .then(d => {
+        if (d.success) {
+          setProducts(d.data.products ?? []);
+          // Prefer the server's subscriber (localStorage copy can be missing/stale).
+          if (d.data.subscriber) setSubscriber({ name: d.data.subscriber.name, email: d.data.subscriber.email, phone: d.data.subscriber.phone });
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -62,7 +69,7 @@ export default function SubscriptionsPage() {
         map.set(orderId, {
           orderId,
           orderNumber: up.order?.orderNumber ?? '—',
-          pricePaid: up.order?.pricePaid ?? 0,
+          pricePaid: up.order?.sellingPrice ?? up.order?.pricePaid ?? 0,
           paymentStatus: up.order?.paymentStatus ?? '—',
           paymentGateway: up.order?.paymentGateway ?? '—',
           items: [],
@@ -111,14 +118,14 @@ export default function SubscriptionsPage() {
   const activeCount = orderGroups.filter(g => g.isAnyActive).length;
   const expiredCount = orderGroups.filter(g => !g.isAnyActive).length;
 
+  // Invoice line items come from the order (items.product + product are populated by the
+  // order API), so per-line amounts and names are available — same as the admin invoice.
   const invItems: OrderItem[] = invoiceOrder
     ? (invoiceOrder.items?.length ? invoiceOrder.items : invoiceOrder.product
-        ? [{ product: invoiceOrder.product, pricePaid: invoiceOrder.pricePaid, startDate: invoiceOrder.purchaseDate, expiryDate: invoiceOrder.expiryDate, durationValue: invoiceOrder.product.durationValue ?? 0, durationType: invoiceOrder.product.durationType ?? '' }]
-        : [])
+      ? [{ product: invoiceOrder.product, pricePaid: invoiceOrder.pricePaid, startDate: invoiceOrder.purchaseDate, expiryDate: invoiceOrder.expiryDate, durationValue: invoiceOrder.product.durationValue ?? 0, durationType: invoiceOrder.product.durationType ?? '' }]
+      : [])
     : [];
-  const invTotal = invoiceOrder?.pricePaid ?? 0;
-  const invGst = invTotal / 11;
-  const invSub = invTotal - invGst;
+  const invTotal = invoiceOrder?.sellingPrice ?? invoiceOrder?.pricePaid ?? 0;
 
   if (loading) return <div className="page-loading">Loading...</div>;
 
@@ -244,7 +251,6 @@ export default function SubscriptionsPage() {
                           <thead>
                             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                               <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569', fontSize: 11 }}>Product</th>
-                              <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569', fontSize: 11 }}>Duration</th>
                               <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569', fontSize: 11 }}>Start</th>
                               <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569', fontSize: 11 }}>Expiry</th>
                               <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600, color: '#475569', fontSize: 11 }}>Status</th>
@@ -264,7 +270,6 @@ export default function SubscriptionsPage() {
                                       <span style={{ fontWeight: 600, color: '#0f172a' }}>{up.product?.name ?? '—'}</span>
                                     </div>
                                   </td>
-                                  <td style={{ padding: '10px 12px', color: '#64748b' }}>{up.product?.durationValue} {up.product?.durationType}</td>
                                   <td style={{ padding: '10px 12px', color: '#64748b' }}>{fmtDate(up.startDate)}</td>
                                   <td style={{ padding: '10px 12px', color: upActive ? '#0f172a' : '#ef4444', fontWeight: 600 }}>{fmtDate(up.expiryDate)}</td>
                                   <td style={{ padding: '10px 12px', textAlign: 'center' }}>
@@ -290,70 +295,22 @@ export default function SubscriptionsPage() {
 
       {/* ── Invoice Modal ── */}
       {invoiceOrder && (
-        <div className="inv-overlay" onClick={() => setInvoiceOrder(null)}>
-          <div className="inv-modal" onClick={e => e.stopPropagation()}>
-            <div className="inv-no-print inv-actions">
-              <span className="text-muted small">Invoice {invoiceOrder.orderNumber}</span>
-              <div className="d-flex gap-2">
-                <button className="btn btn-dark btn-sm" onClick={() => window.print()}>🖨️ Print / Save as PDF</button>
-                <button className="btn btn-outline-secondary btn-sm" onClick={() => setInvoiceOrder(null)}>✕ Close</button>
-              </div>
-            </div>
-            <div className="inv-doc">
-              <div className="inv-hdr">
-                <div className="inv-brand">
-                  <img src="/logo2.png" alt="PristineGaze" className="inv-brand-logo w-100" />
-                </div>
-                <div className="inv-title-block">
-                  <div className="inv-title">TAX INVOICE</div>
-                  <div className="inv-meta-row"><span>Invoice #</span><strong>{invoiceOrder.orderNumber}</strong></div>
-                  <div className="inv-meta-row"><span>Date</span><strong>{fmtDate(invoiceOrder.purchaseDate)}</strong></div>
-                </div>
-              </div>
-              <div className="inv-divider" />
-              <div className="inv-parties">
-                <div>
-                  <div className="inv-section-label">BILL TO</div>
-                  <div className="inv-party-name">{subscriber?.name ?? '—'}</div>
-                  <div className="inv-party-detail">{subscriber?.email ?? '—'}</div>
-                </div>
-                <div className="text-end">
-                  <div className="inv-section-label">FROM</div>
-                  <div className="inv-party-name">PristineGaze Pty Ltd</div>
-                  <div className="inv-party-detail">470 St Kilda Rd, Melbourne VIC 3004</div>
-                  <div className="inv-party-detail">support@pristinegaze.com.au</div>
-                </div>
-              </div>
-              <div className="inv-divider" />
-              <table className="inv-table">
-                <thead>
-                  <tr><th>Description</th><th>Duration</th><th>Period</th><th className="text-end">Amount (AUD)</th></tr>
-                </thead>
-                <tbody>
-                  {invItems.map((item, i) => (
-                    <tr key={i}>
-                      <td>{item.product?.name ?? '—'}</td>
-                      <td>{item.durationValue} {item.durationType}</td>
-                      <td style={{ fontSize: 12, color: '#64748b' }}>{fmtDate(item.startDate)} – {fmtDate(item.expiryDate)}</td>
-                      <td className="text-end">A${(item.pricePaid - item.pricePaid / 11).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="inv-totals">
-                <div className="inv-total-row"><span>Subtotal (excl. GST)</span><span>A${invSub.toFixed(2)}</span></div>
-                <div className="inv-total-row"><span>GST (10%)</span><span>A${invGst.toFixed(2)}</span></div>
-                <div className="inv-total-row inv-grand-total"><span>Total</span><span>A${invTotal.toFixed(2)}</span></div>
-              </div>
-              {invoiceOrder.paymentStatus === 'completed' && <div className="inv-paid-stamp">PAID</div>}
-              <div className="inv-divider" style={{ marginTop: 32 }} />
-              <div className="inv-footer">
-                <p>Thank you for your subscription. This is a computer-generated document and does not require a signature.</p>
-                <p>PristineGaze Pty Ltd &nbsp;|&nbsp; ABN: XX XXX XXX XXX &nbsp;|&nbsp; support@pristinegaze.com.au</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <InvoiceModal
+          orderNumber={invoiceOrder.orderNumber}
+          purchaseDate={invoiceOrder.purchaseDate}
+          billTo={{ name: subscriber?.name, email: subscriber?.email, phone: subscriber?.phone }}
+          items={invItems.map(it => ({
+            name: it.product?.name ?? '—',
+            durationValue: it.durationValue,
+            durationType: it.durationType,
+            startDate: it.startDate,
+            expiryDate: it.expiryDate,
+            pricePaid: it.pricePaid,
+          }))}
+          total={invTotal}
+          paid={invoiceOrder.paymentStatus === 'completed'}
+          onClose={() => setInvoiceOrder(null)}
+        />
       )}
     </div>
   );

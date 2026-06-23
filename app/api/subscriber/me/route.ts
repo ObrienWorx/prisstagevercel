@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   const products = await UserProduct.find({ subscriber: payload.subscriberId })
     .populate('product', 'name slug durationType durationValue featuredImage regularPrice salePrice')
-    .populate('order', 'orderNumber pricePaid paymentStatus paymentGateway')
+    .populate('order', 'orderNumber pricePaid sellingPrice paymentStatus paymentGateway')
     .sort({ createdAt: -1 });
 
   const now = new Date();

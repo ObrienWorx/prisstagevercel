@@ -8,10 +8,10 @@ import SiteLayout from '@/components/SiteLayout';
 interface UserData { name: string; email: string; }
 
 const navItems = [
-  { href: '/user/dashboard', icon: '📊', label: 'Dashboard' },
-  { href: '/user/subscriptions', icon: '📦', label: 'My Subscriptions' },
-  { href: '/user/portfolio', icon: '📈', label: 'My Portfolio' },
-  { href: '/user/profile', icon: '👤', label: 'Profile' },
+  { href: '/user/dashboard', label: 'Dashboard' },
+  { href: '/user/subscriptions', label: 'My Subscriptions' },
+  { href: '/user/portfolio', label: 'My Portfolio' },
+  { href: '/user/profile', label: 'Profile' },
 ];
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
@@ -36,7 +36,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   if (checking) return (
     <div className="portal-checking">
       <div className="portal-checking-body">
-        <div className="portal-checking-icon">🔭</div>
         <div className="portal-checking-text">Loading your account...</div>
       </div>
     </div>
@@ -67,7 +66,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                 href={item.href}
                 className={`portal-tab ${pathname === item.href ? 'active' : ''}`}
               >
-                <span>{item.icon}</span>
                 {item.label}
               </Link>
             ))}

@@ -3815,6 +3815,8 @@ body {
   font-weight: 700;
   padding: 6px;
   letter-spacing: 1px;
+  position: absolute;
+    width: 100%;
   text-transform: uppercase;
 }
 

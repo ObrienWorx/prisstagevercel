@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import ImageUpload from '@/components/ImageUpload';
+import PdfUpload from '@/components/PdfUpload';
 
 interface HomepageSettings {
   _id?: string;
@@ -11,6 +12,8 @@ interface HomepageSettings {
   videoSectionButtonText: string;
   videoSectionButtonHref: string;
   videoSectionYoutubeUrl: string;
+  tickerLeadPdf: string;
+  blogLeadPdf: string;
 }
 
 const defaultSettings: HomepageSettings = {
@@ -20,6 +23,8 @@ const defaultSettings: HomepageSettings = {
   videoSectionButtonText: 'Show All Videos',
   videoSectionButtonHref: '/videos',
   videoSectionYoutubeUrl: '',
+  tickerLeadPdf: '',
+  blogLeadPdf: '',
 };
 
 export default function HomepageSettingsPage() {
@@ -45,6 +50,8 @@ export default function HomepageSettingsPage() {
         videoSectionButtonText: data.data?.videoSectionButtonText ?? defaultSettings.videoSectionButtonText,
         videoSectionButtonHref: data.data?.videoSectionButtonHref ?? defaultSettings.videoSectionButtonHref,
         videoSectionYoutubeUrl: data.data?.videoSectionYoutubeUrl ?? '',
+        tickerLeadPdf: data.data?.tickerLeadPdf ?? '',
+        blogLeadPdf: data.data?.blogLeadPdf ?? '',
       });
       else setErr(data.error || 'Unable to load homepage settings');
     } catch {
@@ -79,6 +86,8 @@ export default function HomepageSettingsPage() {
           videoSectionButtonText: data.data?.videoSectionButtonText ?? defaultSettings.videoSectionButtonText,
           videoSectionButtonHref: data.data?.videoSectionButtonHref ?? defaultSettings.videoSectionButtonHref,
           videoSectionYoutubeUrl: data.data?.videoSectionYoutubeUrl ?? '',
+          tickerLeadPdf: data.data?.tickerLeadPdf ?? '',
+          blogLeadPdf: data.data?.blogLeadPdf ?? '',
         });
         setOk(data.message || 'Homepage settings saved');
         setTimeout(() => setOk(''), 3000);
@@ -181,6 +190,16 @@ export default function HomepageSettingsPage() {
                   value={settings.videoSectionButtonHref}
                   onChange={(e) => setSettings(prev => ({ ...prev, videoSectionButtonHref: e.target.value }))}
                 />
+              </div>
+            </div>
+
+            <div className="row g-4 mt-4">
+              <div className="col-12"><hr /><div className="form-section-title mb-1">Lead Magnet Reports</div></div>
+              <div className="col-md-6">
+                <PdfUpload label="Ticker Report PDF" value={settings.tickerLeadPdf} onChange={(u) => setSettings(prev => ({ ...prev, tickerLeadPdf: u }))} />
+              </div>
+              <div className="col-md-6">
+                <PdfUpload label="Blog Category Report PDF" value={settings.blogLeadPdf} onChange={(u) => setSettings(prev => ({ ...prev, blogLeadPdf: u }))} />
               </div>
             </div>
           </div>

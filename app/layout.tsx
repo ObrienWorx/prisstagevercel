@@ -5,6 +5,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: { default: 'PristineGaze – Australian Investment Research', template: '%s – PristineGaze' },
   description: "Australia's premier investment research platform delivering daily market intelligence, sector analysis and expert insights.",
+  icons: { icon: '/favicon.jpg', shortcut: '/favicon.jpg', apple: '/favicon.jpg' },
 };
 
 export default function RootLayout({
