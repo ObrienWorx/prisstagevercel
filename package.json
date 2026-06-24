@@ -21,6 +21,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^8.0.0",
+    "@vercel/blob": "^2.4.1",
     "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.8",
     "ckeditor5": "^48.0.1",

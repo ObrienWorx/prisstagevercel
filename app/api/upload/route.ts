@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { put } from '@vercel/blob';
 import { authenticate } from '@/middleware/authMiddleware';
 
 export async function POST(req: NextRequest) {
@@ -30,11 +31,21 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
 
+    // On Vercel the filesystem is read-only, so files written to public/uploads don't
+    // persist. When Blob storage is configured, upload there and return the blob URL.
+    // Locally (no token) fall back to writing to public/uploads so dev keeps working.
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(`uploads/${filename}`, buffer, {
+        access: 'public',
+        contentType: file.type,
+      });
+      return NextResponse.json({ success: true, url: blob.url });
+    }
+
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
     await mkdir(uploadDir, { recursive: true });
     await writeFile(path.join(uploadDir, filename), buffer);
-
     return NextResponse.json({ success: true, url: `/uploads/${filename}` });
   } catch (err) {
     console.error('Upload error:', err);
