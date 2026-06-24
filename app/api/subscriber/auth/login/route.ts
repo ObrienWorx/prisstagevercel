@@ -13,7 +13,11 @@ export async function POST(req: NextRequest) {
   const sub = await Subscriber.findOne({ email: email.toLowerCase() });
   if (!sub) return NextResponse.json({ success: false, error: 'Invalid credentials' }, { status: 401 });
   if (!sub.isActive) return NextResponse.json({ success: false, error: 'Account deactivated. Contact support.' }, { status: 403 });
-  if (!sub.password) return NextResponse.json({ success: false, error: 'This account has no password. Please use OTP login.' }, { status: 400 });
+  if (!sub.password) return NextResponse.json({
+    success: false,
+    error: 'For your security and account verification, please log in using OTP authentication.',
+    data: { requiresOtp: true },
+  }, { status: 400 });
   const match = await sub.comparePassword(password);
   if (!match) return NextResponse.json({ success: false, error: 'Invalid credentials' }, { status: 401 });
 

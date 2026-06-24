@@ -15,6 +15,7 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [err, setErr] = useState('');
+  const [otpHint, setOtpHint] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -64,7 +65,7 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
   const submitPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.password) { setErr('Please fill in all fields'); return; }
-    setErr(''); setLoading(true);
+    setErr(''); setOtpHint(false); setLoading(true);
     try {
       const r = await fetch('/api/subscriber/auth/login', {
         method: 'POST',
@@ -76,6 +77,9 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
         finishLogin(d.data.token, d.data.subscriber);
       } else if (d.data?.requiresVerification) {
         router.push(`/auth/verify-email?email=${encodeURIComponent(d.data.email)}${plan ? `&plan=${plan}` : ''}`);
+      } else if (d.data?.requiresOtp) {
+        setOtpHint(true);
+        setErr(d.error || 'Please log in using OTP authentication.');
       } else {
         setErr(d.error || 'Login failed');
       }
@@ -209,6 +213,7 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
     setOtpEmail(form.email);
     setOtpStep('email');
     setErr('');
+    setOtpHint(false);
     setDigits(['', '', '', '', '', '']);
   };
 
@@ -239,7 +244,19 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
           Password reset successfully! You can now sign in.
         </div>
       )}
-      {err && <div className="alert-inline alert-inline-danger">{err}</div>}
+      {err && (
+        <div className="alert-inline alert-inline-danger">
+          {err}
+          {otpHint && (
+            <>
+              {' '}
+              <button type="button" className="auth-otp-inline-link" onClick={switchToOtp}>
+                Click here
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {otpMsg && <div className="alert-inline alert-inline-success text-center">{otpMsg}</div>}
 
       {setupMode ? (

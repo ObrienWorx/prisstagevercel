@@ -3013,6 +3013,16 @@ body {
   color: #1d4ed8;
 }
 
+.auth-otp-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .auth-send-otp-btn {
   width: 100%;
   padding: 13px;

@@ -10,6 +10,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  // Fail fast instead of hanging when the host blocks outbound SMTP (e.g. cloud
+  // providers block ports 25/465/587 by default) — keeps the UI from spinning forever.
+  connectionTimeout: 10000, // 10s to establish the TCP connection
+  greetingTimeout: 10000,   // 10s to receive the SMTP greeting
+  socketTimeout: 20000,     // 20s of socket inactivity
 });
 
 export async function sendOTPEmail(to: string, otp: string, purpose: 'email-verify' | 'password-reset' | 'login') {
