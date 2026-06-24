@@ -135,7 +135,6 @@ export default function PicksPage() {
         )}
       </div>
 
-      {/* ── Create / Edit Modal ── */}
       {showModal && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog"><div className="modal-content">
@@ -193,7 +192,6 @@ export default function PicksPage() {
         </div>
       )}
 
-      {/* ── Delete Confirm ── */}
       {del && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog"><div className="modal-content">

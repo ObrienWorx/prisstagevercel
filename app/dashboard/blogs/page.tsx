@@ -466,7 +466,6 @@ export default function BlogsPage() {
                         </div>
                       )}
                     </div>
-                    {/* <div className="form-text">Press Enter after each tag. Pasted comma-separated tags are split automatically.</div> */}
                   </div>
 
                   <div className="col-12">

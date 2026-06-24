@@ -385,7 +385,6 @@ export default function ProductsPage() {
                 {err && <div className="alert alert-danger mb-3">{err}</div>}
                 <div className="row g-3">
 
-                  {/* Name + Slug */}
                   <div className="col-md-8">
                     <label className="form-label">Product Name <span className="text-danger">*</span></label>
                     <input className="form-control" value={form.name}
@@ -397,7 +396,6 @@ export default function ProductsPage() {
                     <input className="form-control" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
                   </div>
 
-                  {/* Plans */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">Plans <span className="text-muted fw-normal" style={{ fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>— add multiple pricing options</span></div></div>
                   <div className="col-12">
                     <div className="d-flex flex-column gap-2">
@@ -469,7 +467,6 @@ export default function ProductsPage() {
                       onClick={addPlan}>+ Add Plan</button>
                   </div>
 
-                  {/* Risk Rating */}
                   <div className="col-md-4">
                     <label className="form-label">Risk Rating</label>
                     <select className="form-select" value={form.riskRating}
@@ -495,7 +492,6 @@ export default function ProductsPage() {
                     </div>
                   )}
 
-                  {/* Descriptions */}
 
                   <div className="col-12">
                     <label className="form-label">Short Description</label>
@@ -504,7 +500,6 @@ export default function ProductsPage() {
                       placeholder="Brief summary shown in cards and listings..." />
                   </div>
 
-                  {/* Features */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">Features / What&apos;s Included</div>
                     <div className="d-flex flex-column gap-2 mb-2">
                       {form.features.map((f, i) => (
@@ -527,13 +522,11 @@ export default function ProductsPage() {
                     <TinyEditor value={form.fullDescription} onChange={(v) => setForm({ ...form, fullDescription: v })} />
                   </div>
 
-                  {/* Images */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">Images</div></div>
                   <div className="col-md-12">
                     <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
                   </div>
 
-                  {/* Bundle */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">Bundle <span className="text-muted fw-normal" style={{ fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>— other products included free when this one is purchased (granted for the same period)</span></div></div>
                   <div className="col-12">
                     {items.filter(p => !editing || p._id !== editing._id).length === 0 ? (
@@ -560,7 +553,6 @@ export default function ProductsPage() {
                     )}
                   </div>
 
-                  {/* Status */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">Visibility</div></div>
                   <div className="col-md-4">
                     <label className="form-label">Publish Status</label>
@@ -585,7 +577,6 @@ export default function ProductsPage() {
                     </div>
                   </div>
 
-                  {/* SEO */}
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">SEO Settings</div></div>
                   <div className="col-md-6">
                     <label className="form-label">Meta Title</label>

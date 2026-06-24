@@ -138,18 +138,7 @@ export default async function ProductDetailPage({ params }: P) {
 
   return (
     <SiteLayout>
-      {/* Plan Hero */}
-      {/* <div className="plan-hero">
-        <div className="container">
-          <div className="row align-items-center gap-4">
-            <div className="col-lg-12 text-center">
-              <h1>{p.name}</h1>
-            </div>
-          </div>
-        </div>
-      </div> */}
 
-      {/* Full-width countdown bar — only when sale has an end date */}
       {saleEndDate && (
         <SaleCountdownBanner endDate={saleEndDate} />
       )}

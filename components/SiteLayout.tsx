@@ -57,15 +57,12 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <FrontNav />
       <main>{children}</main>
 
-      {/* ── FOOTER ─────────────────────────── */}
       <footer className="site-footer">
 
-        {/* Top columns */}
         <div className="footer-top">
           <div className="container">
             <div className="row g-5">
 
-              {/* Brand */}
               <div className="col-lg-3 col-md-6">
                 <div className="footer-logo">
                   <div className="footer-logo-text">
@@ -77,7 +74,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 </p>
               </div>
 
-              {/* Quick Links */}
               <div className="col-lg-3 col-md-6">
                 <div className="footer-col-title">Quick Links</div>
                 <ul className="footer-links">
@@ -89,7 +85,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 </ul>
               </div>
 
-              {/* Policies */}
               <div className="col-lg-3 col-md-6">
                 <div className="footer-col-title">Policies</div>
                 <ul className="footer-links">
@@ -101,7 +96,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 </ul>
               </div>
 
-              {/* Reach Us */}
               <div className="col-lg-3 col-md-6">
                 <div className="footer-col-title">Reach Us</div>
 
@@ -144,7 +138,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
-        {/* Disclaimer */}
         <div className="footer-disclaimer">
           <div className="container">
             <p>
@@ -155,7 +148,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
-        {/* Bottom bar */}
         <div className="footer-bottom">
           <div className="container">
             <div className="footer-bottom-inner">
@@ -183,7 +175,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         </div>
       </footer>
 
-      {/* Back to top */}
       {showTop && (
         <button className="back-to-top" onClick={scrollTop} aria-label="Back to top">↑</button>
       )}

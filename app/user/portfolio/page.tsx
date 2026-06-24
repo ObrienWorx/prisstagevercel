@@ -189,7 +189,6 @@ export default function PortfolioPage() {
   return (
     <div className="pf-page">
 
-      {/* ── Header ── */}
       <div className="pf-header">
         <div>
           <h1 className="pf-title">My Portfolio</h1>
@@ -198,7 +197,6 @@ export default function PortfolioPage() {
         <button className="pf-new-btn" onClick={createPortfolio}>+ New Portfolio</button>
       </div>
 
-      {/* ── Portfolio tabs ── */}
       {portfolios.length === 0 ? (
         <div className="pf-empty">
           <div className="pf-empty-icon">📈</div>
@@ -221,7 +219,6 @@ export default function PortfolioPage() {
           {activePortfolio && (
             <div className="pf-panel">
 
-              {/* ── Add Stock ── */}
               <div className="pf-add-section">
                 <button className="pf-add-toggle" onClick={() => setAddOpen(o => !o)}>
                   <span className="pf-add-icon">⊕</span> Add Stock to Portfolio
@@ -259,7 +256,6 @@ export default function PortfolioPage() {
                 )}
               </div>
 
-              {/* ── Summary bar ── */}
               <div className="pf-summary">
                 <div className="pf-summary-item">
                   <div className="pf-sum-label">TOTAL INVESTED</div>
@@ -284,7 +280,6 @@ export default function PortfolioPage() {
                 </div>
               </div>
 
-              {/* ── Holdings ── */}
               <div className="pf-holdings">
                 <div className="pf-holdings-title">☰ My Holdings</div>
                 {stocks.length === 0 ? (
@@ -333,7 +328,6 @@ export default function PortfolioPage() {
                       </table>
                     </div>
 
-                    {/* ── Pagination ── */}
                     <div className="pf-pagination">
                       <div className="pf-pag-info">
                         Showing {(page - 1) * PER_PAGE + 1} to {Math.min(page * PER_PAGE, stocks.length)} of {stocks.length} entr{stocks.length === 1 ? 'y' : 'ies'}
@@ -368,7 +362,6 @@ export default function PortfolioPage() {
         </>
       )}
 
-      {/* ── New Portfolio Modal ── */}
       {npModal.open && (
         <div className="pf-modal-overlay" onClick={() => setNpModal({ open: false, name: '', err: '', saving: false })}>
           <div className="pf-modal" onClick={e => e.stopPropagation()}>
@@ -398,7 +391,6 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      {/* ── Delete Portfolio Modal ── */}
       {delModal.portfolio && (
         <div className="pf-modal-overlay" onClick={() => setDelModal({ portfolio: null, saving: false })}>
           <div className="pf-modal" onClick={e => e.stopPropagation()}>

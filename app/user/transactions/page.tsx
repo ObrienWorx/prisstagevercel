@@ -194,7 +194,6 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {/* ── Invoice Modal ─────────────────────────────── */}
       {invoiceOrder && (
         <div className="inv-overlay" onClick={() => setInvoiceOrder(null)}>
           <div className="inv-modal" onClick={e => e.stopPropagation()}>

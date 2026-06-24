@@ -125,7 +125,6 @@ export default async function ReportSlugPage({ params }: P) {
 
   return (
     <SiteLayout>
-      {/* Header */}
       <div className="text-white py-5" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)' }}>
         <div className="container">
           <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
@@ -150,14 +149,10 @@ export default async function ReportSlugPage({ params }: P) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="site-section">
         <div className="container">
           <div className="row">
             <div className="col-lg-8">
-              {/* {report.featuredImage && hasAccess && (
-                <img src={report.featuredImage} alt={report.title} className="img-fluid w-100 rounded-3 mb-4" style={{ maxHeight: 400, objectFit: 'cover' }} />
-              )} */}
 
               {hasAccess ? (
                 <div className="tiptap-prose" dangerouslySetInnerHTML={{ __html: report.content }} />
@@ -213,7 +208,6 @@ export default async function ReportSlugPage({ params }: P) {
               )}
             </div>
 
-            {/* Sidebar */}
             <div className="col-lg-4 d-none d-lg-block">
               <div className="position-sticky" style={{ top: 80 }}>
                 {!hasAccess && (

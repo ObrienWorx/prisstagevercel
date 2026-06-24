@@ -157,7 +157,6 @@ export default function UsersPage() {
 
   return (
     <div>
-      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h4 className="fw-bold mb-0">User Management</h4>
@@ -173,7 +172,6 @@ export default function UsersPage() {
         <div className="alert alert-danger">{error}</div>
       )}
 
-      {/* Users Table */}
       <div className="card">
         <div className="card-body p-0">
           {loading ? (
@@ -248,7 +246,6 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
       {showModal && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-lg">
@@ -306,7 +303,6 @@ export default function UsersPage() {
                     </select>
                   </div>
 
-                  {/* Permissions — only for sub-admin */}
                   {form.role === 'sub-admin' && (
                     <div className="col-12">
                       <div className="d-flex align-items-center justify-content-between mb-1">
@@ -381,7 +377,6 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">

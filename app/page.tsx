@@ -168,7 +168,6 @@ export default async function HomePage() {
 
   return (
     <SiteLayout>
-      {/* HERO */}
       <section className="homepage-hero">
         <div className="container position-relative">
           <div className="row align-items-start justify-content-center g-5">
@@ -206,7 +205,6 @@ export default async function HomePage() {
 
       <TickerTape />
 
-      {/* MARKET NEWS */}
       <section className="home-market-section">
         <div className="container">
           <div className="row g-4 align-items-stretch">
@@ -250,7 +248,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* DAILY ANALYSIS */}
       <section className="home-market-section home-market-section-tight">
         <div className="container">
           <div className="home-section-head">
@@ -294,7 +291,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* STATS */}
       <div className="stats-bar">
         <div className="container">
           <div className="row g-3 text-center">
@@ -315,7 +311,6 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* PLANS PREVIEW */}
       {products.length > 0 && (
         <section className="home-plans-section">
           <div className="container">
@@ -364,7 +359,6 @@ export default async function HomePage() {
       )}
 
 
-      {/* MARKET SCAN + PAST RECOMMENDATIONS */}
       <section className="home-scan-recs-section">
         <div className="container">
           <div className="row g-0 home-scan-recs-row">
@@ -426,7 +420,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-            {/* SECTOR STORIES */}
       <section className="home-sector-stories">
         <div className="container">
           <div className="row g-4 align-items-start">
@@ -483,7 +476,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* VIDEO PROMO */}
       <section className="home-video-promo">
         <div className="container">
           <div className="row align-items-center g-5">

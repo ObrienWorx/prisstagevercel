@@ -73,7 +73,6 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* Search */}
       <div className="mb-3">
         <input
           className="form-control"
@@ -84,7 +83,6 @@ export default function TransactionsPage() {
         />
       </div>
 
-      {/* Filter Tabs */}
       <div className="d-flex gap-2 mb-3 flex-wrap">
         {['all', 'completed', 'pending', 'failed', 'refunded'].map(s => (
           <button key={s} className={`btn btn-sm ${filter === s ? 'btn-primary' : 'btn-outline-secondary'}`} onClick={() => { setFilter(s); setPage(1); }} style={{ textTransform: 'capitalize' }}>

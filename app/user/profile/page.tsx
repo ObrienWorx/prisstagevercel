@@ -90,7 +90,6 @@ export default function ProfilePage() {
       </div>
 
       <div className="row g-4 align-items-start">
-        {/* Left — avatar card */}
         <div className="col-lg-4 d-flex flex-column gap-3">
           <div className="panel text-center p-4">
             <div className="user-avatar">{initials}</div>
@@ -114,9 +113,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Right — forms */}
         <div className="col-lg-8 d-flex flex-column gap-4">
-          {/* Profile form */}
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">Personal Information</div>
@@ -140,7 +137,6 @@ export default function ProfilePage() {
             </form>
           </div>
 
-          {/* Password form */}
           <div className="panel">
             <div className="panel-header">
               <div className="panel-title">Change Password</div>

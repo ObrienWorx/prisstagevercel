@@ -73,12 +73,10 @@ export default function LoginPage() {
     >
       <div className="card shadow-lg" style={{ width: '100%', maxWidth: '420px' }}>
         <div className="card-body p-5">
-          {/* Logo / Brand */}
           <div className="text-center mb-4">
             <div className="name"><img src="/logo2.png" alt="" className='w-100' /></div>
           </div>
 
-          {/* Error Alert */}
           {error && (
             <div className="alert alert-danger alert-dismissible" role="alert">
               {error}
@@ -90,7 +88,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Login Form */}
           <form onSubmit={handleSubmit}>
             <div className="mb-3">
               <label htmlFor="email" className="form-label fw-semibold">

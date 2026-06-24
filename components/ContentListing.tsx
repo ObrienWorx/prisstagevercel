@@ -326,7 +326,6 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
 
   return (
     <>
-      {/* Hero */}
       <div className="cl-hero">
         <div className="cl-hero-overlay" />
         <div className="container" style={{ position: 'relative', zIndex: 2 }}>
@@ -334,11 +333,9 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
         </div>
       </div>
 
-      {/* Body */}
       <div className="cl-body">
         <div className="container">
           <div className="row g-4">
-            {/* Grid */}
             <div className="col-lg-8">
               {displayItems.length === 0 ? (
                 <div className="text-center py-5">
@@ -357,7 +354,6 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
               {button}
             </div>
 
-            {/* Sidebar */}
             <div className="col-lg-4">
               <ReportSidebar latestItems={latestItems} latestLabel={latestLabel} sectors={sectors} categories={categories} />
             </div>

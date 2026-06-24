@@ -107,7 +107,6 @@ export default function CategoriesPage() {
         )}
       </div>
 
-      {/* Create / Edit Modal */}
       {showModal && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog modal-lg modal-dialog-scrollable">

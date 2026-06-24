@@ -82,7 +82,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <SiteLayout>
-      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', color: '#fff', padding: '3.5rem 0 2.5rem' }}>
         <div className="container">
           <div style={{ maxWidth: 700 }}>
@@ -109,7 +108,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       </div>
 
       <div className="container" style={{ padding: '2.5rem 1rem' }}>
-        {/* Access banner */}
         {filterProduct && !hasAccess && (
           <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
@@ -136,7 +134,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
               return (
                 <div key={String(r._id)} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                  {/* Featured image */}
                   <div style={{ height: 140, background: '#f1f5f9', position: 'relative', overflow: 'hidden' }}>
                     {r.featuredImage ? (
                       <img src={r.featuredImage} alt={r.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: isUnlocked ? 'none' : 'blur(6px)', transform: isUnlocked ? 'none' : 'scale(1.05)' }} />
@@ -155,7 +152,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                     )}
                   </div>
 
-                  {/* Card body */}
                   <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                       {r.sector && <span style={{ fontSize: '0.68rem', background: '#eff6ff', color: '#3b82f6', borderRadius: 4, padding: '1px 6px', fontWeight: 600 }}>{r.sector.name}</span>}

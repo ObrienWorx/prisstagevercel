@@ -41,19 +41,21 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     </div>
   );
 
-  const initials = user?.name?.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() || '?';
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const firstName = user?.name.split(' ')[0] ?? 'there';
 
   return (
     <SiteLayout>
-      {/* Portal header — sits below FrontNav, above content */}
       <div className="portal-header">
         <div className="container">
           <div className="portal-header-top">
             <div className="portal-header-user">
-              <div className="user-avatar-sm">{initials}</div>
+              <div className="user-avatar-sm"></div>
               <div>
-                <div className="portal-header-label">Subscriber Portal</div>
-                <div className="portal-header-title">{user?.name || 'My Account'}</div>
+                <div className="portal-header-label text-white">          {new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </div>
+                <h2 className="welcome-banner-title text-white">{greeting}, {firstName} 👋</h2>
               </div>
             </div>
             <Link href="/subscribe" className="portal-new-btn">+ New Subscription</Link>
@@ -73,7 +75,6 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         </div>
       </div>
 
-      {/* Page content */}
       <div className="portal-body">
         <div className="container">
           {children}

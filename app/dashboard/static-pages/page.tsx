@@ -161,7 +161,6 @@ export default function StaticPagesPage() {
         </div>
       </div>
 
-      {/* Modal */}
       {showModal && (
         <div className="modal show d-block" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
           <div className="modal-dialog modal-xl modal-dialog-scrollable">

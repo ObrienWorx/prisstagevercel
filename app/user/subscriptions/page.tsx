@@ -134,7 +134,7 @@ export default function SubscriptionsPage() {
       <div className="page-hdr d-flex align-items-flex-start justify-content-between flex-wrap gap-3">
         <div>
           <h4>My Subscriptions</h4>
-          <p>{orderGroups.length} order{orderGroups.length !== 1 ? 's' : ''} · {products.length} subscription{products.length !== 1 ? 's' : ''}</p>
+          <p>{orderGroups.length} order{orderGroups.length !== 1 ? 's' : ''}</p>
         </div>
         <Link href="/subscribe" className="btn btn-dark btn-sm d-inline-flex align-items-center gap-1">+ Browse Plans</Link>
       </div>
@@ -170,16 +170,13 @@ export default function SubscriptionsPage() {
             return (
               <div key={group.orderId} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
 
-                {/* ── Order row header ── */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.9rem 1.1rem', flexWrap: 'wrap' }}>
-                  {/* Thumbnail */}
                   <div style={{ width: 44, height: 44, borderRadius: 8, background: '#f1f5f9', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {firstProduct?.featuredImage
                       ? <img src={firstProduct.featuredImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <span style={{ fontSize: 20 }}>📊</span>}
                   </div>
 
-                  {/* Order + product summary */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: '#0f172a' }}>
                       Order <span style={{ fontFamily: 'monospace', color: '#3b82f6' }}>#{group.orderNumber}</span>
@@ -190,14 +187,12 @@ export default function SubscriptionsPage() {
                     </div>
                   </div>
 
-                  {/* Status badge */}
                   <div style={{ flexShrink: 0 }}>
                     {isActive
                       ? <span className={daysLeft <= 7 ? 'badge-expiring' : 'badge-active'}>{daysLeft <= 7 ? `⚠ ${daysLeft}d left` : '✓ Active'}</span>
                       : <span className="badge-expired">Expired</span>}
                   </div>
 
-                  {/* Invoice button */}
                   <button
                     className="btn btn-sm btn-outline-secondary"
                     style={{ fontSize: 12, flexShrink: 0 }}
@@ -207,7 +202,6 @@ export default function SubscriptionsPage() {
                     {invoiceLoading ? <span className="spinner-border spinner-border-sm" /> : '🧾 Invoice'}
                   </button>
 
-                  {/* Expand toggle */}
                   <button
                     onClick={() => toggle(group)}
                     style={{ background: isOpen ? '#eff6ff' : '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#475569', flexShrink: 0, transition: 'background 0.15s' }}
@@ -216,19 +210,13 @@ export default function SubscriptionsPage() {
                   </button>
                 </div>
 
-                {/* ── Expanded detail ── */}
                 {isOpen && (
                   <div style={{ borderTop: '1px solid #f1f5f9', padding: '1.1rem 1.1rem 1.25rem', background: '#fafbfc' }}>
 
-                    {/* Order meta row */}
                     <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Purchase Date</div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>{fmtDate(group.minStartDate)}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Payment</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>{gw.icon} {gw.label}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em' }}>Payment Status</div>
@@ -236,7 +224,6 @@ export default function SubscriptionsPage() {
                       </div>
                     </div>
 
-                    {/* Products table */}
                     <div style={{ marginBottom: '1.25rem' }}>
                       <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.07em', marginBottom: 8 }}>
                         Subscriptions ({group.items.length})
@@ -288,7 +275,6 @@ export default function SubscriptionsPage() {
         </div>
       )}
 
-      {/* ── Invoice Modal ── */}
       {invoiceOrder && (
         <InvoiceModal
           orderNumber={invoiceOrder.orderNumber}

@@ -228,7 +228,6 @@ export default function FrontNav() {
                       >
                         {s.featuredImage && <img src={s.featuredImage} alt="" className="nav-sector-img" />}
                         {s.name}
-                        {/* <span className="nav-count-badge">{s.reportCount}</span> */}
                       </Link>
                     ))}
                   </div>

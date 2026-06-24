@@ -162,12 +162,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div>
-      {/* Backdrop (mobile) */}
       {sidebarOpen && (
         <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* SIDEBAR */}
       <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
         <div className="sidebar-brand">
           <div className="brand-name">
@@ -218,7 +216,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
       <div className="main-content">
         <header className="topbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

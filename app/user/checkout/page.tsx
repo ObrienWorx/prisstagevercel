@@ -178,7 +178,6 @@ function CheckoutContent() {
       </div>
 
       <div className="row g-4">
-        {/* Order summary */}
         <div className="col-lg-5">
           <div className="checkout-panel" style={{ position: 'sticky', top: 20 }}>
             <div className="checkout-panel-title border-bottom pb-3 mb-3">Order Summary</div>
@@ -217,7 +216,6 @@ function CheckoutContent() {
           </div>
         </div>
 
-        {/* Payment */}
         <div className="col-lg-7">
           <div className="checkout-panel">
             <div className="checkout-panel-title">{isFree ? 'Free Subscription' : 'Payment Method'}</div>

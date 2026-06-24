@@ -24,13 +24,6 @@ export default async function SubscribePage() {
 
   return (
     <SiteLayout>
-      {/* <div className="subscribe-hero">
-        <div className="container">
-          <div className="section-label" style={{ color: '#93c5fd', justifyContent: 'center' }}>Subscription Plans</div>
-          <h1>Choose Your Plan</h1>
-          <p>Get access to Australia&apos;s most comprehensive investment research platform.</p>
-        </div>
-      </div> */}
 
       <div className="site-section">
         <div className="container">

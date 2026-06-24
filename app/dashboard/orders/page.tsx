@@ -354,7 +354,6 @@ export default function OrdersPage() {
 
       <Pagination page={page} pages={pages} total={total} onChange={setPage} />
 
-      {/* ── Create Order Modal ─────────────────────────────── */}
       {showCreate && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog modal-xl">
@@ -422,7 +421,6 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                {/* Product Lines */}
                 <div className="mb-2 d-flex align-items-center justify-content-between">
                   <span className="fw-semibold" style={{ fontSize: 14 }}>Products</span>
                   <button className="btn btn-sm btn-outline-primary" onClick={addLine}>+ Add Product</button>
@@ -526,7 +524,6 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* ── Delete Confirm Modal ─────────────────────────── */}
       {deleteId && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog">
@@ -549,7 +546,6 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* ── Edit Status Modal ─────────────────────────────── */}
       {editOrder && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog">

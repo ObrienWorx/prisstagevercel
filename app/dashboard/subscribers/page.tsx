@@ -277,7 +277,6 @@ export default function SubscribersPage() {
 
       <Pagination page={page} pages={pages} total={total} onChange={setPage} />
 
-      {/* ── Create / Edit Subscriber Modal ── */}
       {showModal && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog"><div className="modal-content">
@@ -339,7 +338,6 @@ export default function SubscribersPage() {
         </div>
       )}
 
-      {/* ── View / Manage Products Modal ── */}
       {viewSub && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog modal-xl modal-dialog-scrollable"><div className="modal-content">
@@ -355,7 +353,6 @@ export default function SubscribersPage() {
               {err && <div className="alert alert-danger">{err}</div>}
 
 
-              {/* Assign Form */}
               {showAssign && (
                 <div className="card mb-3 border-primary">
                   <div className="card-header d-flex align-items-center justify-content-between py-2 bg-primary bg-opacity-10">
@@ -364,7 +361,6 @@ export default function SubscribersPage() {
                   </div>
                   <div className="card-body">
 
-                    {/* Shared payment fields */}
                     <div className="row g-3 mb-3 pb-3 border-bottom">
                       <div className="col-md-6">
                         <label className="form-label">Payment Gateway</label>
@@ -383,7 +379,6 @@ export default function SubscribersPage() {
                       </div>
                     </div>
 
-                    {/* Product lines */}
                     {assignForm.lines.map((line, i) => {
                       const endDate = calcEndDate(line.startDate, line.durationValue, line.durationType);
                       return (
@@ -452,7 +447,6 @@ export default function SubscribersPage() {
                 </div>
               )}
 
-              {/* Edit Product Assignment */}
               {editProd && (
                 <div className="card mb-3 border-warning">
                   <div className="card-header d-flex align-items-center justify-content-between py-2 bg-warning bg-opacity-10">
@@ -510,7 +504,6 @@ export default function SubscribersPage() {
                 </div>
               )}
 
-              {/* Products Table */}
               {subProducts.length === 0 ? (
                 <div className="text-center p-4 text-muted">No products assigned yet.</div>
               ) : (
@@ -559,7 +552,6 @@ export default function SubscribersPage() {
         </div>
       )}
 
-      {/* ── Delete Subscriber Modal ── */}
       {del && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog"><div className="modal-content">
@@ -580,7 +572,6 @@ export default function SubscribersPage() {
         </div>
       )}
 
-      {/* ── Activity Log Modal ── */}
       {activitySub && (
         <div className="modal d-block" style={{ backgroundColor: 'rgba(15,23,42,0.55)' }}>
           <div className="modal-dialog modal-lg modal-dialog-scrollable"><div className="modal-content">

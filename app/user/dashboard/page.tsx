@@ -10,7 +10,6 @@ interface UserProduct { _id: string; product: Product; order: Order; startDate: 
 interface DashData { subscriber: { _id: string; name: string; email: string; createdAt: string }; products: UserProduct[]; reportCount: number; }
 
 function getDaysLeft(d: string) { return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000); }
-function fmtDate(d: string) { return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }); }
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -36,9 +35,6 @@ function DashboardContent() {
   if (loading) return <div className="page-loading">Loading...</div>;
 
   const activeProducts = data?.products.filter(p => p.isActive && getDaysLeft(p.expiryDate) > 0) ?? [];
-  const firstName = data?.subscriber.name.split(' ')[0] ?? 'there';
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
   const quickLinks = [
     { href: '/user/subscriptions', icon: '📦', label: 'My Subscriptions', sub: 'View & manage packages' },
@@ -69,23 +65,7 @@ function DashboardContent() {
           Order placed! Your subscription activates after payment is confirmed by our team.
         </div>
       )}
-
-      {/* Welcome banner */}
-      <div className="welcome-banner">
-        <div className="welcome-banner-bg">🔭</div>
-        <div className="welcome-banner-date">
-          {new Date().toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </div>
-        <h2 className="welcome-banner-title">{greeting}, {firstName} 👋</h2>
-        <p className="welcome-banner-sub">
-          {activeProducts.length > 0
-            ? `You have ${activeProducts.length} active subscription${activeProducts.length > 1 ? 's' : ''}. Access your research below.`
-            : 'Welcome to PristineGaze. Browse our plans to get started with premium research.'}
-        </p>
-      </div>
-
       <div className="row g-4">
-        {/* Plans grid */}
         <div className="col-lg-8">
           {allProducts.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
@@ -98,7 +78,6 @@ function DashboardContent() {
                     style={{ textDecoration: 'none' }}
                   >
                     <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid #e2e8f0', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', transition: 'box-shadow 0.15s' }}>
-                      {/* Image */}
                       <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden', background: '#f1f5f9' }}>
                         {p.featuredImage
                           ? <img src={p.featuredImage} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', filter: unlocked ? 'none' : 'grayscale(0.2) brightness(0.75)' }} />
@@ -109,7 +88,6 @@ function DashboardContent() {
                           </div>
                         )}
                       </div>
-                      {/* Name */}
                       <div style={{ padding: '0.6rem 0.75rem' }}>
                         <div style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', lineHeight: 1.35, textAlign: 'center' }}>{p.name}</div>
                       </div>
@@ -121,7 +99,6 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* Quick links + research */}
         <div className="col-lg-4 d-flex flex-column gap-3">
           <div className="panel">
             <div className="panel-header"><span className="panel-title">Quick Access</span></div>

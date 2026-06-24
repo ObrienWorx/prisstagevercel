@@ -57,7 +57,6 @@ export default async function BlogDetailPage({ params }: P) {
 
   return (
     <SiteLayout>
-      {/* Hero */}
       <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #101251 100%)', color: '#fff', padding: '4rem 0 3rem' }}>
         <div className="container">
           {category && (
@@ -77,11 +76,9 @@ export default async function BlogDetailPage({ params }: P) {
         </div>
       </div>
 
-      {/* Content */}
       <div className="site-section">
         <div className="container">
           <div className="row g-5">
-            {/* Main */}
             <div className="col-lg-8">
               {blog.featuredImage && (
                 <img
@@ -97,7 +94,6 @@ export default async function BlogDetailPage({ params }: P) {
               />
             </div>
 
-            {/* Sidebar */}
             <div className="col-lg-4 d-none d-lg-block">
               <div style={{ position: 'sticky', top: 80, display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <BlogSidebarPromo source={category?.slug || categorySlug} />

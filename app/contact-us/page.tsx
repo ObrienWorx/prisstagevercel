@@ -9,7 +9,6 @@ export const metadata = {
 export default function ContactUsPage() {
   return (
     <SiteLayout>
-      {/* Hero */}
       <div className="cu-hero">
         <div className="cu-hero-overlay" />
         <div className="container cu-hero-inner">
@@ -18,12 +17,10 @@ export default function ContactUsPage() {
         </div>
       </div>
 
-      {/* Body */}
       <div className="cu-body">
         <div className="container">
           <div className="row g-5">
 
-            {/* Left: contact details + map */}
             <div className="col-lg-7">
               <h2 className="cu-section-title">Get in Touch</h2>
               <p className="cu-section-sub">
@@ -80,7 +77,6 @@ export default function ContactUsPage() {
               </div>
             </div>
 
-            {/* Right: lead capture form */}
             <div className="col-lg-5">
               <LeadCaptureForm source="contact-us" badge='' title='Get In Touch With Us' buttonText='Submit' />
             </div>

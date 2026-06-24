@@ -18,7 +18,6 @@ export default async function VideosPage() {
 
   return (
     <SiteLayout>
-      {/* Header */}
       <div className="video-page-hero text-white">
         <div className="container text-center">
           <h1 className="video-page-title">
@@ -27,7 +26,6 @@ export default async function VideosPage() {
         </div>
       </div>
 
-      {/* Videos Grid */}
       <div className="site-section">
         <div className="container">
           {videos.length === 0 ? (
