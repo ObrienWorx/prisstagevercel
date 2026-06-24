@@ -15,6 +15,8 @@ interface Order {
   purchaseDate: string; expiryDate: string;
   items: OrderItem[]; notes: string; createdAt: string;
 }
+interface AccessProduct { _id: string; name: string; featuredImage?: string; }
+interface UserProduct { _id: string; product: AccessProduct | null; startDate: string; expiryDate: string; isActive: boolean; }
 
 const STATUS_COLORS: Record<string, string> = {
   completed: 'bg-success', pending: 'bg-warning text-dark',
@@ -25,9 +27,14 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function getDaysLeft(d: string) {
+  return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<Order | null>(null);
+  const [userProducts, setUserProducts] = useState<UserProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
@@ -45,6 +52,7 @@ export default function OrderDetailPage() {
       const d = await r.json();
       if (d.success) {
         setOrder(d.data.order);
+        setUserProducts(d.data.userProducts ?? []);
         setForm({
           paymentStatus: d.data.order.paymentStatus,
           orderStatus: d.data.order.orderStatus,
@@ -144,6 +152,51 @@ export default function OrderDetailPage() {
               </table>
             </div>
           </div>
+
+          {userProducts.length > 0 && (
+            <div className="card mt-4">
+              <div className="card-header d-flex align-items-center justify-content-between">
+                <h6 className="mb-0">Unlocked Subscriptions ({userProducts.length})</h6>
+                {userProducts.length > items.length && (
+                  <span className="badge bg-info text-dark">includes bundled products</span>
+                )}
+              </div>
+              <div className="table-responsive">
+                <table className="table mb-0">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Start</th>
+                      <th>Expiry</th>
+                      <th className="text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {userProducts.map(up => {
+                      const daysLeft = getDaysLeft(up.expiryDate);
+                      const active = up.isActive && daysLeft > 0;
+                      const isBundled = !items.some(it => it.product?._id === up.product?._id);
+                      return (
+                        <tr key={up._id}>
+                          <td className="fw-semibold">
+                            {up.product?.name ?? '—'}
+                            {isBundled && <span className="badge bg-light text-secondary border ms-2" style={{ fontSize: 10 }}>bundled</span>}
+                          </td>
+                          <td style={{ fontSize: 12, color: '#64748b' }}>{fmtDate(up.startDate)}</td>
+                          <td style={{ fontSize: 12, color: active ? '#16a34a' : '#ef4444', fontWeight: 600 }}>{fmtDate(up.expiryDate)}</td>
+                          <td className="text-center">
+                            {active
+                              ? <span className={`badge ${daysLeft <= 7 ? 'bg-warning text-dark' : 'bg-success'}`}>{daysLeft <= 7 ? `⚠ ${daysLeft}d left` : '✓ Active'}</span>
+                              : <span className="badge bg-secondary">Expired</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="col-lg-4">

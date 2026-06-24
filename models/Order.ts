@@ -58,8 +58,14 @@ const OrderSchema = new Schema<IOrder>(
 
 OrderSchema.pre('save', async function () {
   if (!this.orderNumber) {
-    const count = await (this.constructor as Model<IOrder>).countDocuments();
-    this.orderNumber = `ORD-${String(count + 1).padStart(5, '0')}`;
+    // Derive from the highest existing orderNumber, not the document count:
+    // historical imports created orders with explicit (gapped) ORD-##### numbers,
+    // so count+1 collides with already-used numbers. Numbers are 5-digit
+    // zero-padded, so a descending sort yields the true max.
+    const Order = this.constructor as Model<IOrder>;
+    const last = await Order.findOne({}).sort({ orderNumber: -1 }).select('orderNumber').lean();
+    const seq = last?.orderNumber ? parseInt(String(last.orderNumber).replace(/\D/g, ''), 10) || 0 : 0;
+    this.orderNumber = `ORD-${String(seq + 1).padStart(5, '0')}`;
   }
 });
 

@@ -129,12 +129,31 @@ export async function POST(req: NextRequest) {
   }));
   await Order.collection.updateOne({ _id: order._id }, { $set: { items: itemsPayload } });
 
+  const isActive = order.orderStatus === 'completed';
+  // Track which products already have a UserProduct on this order to avoid duplicates
+  // (a bundled product may also be an explicit line, or be bundled by multiple lines).
+  const granted = new Set<string>();
+
   for (const r of resolved) {
     await UserProduct.create({
       subscriber: subscriberId, product: r.productId,
       order: order._id, startDate: r.start, expiryDate: r.expiry,
-      isActive: order.orderStatus === 'completed',
+      isActive,
     });
+    granted.add(r.productId);
+
+    // Bundle: grant access to any included products for the SAME period as this line.
+    const bundled = (r.prod.bundledProducts ?? [])
+      .map((bid) => bid.toString())
+      .filter((bid) => bid !== r.productId && !granted.has(bid));
+    for (const bundledId of bundled) {
+      await UserProduct.create({
+        subscriber: subscriberId, product: bundledId,
+        order: order._id, startDate: r.start, expiryDate: r.expiry,
+        isActive,
+      });
+      granted.add(bundledId);
+    }
   }
 
   const sellAmt = (sellingPrice !== undefined && sellingPrice !== '' && Number(sellingPrice) > 0) ? Number(sellingPrice) : null;

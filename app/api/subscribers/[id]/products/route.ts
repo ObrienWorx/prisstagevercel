@@ -71,12 +71,19 @@ export async function POST(req: NextRequest, { params }: P) {
     })),
   });
 
+  const isActive = order.orderStatus === 'completed';
+  // Track which products already have a UserProduct on this order to avoid duplicates
+  // (a bundled product may also be an explicit line, or be bundled by multiple lines).
+  const granted = new Set<string>();
+
   for (const r of resolved) {
     await UserProduct.create({
       subscriber: id, product: r.productId,
       order: order._id, startDate: r.start, expiryDate: r.expiry,
-      isActive: order.orderStatus === 'completed',
+      isActive,
     });
+    granted.add(r.productId);
+
     await Transaction.create({
       order: order._id, subscriber: id, product: r.productId,
       amount: r.price,
@@ -84,6 +91,19 @@ export async function POST(req: NextRequest, { params }: P) {
       paymentStatus: order.paymentStatus,
       paymentDate: r.start,
     });
+
+    // Bundle: grant access to any included products for the SAME period as this line.
+    const bundled = (r.prod.bundledProducts ?? [])
+      .map((bid) => bid.toString())
+      .filter((bid) => bid !== r.productId && !granted.has(bid));
+    for (const bundledId of bundled) {
+      await UserProduct.create({
+        subscriber: id, product: bundledId,
+        order: order._id, startDate: r.start, expiryDate: r.expiry,
+        isActive,
+      });
+      granted.add(bundledId);
+    }
   }
 
   return successResponse(

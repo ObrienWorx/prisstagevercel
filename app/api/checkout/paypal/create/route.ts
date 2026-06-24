@@ -20,6 +20,10 @@ async function getPayPalToken() {
     body: 'grant_type=client_credentials',
   });
   const data = await res.json();
+  if (!res.ok || !data.access_token) {
+    console.error('PayPal auth failed:', res.status, JSON.stringify(data));
+    throw new Error(data?.error_description || data?.error || 'PayPal authentication failed — check PAYPAL_CLIENT_ID/SECRET and PAYPAL_MODE');
+  }
   return { token: data.access_token as string, base };
 }
 
@@ -68,9 +72,21 @@ export async function POST(req: NextRequest) {
       }),
     });
     const data = await res.json();
-    if (!res.ok) return errorResponse(data?.message || 'PayPal error', 500);
+    if (!res.ok) {
+      // Log the full PayPal payload so the real cause is visible server-side.
+      console.error('PayPal create-order failed:', res.status, JSON.stringify(data));
+      const issue = data?.details?.[0];
+      const detail = issue?.description || issue?.issue || data?.message || data?.name || `PayPal rejected the order (HTTP ${res.status})`;
+      const debugId = data?.debug_id ? ` [ref: ${data.debug_id}]` : '';
+      return errorResponse(`PayPal: ${detail}${debugId}`, 500);
+    }
+    if (!data.id) {
+      console.error('PayPal create-order returned no id:', JSON.stringify(data));
+      return errorResponse('PayPal did not return an order id. Check PayPal credentials/mode.', 500);
+    }
     return successResponse({ orderId: data.id });
   } catch (e) {
-    return errorResponse('PayPal request failed: ' + String(e), 500);
+    console.error('PayPal create-order exception:', e);
+    return errorResponse('PayPal request failed: ' + (e instanceof Error ? e.message : String(e)), 500);
   }
 }

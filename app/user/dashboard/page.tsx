@@ -48,6 +48,13 @@ function DashboardContent() {
   // Mark which products are already active for the subscriber
   const activeProductIds = new Set(activeProducts.map(up => up.product?._id).filter(Boolean));
 
+  // Show unlocked (active) products first, preserving original order within each group.
+  const sortedProducts = [...allProducts].sort((a, b) => {
+    const aUnlocked = activeProductIds.has(a._id) ? 0 : 1;
+    const bUnlocked = activeProductIds.has(b._id) ? 0 : 1;
+    return aUnlocked - bUnlocked;
+  });
+
   return (
     <div>
       {paySuccess && (
@@ -82,7 +89,7 @@ function DashboardContent() {
         <div className="col-lg-8">
           {allProducts.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
-              {allProducts.map(p => {
+              {sortedProducts.map(p => {
                 const unlocked = activeProductIds.has(p._id);
                 return (
                   <Link

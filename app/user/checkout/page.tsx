@@ -30,6 +30,7 @@ function CheckoutContent() {
   const [err, setErr] = useState('');
   const paypalRef = useRef<HTMLDivElement>(null);
   const paypalRendered = useRef(false);
+  const createErrRef = useRef('');
   const [token, setToken] = useState('');
 
   useEffect(() => { setToken(localStorage.getItem('subscriber_token') ?? ''); }, []);
@@ -73,14 +74,28 @@ function CheckoutContent() {
       style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay' },
       createOrder: async () => {
         setErr('');
-        const res = await fetch('/api/checkout/paypal/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ planSlug, saleOffer }),
-        });
-        const d = await res.json();
-        if (!d.success) throw new Error(d.error || 'Failed to create PayPal order');
-        return d.data.orderId;
+        createErrRef.current = '';
+        try {
+          const res = await fetch('/api/checkout/paypal/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ planSlug, saleOffer }),
+          });
+          const d = await res.json();
+          if (!d.success) {
+            const detail = d.error || `Failed to create PayPal order (HTTP ${res.status})`;
+            throw new Error(detail);
+          }
+          return d.data.orderId;
+        } catch (e) {
+          // The PayPal SDK swallows this thrown error and re-fires onError with a
+          // generic "PayPal error" message, so capture the real reason here for display.
+          const detail = e instanceof Error ? e.message : 'Failed to create PayPal order';
+          createErrRef.current = detail;
+          console.error('PayPal createOrder failed:', e);
+          setErr(detail);
+          throw e;
+        }
       },
       onApprove: async (data: { orderID: string }) => {
         setMsg('Processing payment...');
@@ -93,7 +108,11 @@ function CheckoutContent() {
         if (d.success) { router.push('/user/dashboard?success=1'); }
         else { setErr(d.error || 'Payment failed. Please try again.'); setMsg(''); }
       },
-      onError: (e: Error) => setErr('PayPal error: ' + e.message),
+      onError: (e: Error) => {
+        console.error('PayPal onError:', e);
+        // Prefer the specific reason captured in createOrder over the SDK's generic message.
+        setErr(createErrRef.current || 'PayPal error: ' + (e?.message || 'Something went wrong. Please try again.'));
+      },
       onCancel: () => setMsg(''),
     }).render(paypalRef.current);
   }

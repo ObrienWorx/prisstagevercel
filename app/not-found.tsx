@@ -9,7 +9,7 @@ export default function NotFound() {
           <div style={{ fontSize: 80, lineHeight: 1, marginBottom: '1.5rem', opacity: 0.15, fontWeight: 900, color: '#0f172a', letterSpacing: '-4px' }}>
             404
           </div>
-          <div style={{ fontSize: 48, marginBottom: '1rem' }}>🔭</div>
+          <img src="/trend.png" alt="" style={{ width: 64, height: 64, objectFit: 'contain', marginBottom: '1rem' }} />
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
             Page Not Found
           </h1>

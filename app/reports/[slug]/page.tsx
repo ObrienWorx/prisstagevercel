@@ -83,7 +83,6 @@ export default async function ReportSlugPage({ params }: P) {
     );
   }
 
-  // ── 2. Individual report ─────────────────────────────────────────────────
   const report = await Report.findOne({ slug, publishStatus: 'published' })
     .populate('sector', 'name slug')
     .populate('product', 'name slug regularPrice salePrice saleOverPrice saleEndDate shortDescription features featuredImage saleBanner saleOverBanner riskRating durationValue durationType plans')
@@ -115,7 +114,6 @@ export default async function ReportSlugPage({ params }: P) {
 
   const excerpt = report.content ? report.content.replace(/<[^>]+>/g, '').slice(0, 400) : '';
 
-  // Sidebar nav data (same widgets as the sector/category listing pages)
   const [allSectors, allReportCats, latestReports] = await Promise.all([
     Sector.find({}).select('name slug icon').sort({ name: 1 }).lean() as Promise<any[]>,
     ReportCategory.find({ status: 'active' }).select('name slug icon').sort({ name: 1 }).lean() as Promise<any[]>,
@@ -157,9 +155,9 @@ export default async function ReportSlugPage({ params }: P) {
         <div className="container">
           <div className="row">
             <div className="col-lg-8">
-              {report.featuredImage && hasAccess && (
+              {/* {report.featuredImage && hasAccess && (
                 <img src={report.featuredImage} alt={report.title} className="img-fluid w-100 rounded-3 mb-4" style={{ maxHeight: 400, objectFit: 'cover' }} />
-              )}
+              )} */}
 
               {hasAccess ? (
                 <div className="tiptap-prose" dangerouslySetInnerHTML={{ __html: report.content }} />

@@ -190,11 +190,6 @@ export default function SubscriptionsPage() {
                     </div>
                   </div>
 
-                  {/* Amount */}
-                  <div style={{ fontWeight: 800, fontSize: 15, color: '#0f172a', flexShrink: 0 }}>
-                    A${group.pricePaid.toFixed(2)}
-                  </div>
-
                   {/* Status badge */}
                   <div style={{ flexShrink: 0 }}>
                     {isActive

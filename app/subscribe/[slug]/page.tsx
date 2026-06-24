@@ -264,7 +264,6 @@ export default async function ProductDetailPage({ params }: P) {
                     '📊 Daily sector analysis & reports',
                     '🔒 Secure, encrypted platform',
                     '📧 Daily email digest included',
-                    '❌ Cancel anytime, no lock-in',
                   ].map(t => (
                     <div key={t} className="subscribe-why-item">{t}</div>
                   ))}

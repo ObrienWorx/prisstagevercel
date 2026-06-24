@@ -38,7 +38,15 @@ export async function GET(req: NextRequest, { params }: P) {
   }
 
   const transactions = await Transaction.find({ order: id }).sort({ createdAt: -1 }).lean();
-  return successResponse({ order, transactions });
+
+  // Access records granted by this order — includes bundled products (which are
+  // not in order.items) and carries live isActive + expiry per product.
+  const userProducts = await UserProduct.find({ order: id })
+    .populate('product', 'name featuredImage durationType durationValue')
+    .sort({ startDate: 1 })
+    .lean();
+
+  return successResponse({ order, transactions, userProducts });
 }
 
 export async function PUT(req: NextRequest, { params }: P) {

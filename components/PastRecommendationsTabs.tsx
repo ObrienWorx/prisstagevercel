@@ -27,8 +27,21 @@ type CurrentRow = {
 };
 
 type TabKey = 'past' | 'current';
+type SortDir = 'asc' | 'desc';
+type SortState = { key: string; dir: SortDir };
 
 const PER_PAGE = 10;
+
+const COLUMN_TYPES: Record<string, 'string' | 'number' | 'date'> = {
+  ticker: 'string',
+  index: 'string',
+  buyingDate: 'date',
+  sellingDate: 'date',
+  buyingPrice: 'number',
+  sellingPrice: 'number',
+  currentPrice: 'number',
+  profitLoss: 'number',
+};
 
 function formatPrice(value: number) {
   return Number.isFinite(value) ? value.toLocaleString('en-AU', { maximumFractionDigits: 3 }) : '-';
@@ -61,6 +74,7 @@ export default function PastRecommendationsTabs({
   const [activeTab, setActiveTab] = useState<TabKey>('past');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<SortState | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const sourceRows = activeTab === 'past' ? pastRows : currentRows;
@@ -71,11 +85,37 @@ export default function PastRecommendationsTabs({
     return searchableRows.filter((row) => Object.values(row).some((value) => String(value).toLowerCase().includes(q)));
   }, [searchableRows, search]);
 
+  const sortedRows = useMemo(() => {
+    if (!sort) return filteredRows;
+    const type = COLUMN_TYPES[sort.key] ?? 'string';
+    const dir = sort.dir === 'asc' ? 1 : -1;
+    return [...filteredRows].sort((a, b) => {
+      const av = (a as Record<string, unknown>)[sort.key];
+      const bv = (b as Record<string, unknown>)[sort.key];
+      // Missing values always sort to the bottom, regardless of direction.
+      const aMissing = av === null || av === undefined || av === '';
+      const bMissing = bv === null || bv === undefined || bv === '';
+      if (aMissing && bMissing) return 0;
+      if (aMissing) return 1;
+      if (bMissing) return -1;
+      let cmp: number;
+      if (type === 'number') cmp = Number(av) - Number(bv);
+      else if (type === 'date') cmp = new Date(av as string).getTime() - new Date(bv as string).getTime();
+      else cmp = String(av).localeCompare(String(bv));
+      return cmp * dir;
+    });
+  }, [filteredRows, sort]);
+
+  const toggleSort = (key: string) => {
+    setSort((prev) => (prev?.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+    setPage(1);
+  };
+
   const totalPages = !isLoggedIn && activeTab === 'past' && !search.trim()
     ? Math.max(1, Math.ceil(sourceRows.length / PER_PAGE))
     : Math.max(1, Math.ceil(filteredRows.length / PER_PAGE));
   const currentPage = Math.min(page, totalPages);
-  const pagedRows = filteredRows.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+  const pagedRows = sortedRows.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
   const start = filteredRows.length === 0 ? 0 : (currentPage - 1) * PER_PAGE + 1;
   const totalEntries = !isLoggedIn && activeTab === 'past' && !search.trim() ? sourceRows.length : filteredRows.length;
   const end = Math.min(currentPage * PER_PAGE, totalEntries);
@@ -88,7 +128,20 @@ export default function PastRecommendationsTabs({
     setActiveTab(tab);
     setSearch('');
     setPage(1);
+    setSort(null);
   };
+
+  const SortHeader = ({ label, sortKey }: { label: string; sortKey: string }) => (
+    <th
+      className="pg-rec-sortable"
+      style={{ cursor: 'pointer', userSelect: 'none' }}
+      onClick={() => toggleSort(sortKey)}
+      aria-sort={sort?.key === sortKey ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      {label}
+      <span className="pg-rec-sort-ind">{sort?.key === sortKey ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}</span>
+    </th>
+  );
 
   const changePage = (nextPage: number) => {
     if (!isLoggedIn && activeTab === 'past' && nextPage > 1) {
@@ -164,15 +217,15 @@ export default function PastRecommendationsTabs({
           <table className="pg-rec-table">
             <thead>
               <tr>
-                <th>TICKER</th>
-                <th>INDEX</th>
-                <th>Buying Date</th>
+                <SortHeader label="TICKER" sortKey="ticker" />
+                <SortHeader label="INDEX" sortKey="index" />
+                <SortHeader label="Buying Date" sortKey="buyingDate" />
                 <th>Buy Report</th>
-                <th>Selling Date</th>
+                <SortHeader label="Selling Date" sortKey="sellingDate" />
                 <th>Sell Report</th>
-                <th>Buying Price</th>
-                <th>Selling Price</th>
-                <th>P/L%</th>
+                <SortHeader label="Buying Price" sortKey="buyingPrice" />
+                <SortHeader label="Selling Price" sortKey="sellingPrice" />
+                <SortHeader label="P/L%" sortKey="profitLoss" />
               </tr>
             </thead>
             <tbody>
@@ -195,12 +248,12 @@ export default function PastRecommendationsTabs({
           <table className="pg-rec-table">
             <thead>
               <tr>
-                <th>TICKER</th>
-                <th>INDEX</th>
-                <th>Buying Date</th>
-                <th>Buying Price</th>
-                <th>Current Price ({currentPriceLabel})</th>
-                <th>P/L%</th>
+                <SortHeader label="TICKER" sortKey="ticker" />
+                <SortHeader label="INDEX" sortKey="index" />
+                <SortHeader label="Buying Date" sortKey="buyingDate" />
+                <SortHeader label="Buying Price" sortKey="buyingPrice" />
+                <SortHeader label={`Current Price (${currentPriceLabel})`} sortKey="currentPrice" />
+                <SortHeader label="P/L%" sortKey="profitLoss" />
               </tr>
             </thead>
             <tbody>
