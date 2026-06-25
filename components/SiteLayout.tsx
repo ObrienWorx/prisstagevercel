@@ -31,13 +31,13 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   const staticPolicyLinks: SlugLink[] = [
-    { title: 'Privacy Policy', slug: 'privacy-policy' },
-    { title: 'Terms Of Use', slug: 'terms-of-use' },
-    { title: 'Financial Service Guide', slug: 'financial-service-guide' },
-    { title: 'Cancellation & Refund Policy', slug: 'cancellation-refund-policy' },
-    { title: 'Terms and Conditions of Free Trial Use', slug: 'terms-free-trial' },
-    { title: 'Disclaimer', slug: 'disclaimer' },
-    { title: 'Account Deletion Request', slug: 'account-deletion-request' },
+    // { title: 'Privacy Policy', slug: 'privacy-policy' },
+    // { title: 'Terms Of Use', slug: 'terms-of-use' },
+    // { title: 'Financial Service Guide', slug: 'financial-service-guide' },
+    // { title: 'Cancellation & Refund Policy', slug: 'cancellation-refund-policy' },
+    // { title: 'Terms and Conditions of Free Trial Use', slug: 'terms-free-trial' },
+    // { title: 'Disclaimer', slug: 'disclaimer' },
+    // { title: 'Account Deletion Request', slug: 'account-deletion-request' },
     ...policyPages,
   ];
 
@@ -46,7 +46,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     { title: 'Past Recommendations', slug: 'past-recommendations' },
     { title: 'Subscriptions', href: '/subscribe' },
     { title: 'Videos', href: '/videos' },
-    { title: 'Terminology', slug: 'terminology' },
     { title: 'Free Trial', href: '/subscribe/7-day-free-trial' },
     { title: 'Contact Us', href: '/contact-us' },
     ...quickPages,

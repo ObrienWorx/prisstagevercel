@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const { error } = await requireAdmin(req);
   if (error) return error;
   await connectDB();
-  const pages = await StaticPage.find({}).sort({ createdAt: -1 });
+  const pages = await StaticPage.find({}).sort({ sortOrder: 1, createdAt: -1 });
   return successResponse(pages);
 }
 

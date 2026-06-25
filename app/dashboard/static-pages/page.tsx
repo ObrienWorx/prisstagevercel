@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
 const RichEditor = dynamic(() => import('@/components/RichEditor'), { ssr: false, loading: () => <div style={{ minHeight: 200, background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 13 }}>Loading editor…</div> });
@@ -10,6 +10,7 @@ interface Page {
   metaTitle: string; metaDescription: string;
   isPublished: boolean; showInFooter: boolean;
   footerColumn: 'quick-links' | 'policies' | 'none';
+  sortOrder: number;
   updatedAt: string;
 }
 
@@ -28,6 +29,9 @@ export default function StaticPagesPage() {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [search, setSearch] = useState('');
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') || '' : '';
 
@@ -84,6 +88,31 @@ export default function StaticPagesPage() {
     load();
   };
 
+  const persistOrder = async (ordered: Page[]) => {
+    try {
+      const r = await fetch('/api/static-pages/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: ordered.map(p => p._id) }),
+      });
+      const d = await r.json();
+      if (!d.success) setErr(d.error || 'Failed to save order');
+    } catch { setErr('Failed to save order'); }
+  };
+
+  const handleDrop = () => {
+    const from = dragItem.current, to = dragOverItem.current;
+    dragItem.current = null; dragOverItem.current = null; setDragging(null);
+    if (from == null || to == null || from === to) return;
+    setPages(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      persistOrder(next);
+      return next;
+    });
+  };
+
   const filtered = pages.filter(p =>
     p.title.toLowerCase().includes(search.toLowerCase()) ||
     p.slug.toLowerCase().includes(search.toLowerCase())
@@ -104,10 +133,15 @@ export default function StaticPagesPage() {
           <span>{filtered.length} pages</span>
           <input className="form-control form-control-sm" style={{ maxWidth: 260 }} placeholder="Search pages…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <div className="px-3 pt-3 text-muted" style={{ fontSize: 12 }}>
+          Tip: drag the <span style={{ color: '#94a3b8' }}>⋮⋮</span> handle to reorder how pages appear in the footer.
+          {search && <span> (clear the search to reorder)</span>}
+        </div>
         <div className="table-responsive">
           <table className="table">
             <thead>
               <tr>
+                <th style={{ width: 32 }} title="Drag rows to reorder"></th>
                 <th>Title</th>
                 <th>Slug</th>
                 <th>Footer</th>
@@ -118,11 +152,19 @@ export default function StaticPagesPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-4 text-muted">Loading…</td></tr>
+                <tr><td colSpan={7} className="text-center py-4 text-muted">Loading…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-4 text-muted">No pages found</td></tr>
-              ) : filtered.map(p => (
-                <tr key={p._id}>
+                <tr><td colSpan={7} className="text-center py-4 text-muted">No pages found</td></tr>
+              ) : filtered.map((p, index) => (
+                <tr key={p._id}
+                  draggable={!search}
+                  onDragStart={() => { if (search) return; dragItem.current = index; setDragging(index); }}
+                  onDragEnter={() => { if (!search) dragOverItem.current = index; }}
+                  onDragEnd={handleDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  style={{ opacity: dragging === index ? 0.4 : 1 }}
+                >
+                  <td style={{ cursor: search ? 'not-allowed' : 'move', color: '#94a3b8', textAlign: 'center', userSelect: 'none' }} title={search ? 'Clear search to reorder' : 'Drag to reorder'}>⋮⋮</td>
                   <td>
                     <div style={{ fontWeight: 600, color: '#0f172a' }}>{p.title}</div>
                   </td>

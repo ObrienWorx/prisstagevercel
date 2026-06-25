@@ -9,6 +9,7 @@ export interface IStaticPage extends Document {
   isPublished: boolean;
   showInFooter: boolean;
   footerColumn: 'quick-links' | 'policies' | 'none';
+  sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +23,7 @@ const StaticPageSchema = new Schema<IStaticPage>({
   isPublished: { type: Boolean, default: true },
   showInFooter: { type: Boolean, default: false },
   footerColumn: { type: String, enum: ['quick-links', 'policies', 'none'], default: 'none' },
+  sortOrder: { type: Number, default: 0 },
 }, { timestamps: true });
 
 const StaticPage: Model<IStaticPage> =
