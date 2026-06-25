@@ -40,6 +40,13 @@ interface NavLink {
   icon?: string;
 }
 
+interface Pagination {
+  page: number;        // current page (1-based)
+  totalPages: number;  // total number of pages
+  basePath: string;    // path to link to (e.g. '/search')
+  query: string;       // querystring to preserve, without `page` (e.g. 'q=daily%20digest')
+}
+
 interface Props {
   title: string;
   items: Item[];
@@ -50,8 +57,33 @@ interface Props {
   sectors?: NavLink[];
   emptyMessage?: string;
   loadMore?: LoadMore;
+  pagination?: Pagination;   // server-side page pagination (numbered Prev/Next links)
   leadSource?: string;       // source tag stored on the captured lead (e.g. category slug)
   autoOpenLead?: boolean;    // auto-open the claim popup after 10s or a small scroll
+}
+
+function pageWindow(current: number, total: number) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set([1, total, current, current - 1, current + 1]);
+  return Array.from(pages).filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+}
+
+function Pagination({ page, totalPages, basePath, query }: Pagination) {
+  if (totalPages <= 1) return null;
+  const href = (p: number) => `${basePath}?${query ? query + '&' : ''}page=${p}`;
+  const nums = pageWindow(page, totalPages);
+  return (
+    <nav className="cl-pagination" style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 28, flexWrap: 'wrap' }} aria-label="Pagination">
+      {page > 1 && <Link href={href(page - 1)} className="btn btn-sm btn-outline-secondary">« Prev</Link>}
+      {nums.map((p, i, arr) => (
+        <span key={p} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {i > 0 && p - arr[i - 1] > 1 && <span style={{ color: '#94a3b8' }}>…</span>}
+          <Link href={href(p)} className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-outline-secondary'}`} aria-current={p === page ? 'page' : undefined}>{p}</Link>
+        </span>
+      ))}
+      {page < totalPages && <Link href={href(page + 1)} className="btn btn-sm btn-outline-secondary">Next »</Link>}
+    </nav>
+  );
 }
 
 // Merges the server-rendered first page with client-fetched batches.
@@ -317,11 +349,13 @@ function BlogCategoryListing({ title, items, categories, emptyMessage, footer, l
   );
 }
 
-export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage, loadMore, leadSource, autoOpenLead }: Props) {
+export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage, loadMore, pagination, leadSource, autoOpenLead }: Props) {
   const { displayItems, button } = useLoadMore(items, loadMore);
+  // Server-side page pagination is mutually exclusive with the "Load more" button.
+  const footer = pagination ? <Pagination {...pagination} /> : button;
 
   if (sidebarType === 'blog') {
-    return <BlogCategoryListing title={title} items={displayItems} categories={categories} emptyMessage={emptyMessage} footer={button} leadSource={leadSource} autoOpenLead={autoOpenLead} />;
+    return <BlogCategoryListing title={title} items={displayItems} categories={categories} emptyMessage={emptyMessage} footer={footer} leadSource={leadSource} autoOpenLead={autoOpenLead} />;
   }
 
   return (
@@ -351,7 +385,7 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
                   ))}
                 </div>
               )}
-              {button}
+              {footer}
             </div>
 
             <div className="col-lg-4">

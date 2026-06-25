@@ -8,7 +8,9 @@ import ContentListing from '@/components/ContentListing';
 
 export const dynamic = 'force-dynamic';
 
-type P = { searchParams: Promise<{ q?: string }> };
+const PER_PAGE = 12;
+
+type P = { searchParams: Promise<{ q?: string; page?: string }> };
 
 export async function generateMetadata({ searchParams }: P) {
   const { q } = await searchParams;
@@ -22,8 +24,9 @@ function fmtDate(d: string | Date) {
 }
 
 export default async function SearchPage({ searchParams }: P) {
-  const { q } = await searchParams;
+  const { q, page: pageParam } = await searchParams;
   const query = q?.trim() || '';
+  const page = Math.max(1, parseInt(pageParam || '1', 10) || 1);
 
   await connectDB();
 
@@ -38,6 +41,7 @@ export default async function SearchPage({ searchParams }: P) {
   ]);
 
   let results: any[] = [];
+  let totalCount = 0;
 
   if (query) {
     const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -46,11 +50,17 @@ export default async function SearchPage({ searchParams }: P) {
     const orClauses: object[] = [{ title: regex }, { upsellTicker: regex }];
     if (sectorIds.length) orClauses.push({ sector: { $in: sectorIds } });
 
-    results = await Report.find({ publishStatus: 'published', $or: orClauses })
+    const filter: any = { publishStatus: 'published', $or: orClauses };
+    totalCount = await Report.countDocuments(filter);
+    results = await Report.find(filter)
       .select('title slug featuredImage createdAt recommendation')
       .sort({ createdAt: -1 })
+      .skip((page - 1) * PER_PAGE)
+      .limit(PER_PAGE)
       .lean() as any[];
   }
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PER_PAGE));
 
   const items = results.map((r: any) => ({
     _id: r._id.toString(),
@@ -71,7 +81,7 @@ export default async function SearchPage({ searchParams }: P) {
   }));
 
   const title = query
-    ? `${results.length} result${results.length !== 1 ? 's' : ''} for "${query}"`
+    ? `${totalCount} result${totalCount !== 1 ? 's' : ''} for "${query}"`
     : 'Search Reports';
 
   return (
@@ -85,6 +95,7 @@ export default async function SearchPage({ searchParams }: P) {
         emptyMessage={query ? `No reports found for "${query}". Try a different keyword.` : 'Enter a search term in the header to find reports.'}
         sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}` }))}
         categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}` }))}
+        pagination={query && totalPages > 1 ? { page, totalPages, basePath: '/search', query: `q=${encodeURIComponent(query)}` } : undefined}
       />
     </SiteLayout>
   );
