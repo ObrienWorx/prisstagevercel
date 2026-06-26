@@ -42,18 +42,25 @@ export async function GET(req: NextRequest) {
     const category = sp.get('category')?.trim();
     const sector = sp.get('sector')?.trim();
     const product = sp.get('product')?.trim();
+    const index = sp.get('index')?.trim();
+    const ticker = sp.get('ticker')?.trim();
+    const recommendation = sp.get('recommendation')?.trim();
     const filter: Record<string, unknown> = {};
     if (search) filter.title = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     if (category) filter.category = category;
     if (sector) filter.sector = sector;
     if (product) filter.product = product;
+    if (index) filter.upsellTicker = index.toUpperCase();
+    if (ticker) filter.ticker = ticker.toUpperCase();
+    // Match the multi-select tags array, falling back to the legacy single `recommendation` field.
+    if (recommendation) filter.$or = [{ recommendations: recommendation }, { recommendation }];
     const [items, total] = await Promise.all([
       Report.find(filter)
         .select('-content') // omit heavy HTML body; fetched on demand via /api/reports/[id]
         .populate('category', 'name slug')
         .populate('sector', 'name slug')
         .populate('product', 'name regularPrice salePrice')
-        .populate('pastStockRecommendation', 'title slug')
+        .populate('pastStockRecommendations', 'title slug ticker upsellTicker')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -69,12 +76,14 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'reports'); if (error) return error;
   await connectDB();
-  const { title, slug, content, featuredImage, category, sector, product, pastStockRecommendation, upsellTicker, ticker, price, recommendation, recommendations, featured, publishStatus, metaTitle, metaDescription, metaImage } = await req.json();
+  const { title, slug, content, featuredImage, category, sector, product, pastStockRecommendation, pastStockRecommendations, upsellTicker, ticker, price, recommendation, recommendations, featured, publishStatus, metaTitle, metaDescription, metaImage } = await req.json();
   if (!title) return errorResponse('Title is required');
   const finalSlug = slug ? slugify(slug) : slugify(title);
   if (await Report.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
   const recoTags = Array.isArray(recommendations) ? recommendations.filter(Boolean) : (recommendation ? [recommendation] : []);
-  const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, pastStockRecommendation: pastStockRecommendation || null, upsellTicker: (upsellTicker || '').trim().toUpperCase(), ticker: (ticker || '').trim().toUpperCase(), price: price ?? 0, recommendation: recoTags[0] || '', recommendations: recoTags, featured: !!featured, publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
-  await report.populate([{ path: 'category', select: 'name slug' }, { path: 'sector', select: 'name slug' }, { path: 'product', select: 'name' }, { path: 'pastStockRecommendation', select: 'title slug' }]);
+  // A SELL may close several prior buys — keep the singular field synced to the first for back-compat.
+  const pastBuys = Array.isArray(pastStockRecommendations) ? pastStockRecommendations.filter(Boolean) : (pastStockRecommendation ? [pastStockRecommendation] : []);
+  const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, pastStockRecommendations: pastBuys, pastStockRecommendation: pastBuys[0] || null, upsellTicker: (upsellTicker || '').trim().toUpperCase(), ticker: (ticker || '').trim().toUpperCase(), price: price ?? 0, recommendation: recoTags[0] || '', recommendations: recoTags, featured: !!featured, publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
+  await report.populate([{ path: 'category', select: 'name slug' }, { path: 'sector', select: 'name slug' }, { path: 'product', select: 'name' }, { path: 'pastStockRecommendations', select: 'title slug ticker upsellTicker' }]);
   return successResponse(report, 'Report created', 201);
 }

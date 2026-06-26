@@ -21,7 +21,8 @@ export async function GET(req: NextRequest, { params }: Params) {
     .populate('category', 'name slug')
     .populate('sector', 'name slug')
     .populate('product', 'name price')
-    .populate('pastStockRecommendation', 'title slug');
+    .populate('pastStockRecommendation', 'title slug')
+    .populate('pastStockRecommendations', 'title slug ticker upsellTicker');
   if (!report) return errorResponse('Report not found', 404);
   return successResponse(report);
 }
@@ -33,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   await connectDB();
   const { id } = await params;
   const body = await req.json();
-  const { title, slug, content, featuredImage, category, sector, product, pastStockRecommendation, upsellTicker, ticker, price, recommendation, recommendations, featured, publishStatus, metaTitle, metaDescription, metaImage } = body;
+  const { title, slug, content, featuredImage, category, sector, product, pastStockRecommendation, pastStockRecommendations, upsellTicker, ticker, price, recommendation, recommendations, featured, publishStatus, metaTitle, metaDescription, metaImage } = body;
 
   const existing = await Report.findById(id);
   if (!existing) return errorResponse('Report not found', 404);
@@ -53,7 +54,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
     ...(category            !== undefined && { category: category || null }),
     ...(sector              !== undefined && { sector: sector || null }),
     ...(product             !== undefined && { product: product || null }),
-    ...(pastStockRecommendation !== undefined && { pastStockRecommendation: pastStockRecommendation || null }),
+    ...(pastStockRecommendations !== undefined && {
+      pastStockRecommendations: Array.isArray(pastStockRecommendations) ? pastStockRecommendations.filter(Boolean) : [],
+      pastStockRecommendation: (Array.isArray(pastStockRecommendations) && pastStockRecommendations.filter(Boolean)[0]) || null,
+    }),
+    ...(pastStockRecommendations === undefined && pastStockRecommendation !== undefined && {
+      pastStockRecommendation: pastStockRecommendation || null,
+      pastStockRecommendations: pastStockRecommendation ? [pastStockRecommendation] : [],
+    }),
     ...(upsellTicker        !== undefined && { upsellTicker: (upsellTicker || '').trim().toUpperCase() }),
     ...(ticker              !== undefined && { ticker: (ticker || '').trim().toUpperCase() }),
     ...(price               !== undefined && { price: Number(price) || 0 }),
@@ -73,7 +81,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
     .populate('category', 'name slug')
     .populate('sector', 'name slug')
     .populate('product', 'name')
-    .populate('pastStockRecommendation', 'title slug');
+    .populate('pastStockRecommendation', 'title slug')
+    .populate('pastStockRecommendations', 'title slug ticker upsellTicker');
 
   return successResponse(updated, 'Report updated successfully');
 }

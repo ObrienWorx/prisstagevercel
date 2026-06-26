@@ -94,15 +94,30 @@ function parseRecLine(html) {
 // Keep headings + paragraphs + images/figures + lists, in document order.
 function richContent(slice) {
   const nodes = slice.match(/<h2\b[^>]*>[\s\S]*?<\/h2>|<h3\b[^>]*>[\s\S]*?<\/h3>|<h4\b[^>]*>[\s\S]*?<\/h4>|<p\b[^>]*>[\s\S]*?<\/p>|<figure\b[^>]*>[\s\S]*?<\/figure>|<ul\b[^>]*>[\s\S]*?<\/ul>|<ol\b[^>]*>[\s\S]*?<\/ol>|<img\b[^>]*?\/?>/gi) || [];
-  return nodes.map((n) => n.trim()).filter((n) => stripTags(n).length > 0 || /<img|<figure/i.test(n)).join('\n');
+  return nodes
+    .map((n) => n.replace(/(?:&nbsp;| )(?:\s*(?:&nbsp;| ))+/gi, ' ').trim()) // collapse padding runs
+    .filter((n) => stripTags(n).length > 0 || /<img|<figure/i.test(n)).join('\n');
 }
 function firstImage(slice) {
   const m = slice.match(/<img\b[^>]*?\bsrc="([^"]+)"[^>]*?>/i);
   return m ? m[1] : '';
 }
 function disclaimerStart(html) {
-  const i = html.search(new RegExp('<p[^>]*>(?:(?!<\\/p>)[\\s\\S])*?Disclaimer:', 'i'));
-  return i === -1 ? html.length : i;
+  // Cut at the first boilerplate/footnote block. Older posts use a bare
+  // "<p><strong>Disclaimer</strong></p>" heading (no colon) and "*All currency
+  // figures…" / "*All data sourced…" footnotes ahead of the disclaimer.
+  const markers = [
+    '<p[^>]*>(?:(?!<\\/p>)[\\s\\S])*?Disclaimer:',
+    '<p[^>]*>(?:(?!<\\/p>)[\\s\\S])*?Disclaimer<',
+    '<p[^>]*>(?:(?!<\\/p>)[\\s\\S])*?All currency figures are in',
+    '<p[^>]*>(?:(?!<\\/p>)[\\s\\S])*?All data sourced from',
+  ];
+  let min = html.length;
+  for (const src of markers) {
+    const i = html.search(new RegExp(src, 'i'));
+    if (i !== -1 && i < min) min = i;
+  }
+  return min;
 }
 
 // Gutenberg: h4 headings carrying "INDEX: <mark>TICKER</mark>"
@@ -127,6 +142,28 @@ function findHeadings(html) {
   const out = [];
   let m;
   while ((m = re.exec(html))) out.push({ index: m[1].trim().toUpperCase(), ticker: m[2].toUpperCase(), start: m.index, end: re.lastIndex });
+  return out;
+}
+
+// Legacy plain-paragraph format: company name in a bold <p>, then a separate
+// "<p>ASX: TICKER</p>" line (no Gutenberg <mark>, no Elementor heading class).
+// Each stock block starts at the bold company <p> that immediately precedes its
+// ticker line.
+const PLAIN_TICKER_RE = /^([A-Za-z][A-Za-z .]*?):\s*([A-Za-z0-9.]+)$/;
+function plainHeadings(html) {
+  const pRe = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+  const paras = [];
+  let m;
+  while ((m = pRe.exec(html))) paras.push({ start: m.index, inner: m[1] });
+
+  const out = [];
+  for (let i = 0; i < paras.length; i++) {
+    const tm = stripTags(paras[i].inner).match(PLAIN_TICKER_RE);
+    if (!tm) continue;
+    // The bold company name sits in the paragraph just above the ticker line.
+    const company = i > 0 ? paras[i - 1] : paras[i];
+    out.push({ index: tm[1].trim().toUpperCase(), ticker: tm[2].toUpperCase(), blockStart: company.start });
+  }
   return out;
 }
 
@@ -176,6 +213,7 @@ function buildReports(post) {
 
   const gTickers = gutenbergTickers(html);
   const eHeads = findHeadings(html);
+  const pHeads = plainHeadings(html.slice(0, cut));
 
   // ---- MULTI (Gutenberg): split per stock ----
   if (gTickers.length >= 2) {
@@ -217,6 +255,23 @@ function buildReports(post) {
     });
   }
 
+  // ---- MULTI (legacy plain paragraphs): split per stock ----
+  if (pHeads.length >= 2) {
+    return pHeads.map((h, i) => {
+      const sliceEnd = i + 1 < pHeads.length ? pHeads[i + 1].blockStart : cut;
+      const slice = html.slice(h.blockStart, sliceEnd);
+      const rec = parseRecLine(slice) || {};
+      return {
+        title: `${postTitle} (${h.index}:${h.ticker})`,
+        baseSlug: `${postSlug || 'daily-digest'}-${h.ticker.toLowerCase()}`,
+        content: `${richContent(slice)}\n${TERMS}`,
+        featuredImage: firstImage(slice),
+        index: h.index, ticker: h.ticker, price: rec.price ?? 0,
+        recommendation: rec.reco || '', recommendations: rec.reco ? [rec.reco] : [], createdAt: postDate,
+      };
+    });
+  }
+
   // ---- SINGLE: leave exactly as the original simple import (full body, WP title/slug) ----
   const { index, ticker } = parseTitleSimple(post?.title?.rendered || '');
   const recos = readAcf(post);
@@ -249,12 +304,25 @@ async function main() {
     else { const r = await Report.deleteMany({ product: productId }); console.log(`PURGE: deleted ${r.deletedCount} existing Daily Digest reports`); }
   }
 
-  let created = 0, skipped = 0, postsSeen = 0, splitPosts = 0, singlePosts = 0, page = 1;
+  let created = 0, skipped = 0, postsSeen = 0, splitPosts = 0, singlePosts = 0, staleRemoved = 0, page = 1;
 
   const handlePost = async (p) => {
     postsSeen++;
     const reports = buildReports(p);
-    if (reports[0]?.single) singlePosts++; else splitPosts++;
+    const isSplit = !reports[0]?.single;
+    if (isSplit) splitPosts++; else singlePosts++;
+
+    // A post that now splits may already be imported as ONE single report sitting
+    // at the parent post slug — remove that stale single before creating the splits.
+    if (isSplit) {
+      const parentSlug = (p?.slug || '').toLowerCase();
+      if (parentSlug && await Report.exists({ slug: parentSlug, product: productId })) {
+        if (DRY) console.log(`  [${p.id}] would remove stale single report  slug=${parentSlug}`);
+        else await Report.deleteOne({ slug: parentSlug, product: productId });
+        staleRemoved++;
+      }
+    }
+
     for (const r of reports) {
       if (await Report.exists({ slug: r.baseSlug })) { skipped++; continue; }
       const slug = await uniqueSlug(r.baseSlug);
@@ -298,11 +366,11 @@ async function main() {
     process.stdout.write('\n');
   }
 
-  console.log(`\nDone: ${created} reports ${DRY ? 'WOULD BE created' : 'created'} from ${postsSeen} posts (${splitPosts} split, ${singlePosts} single), ${skipped} skipped`);
+  console.log(`\nDone: ${created} reports ${DRY ? 'WOULD BE created' : 'created'} from ${postsSeen} posts (${splitPosts} split, ${singlePosts} single), ${skipped} skipped, ${staleRemoved} stale single(s) ${DRY ? 'would be ' : ''}removed`);
   await mongoose.disconnect();
 }
 
 const isMain = import.meta.url === pathToFileURL(process.argv[1] || '').href;
 if (isMain) main().catch((e) => { console.error('\nMIGRATION FAILED:', e); process.exit(1); });
 
-export { parseTitleSimple, parseRecLine, findHeadings, gutenbergTickers, gutenbergCompanies, buildReports, mapReco };
+export { parseTitleSimple, parseRecLine, findHeadings, gutenbergTickers, gutenbergCompanies, plainHeadings, buildReports, mapReco };

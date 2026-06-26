@@ -16,6 +16,7 @@ interface Report {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
   category: Ref | null; sector: Ref | null; product: Ref | null;
   pastStockRecommendation: ReportRef | string | null;
+  pastStockRecommendations?: (ReportRef | string)[];
   upsellTicker: string; ticker: string; price: number; recommendation: string; recommendations?: string[];
   publishStatus: 'draft' | 'published';
   featured: boolean;
@@ -31,35 +32,29 @@ const RECOM_COLOR: Record<string, string> = {
 };
 
 const refId = (ref: ReportRef | string | null | undefined) => typeof ref === 'string' ? ref : ref?._id || '';
+const refIds = (refs: (ReportRef | string)[] | null | undefined) => (refs || []).map(refId).filter(Boolean);
 
 const empty = {
   title: '', slug: '', content: '', featuredImage: '',
-  category: '', sector: '', product: '', pastStockRecommendation: '',
+  category: '', sector: '', product: '', pastStockRecommendations: [] as string[],
   upsellTicker: '', ticker: '', price: '', recommendations: [] as string[],
   publishStatus: 'draft' as 'draft' | 'published',
   featured: false,
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
-// Searchable replacement for the "Past Stock Recommendations" select: a native
-// <select> can't host a search box, so this is a custom combobox over the report titles.
-function ReportSearchSelect({ options, value, onChange, empty = 'No reports available.' }: {
-  options: ReportRef[]; value: string; onChange: (id: string) => void; empty?: string;
+// Searchable dropdown over a plain string list (used by the Ticker filter, which
+// can have a long list of symbols). A native <select> can't host a search box.
+function SearchSelect({ options, value, onChange, placeholder, style }: {
+  options: string[]; value: string; onChange: (v: string) => void; placeholder: string; style?: React.CSSProperties;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef<HTMLDivElement>(null);
 
-  const selected = options.find((o) => o._id === value);
   const q = query.trim().toLowerCase();
-  const filtered = q
-    ? options.filter((o) =>
-      o.title.toLowerCase().includes(q) ||
-      (o.ticker || '').toLowerCase().includes(q) ||
-      (o.upsellTicker || '').toLowerCase().includes(q))
-    : options;
+  const filtered = q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
 
-  // Close when clicking outside the control.
   useEffect(() => {
     if (!open) return;
     const onDocClick = (e: MouseEvent) => {
@@ -69,7 +64,85 @@ function ReportSearchSelect({ options, value, onChange, empty = 'No reports avai
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [open]);
 
-  const pick = (id: string) => { onChange(id); setOpen(false); setQuery(''); };
+  const pick = (v: string) => { onChange(v); setOpen(false); setQuery(''); };
+
+  return (
+    <div ref={ref} style={{ position: 'relative', ...style }}>
+      <button
+        type="button"
+        className="form-select text-start"
+        onClick={() => setOpen((o) => !o)}
+        style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+      >
+        {value || <span style={{ color: 'var(--muted)' }}>{placeholder}</span>}
+      </button>
+      {open && (
+        <div
+          className="card"
+          style={{ position: 'absolute', zIndex: 1056, top: '100%', left: 0, right: 0, marginTop: 4, maxHeight: 280, display: 'flex', flexDirection: 'column' }}
+        >
+          <div style={{ padding: 8, borderBottom: '1px solid var(--border, #e5e7eb)' }}>
+            <input
+              className="form-control form-control-sm"
+              placeholder="Search ticker..."
+              value={query}
+              autoFocus
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <div style={{ overflowY: 'auto' }}>
+            <button
+              type="button"
+              className="dropdown-item"
+              style={{ width: '100%', textAlign: 'left', padding: '6px 12px', background: !value ? 'var(--bs-primary-bg-subtle, #e7f1ff)' : 'none', border: 'none', color: 'var(--muted)' }}
+              onClick={() => pick('')}
+            >{placeholder}</button>
+            {filtered.length === 0 ? (
+              <div style={{ padding: '6px 12px', color: 'var(--muted)', fontSize: 13 }}>No matches.</div>
+            ) : filtered.map((o) => (
+              <button
+                key={o}
+                type="button"
+                className="dropdown-item"
+                style={{ width: '100%', textAlign: 'left', padding: '6px 12px', background: o === value ? 'var(--bs-primary-bg-subtle, #e7f1ff)' : 'none', border: 'none' }}
+                onClick={() => pick(o)}
+              >{o}</button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Multi-select variant of ReportSearchSelect: a SELL can close several prior buys,
+// so this lets you tick every matching report. Shows selected titles as chips.
+function ReportMultiSelect({ options, value, onChange, empty = 'No reports available.' }: {
+  options: ReportRef[]; value: string[]; onChange: (ids: string[]) => void; empty?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selected = options.filter((o) => value.includes(o._id));
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? options.filter((o) =>
+      o.title.toLowerCase().includes(q) ||
+      (o.ticker || '').toLowerCase().includes(q) ||
+      (o.upsellTicker || '').toLowerCase().includes(q))
+    : options;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open]);
+
+  const toggle = (id: string) => onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -77,9 +150,22 @@ function ReportSearchSelect({ options, value, onChange, empty = 'No reports avai
         type="button"
         className="form-select text-start"
         onClick={() => setOpen((o) => !o)}
-        style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        style={{ minHeight: 38, height: 'auto', whiteSpace: 'normal' }}
       >
-        {selected ? selected.title : <span style={{ color: 'var(--muted)' }}>Select Report</span>}
+        {selected.length === 0
+          ? <span style={{ color: 'var(--muted)' }}>Select reports</span>
+          : <span className="d-flex flex-wrap gap-1">
+            {selected.map((o) => (
+              <span key={o._id} className="badge bg-secondary" style={{ fontWeight: 400 }}>
+                {o.upsellTicker || o.ticker ? `${o.upsellTicker || ''}${o.upsellTicker && o.ticker ? ':' : ''}${o.ticker || ''}` : o.title}
+                <span
+                  role="button"
+                  onClick={(e) => { e.stopPropagation(); toggle(o._id); }}
+                  style={{ marginLeft: 6, cursor: 'pointer' }}
+                >×</span>
+              </span>
+            ))}
+          </span>}
       </button>
       {open && (
         <div
@@ -96,22 +182,19 @@ function ReportSearchSelect({ options, value, onChange, empty = 'No reports avai
             />
           </div>
           <div style={{ overflowY: 'auto' }}>
-            <button
-              type="button"
-              className="dropdown-item"
-              style={{ width: '100%', textAlign: 'left', padding: '6px 12px', background: 'none', border: 'none', color: 'var(--muted)' }}
-              onClick={() => pick('')}
-            >Select Report</button>
             {filtered.length === 0 ? (
               <div style={{ padding: '6px 12px', color: 'var(--muted)', fontSize: 13 }}>{options.length === 0 ? empty : 'No reports match.'}</div>
             ) : filtered.map((o) => (
               <button
                 key={o._id}
                 type="button"
-                className="dropdown-item"
-                style={{ width: '100%', textAlign: 'left', padding: '6px 12px', background: o._id === value ? 'var(--bs-primary-bg-subtle, #e7f1ff)' : 'none', border: 'none', whiteSpace: 'normal' }}
-                onClick={() => pick(o._id)}
-              >{o.title}</button>
+                className="dropdown-item d-flex align-items-center gap-2"
+                style={{ width: '100%', textAlign: 'left', padding: '6px 12px', background: value.includes(o._id) ? 'var(--bs-primary-bg-subtle, #e7f1ff)' : 'none', border: 'none', whiteSpace: 'normal' }}
+                onClick={() => toggle(o._id)}
+              >
+                <input type="checkbox" className="form-check-input m-0" checked={value.includes(o._id)} readOnly />
+                <span>{o.title}</span>
+              </button>
             ))}
           </div>
         </div>
@@ -135,6 +218,9 @@ export default function ReportsPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [sectorFilter, setSectorFilter] = useState('');
   const [productFilter, setProductFilter] = useState('');
+  const [indexFilter, setIndexFilter] = useState('');
+  const [tickerFilter, setTickerFilter] = useState('');
+  const [recommendationFilter, setRecommendationFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -147,12 +233,12 @@ export default function ReportsPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
 
-  // Load the paginated report list for the current page/search/category.
-  const load = useCallback(async (p = 1, q = '', cat = '', sec = '', prod = '') => {
+  // Load the paginated report list for the current page/search/filters.
+  const load = useCallback(async (p = 1, q = '', cat = '', sec = '', prod = '', idx = '', tic = '', reco = '') => {
     setLoading(true);
     try {
       const r = await fetch(
-        `/api/reports?page=${p}&limit=${PER_PAGE}&search=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}&sector=${encodeURIComponent(sec)}&product=${encodeURIComponent(prod)}`,
+        `/api/reports?page=${p}&limit=${PER_PAGE}&search=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}&sector=${encodeURIComponent(sec)}&product=${encodeURIComponent(prod)}&index=${encodeURIComponent(idx)}&ticker=${encodeURIComponent(tic)}&recommendation=${encodeURIComponent(reco)}`,
         { headers: h },
       ).then((res) => res.json());
       if (r.success) {
@@ -181,11 +267,21 @@ export default function ReportsPage() {
 
   useEffect(() => { void loadRefs(); }, [loadRefs]);
 
-  // Reload list whenever the committed search term or category filter changes (and on first mount).
+  // Distinct INDEX and TICKER values, derived from the lightweight titles list.
+  const indexOptions = useMemo(
+    () => Array.from(new Set(titles.map((t) => t.upsellTicker).filter(Boolean) as string[])).sort(),
+    [titles],
+  );
+  const tickerOptions = useMemo(
+    () => Array.from(new Set(titles.map((t) => t.ticker).filter(Boolean) as string[])).sort(),
+    [titles],
+  );
+
+  // Reload list whenever the committed search term or any filter changes (and on first mount).
   useEffect(() => {
-    const timeout = window.setTimeout(() => { void load(1, search, categoryFilter, sectorFilter, productFilter); }, 0);
+    const timeout = window.setTimeout(() => { void load(1, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter); }, 0);
     return () => { window.clearTimeout(timeout); };
-  }, [load, search, categoryFilter, sectorFilter, productFilter]);
+  }, [load, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter]);
 
   // Open edit modal when navigated from search with ?edit=<id>
   useEffect(() => {
@@ -197,13 +293,14 @@ export default function ReportsPage() {
   }, [searchParams]);
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
-  const goToPage = (p: number) => { void load(p, search, categoryFilter, sectorFilter, productFilter); };
+  const goToPage = (p: number) => { void load(p, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter); };
 
   const fillForm = (item: Report) => {
     setEditing(item);
     setForm({
       title: item.title, slug: item.slug, content: item.content || '', featuredImage: item.featuredImage,
-      category: item.category?._id || '', sector: item.sector?._id || '', product: item.product?._id || '', pastStockRecommendation: refId(item.pastStockRecommendation),
+      category: item.category?._id || '', sector: item.sector?._id || '', product: item.product?._id || '',
+      pastStockRecommendations: item.pastStockRecommendations?.length ? refIds(item.pastStockRecommendations) : (item.pastStockRecommendation ? [refId(item.pastStockRecommendation)] : []),
       upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), recommendations: item.recommendations?.length ? item.recommendations : (item.recommendation ? [item.recommendation] : []),
       publishStatus: item.publishStatus,
       featured: item.featured ?? false,
@@ -236,7 +333,7 @@ export default function ReportsPage() {
         category: form.category || null,
         sector: form.sector || null,
         product: form.product || null,
-        pastStockRecommendation: form.pastStockRecommendation || null,
+        pastStockRecommendations: form.pastStockRecommendations,
         upsellTicker: form.upsellTicker.trim().toUpperCase(),
         ticker: form.ticker.trim().toUpperCase(),
         price: form.price !== '' ? Number(form.price) : 0,
@@ -244,7 +341,7 @@ export default function ReportsPage() {
       const url = editing ? `/api/reports/${editing._id}` : '/api/reports';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
       const d = await r.json();
-      if (d.success) { flash(d.message); setShowModal(false); load(page, search, categoryFilter, sectorFilter, productFilter); loadRefs(); }
+      if (d.success) { flash(d.message); setShowModal(false); load(page, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter); loadRefs(); }
       else setErr(d.error || 'Something went wrong');
     } finally { setSaving(false); }
   };
@@ -254,7 +351,7 @@ export default function ReportsPage() {
     try {
       const r = await fetch(`/api/reports/${del._id}`, { method: 'DELETE', headers: h });
       const d = await r.json();
-      if (d.success) { flash('Report deleted'); setDel(null); load(page, search, categoryFilter, sectorFilter, productFilter); loadRefs(); }
+      if (d.success) { flash('Report deleted'); setDel(null); load(page, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter); loadRefs(); }
       else { setErr(d.error || 'Delete failed'); setDel(null); }
     } finally { setSaving(false); }
   };
@@ -320,13 +417,48 @@ export default function ReportsPage() {
           <option value="">All products</option>
           {products.map((p) => <option key={p._id} value={p._id}>{p.name}</option>)}
         </select>
+        <select
+          className="form-select"
+          style={{ maxWidth: 180 }}
+          value={indexFilter}
+          onChange={(e) => setIndexFilter(e.target.value)}
+        >
+          <option value="">All indexes</option>
+          {indexOptions.map((i) => <option key={i} value={i}>{i}</option>)}
+        </select>
+        <SearchSelect
+          options={tickerOptions}
+          value={tickerFilter}
+          onChange={setTickerFilter}
+          placeholder="All tickers"
+          style={{ width: 180 }}
+        />
+        <select
+          className="form-select"
+          style={{ maxWidth: 220 }}
+          value={recommendationFilter}
+          onChange={(e) => setRecommendationFilter(e.target.value)}
+        >
+          <option value="">All recommendations</option>
+          {RECOMMENDATION_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {(categoryFilter || sectorFilter || productFilter || indexFilter || tickerFilter || recommendationFilter) && (
+          <button
+            className="btn btn-outline-secondary"
+            type="button"
+            onClick={() => {
+              setCategoryFilter(''); setSectorFilter(''); setProductFilter('');
+              setIndexFilter(''); setTickerFilter(''); setRecommendationFilter('');
+            }}
+          >Clear filters</button>
+        )}
       </div>
 
       <div className="card">
         {loading ? (
           <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
         ) : items.length === 0 ? (
-          <div className="empty-state"><div className="empty-icon">📈</div><p>{search ? `No reports match “${search}”.` : (categoryFilter || sectorFilter || productFilter) ? 'No reports match the selected filters.' : 'No reports yet. Create your first one.'}</p></div>
+          <div className="empty-state"><div className="empty-icon">📈</div><p>{search ? `No reports match “${search}”.` : (categoryFilter || sectorFilter || productFilter || indexFilter || tickerFilter || recommendationFilter) ? 'No reports match the selected filters.' : 'No reports yet. Create your first one.'}</p></div>
         ) : (
           <div className="table-responsive">
             <table className="table">
@@ -436,15 +568,15 @@ export default function ReportsPage() {
                   </div>
 
                   <div className="col-md-3">
-                    <label className="form-label">Past Stock Recommendations</label>
-                    <ReportSearchSelect
+                    <label className="form-label">Past Stock Recommendations <span style={{ fontSize: 11, color: '#64748b', fontWeight: 400 }}>(select all matching buys)</span></label>
+                    <ReportMultiSelect
                       options={titles.filter((report) =>
                         report._id !== editing?._id &&
                         (report.upsellTicker || '') === form.upsellTicker &&
                         (report.ticker || '') === form.ticker,
                       )}
-                      value={form.pastStockRecommendation}
-                      onChange={(id) => setForm(prev => ({ ...prev, pastStockRecommendation: id }))}
+                      value={form.pastStockRecommendations}
+                      onChange={(ids) => setForm(prev => ({ ...prev, pastStockRecommendations: ids }))}
                       empty={!form.upsellTicker && !form.ticker
                         ? 'Set INDEX and TICKER to see matching reports.'
                         : 'No other reports for this index & ticker.'}

@@ -8,7 +8,8 @@ export interface IReport extends Document {
   category: Types.ObjectId | null;
   sector: Types.ObjectId | null;
   product: Types.ObjectId | null;
-  pastStockRecommendation: Types.ObjectId | null;
+  pastStockRecommendation: Types.ObjectId | null;   // primary (= pastStockRecommendations[0]); kept for back-compat
+  pastStockRecommendations: Types.ObjectId[];        // a SELL closes every prior BUY / SPECULATIVE BUY of the same index+ticker
   upsellTicker: string;
   ticker: string;
   price: number;
@@ -36,6 +37,7 @@ const ReportSchema = new Schema<IReport>(
     sector: { type: Schema.Types.ObjectId, ref: 'Sector', default: null },
     product: { type: Schema.Types.ObjectId, ref: 'Product', default: null },
     pastStockRecommendation: { type: Schema.Types.ObjectId, ref: 'Report', default: null },
+    pastStockRecommendations: { type: [{ type: Schema.Types.ObjectId, ref: 'Report' }], default: [] },
     upsellTicker: { type: String, default: '' },
     ticker: { type: String, default: '', trim: true },
     price: { type: Number, default: 0 },
@@ -59,6 +61,10 @@ if (mongoose.models.Report) {
 
   if (!cachedReportSchema.path('pastStockRecommendation')) {
     missingPaths.pastStockRecommendation = { type: Schema.Types.ObjectId, ref: 'Report', default: null };
+  }
+
+  if (!cachedReportSchema.path('pastStockRecommendations')) {
+    missingPaths.pastStockRecommendations = { type: [{ type: Schema.Types.ObjectId, ref: 'Report' }], default: [] };
   }
 
   if (!cachedReportSchema.path('upsellTicker')) {

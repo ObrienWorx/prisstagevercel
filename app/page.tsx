@@ -109,43 +109,45 @@ export default async function HomePage() {
     getBlogsForCategory('sector-stories', 6),
   ]);
 
+  type HomeRecBuy = {
+    _id: MongoId;
+    title: string;
+    ticker: string;
+    upsellTicker: string;
+    price: number;
+  };
   type HomeRecPopulated = {
     _id: MongoId;
     title: string;
     ticker: string;
     upsellTicker: string;
     price: number;
-    pastStockRecommendation: {
-      _id: MongoId;
-      title: string;
-      ticker: string;
-      upsellTicker: string;
-      price: number;
-    } | null;
+    pastStockRecommendations: HomeRecBuy[];
   };
 
   const pastRecReports = await Report.find({
     publishStatus: 'published',
     recommendation: 'SELL',
-    pastStockRecommendation: { $ne: null },
+    pastStockRecommendations: { $exists: true, $ne: [] },
   })
-    .select('title ticker upsellTicker price pastStockRecommendation')
-    .populate('pastStockRecommendation', 'title ticker upsellTicker price')
+    .select('title ticker upsellTicker price pastStockRecommendations')
+    .populate('pastStockRecommendations', 'title ticker upsellTicker price')
     .sort({ createdAt: -1 })
-    .limit(5)
+    .limit(10)
     .lean() as unknown as HomeRecPopulated[];
 
+  // Each SELL closes one or more buys — emit a row per buy, newest first, capped at 5.
   const homeRecs = pastRecReports
-    .map((sell) => {
-      const buy = sell.pastStockRecommendation;
+    .flatMap((sell) => (sell.pastStockRecommendations || []).map((buy) => {
       if (!buy || !buy.price) return null;
       const exchange = buy.upsellTicker || sell.upsellTicker || '';
       const ticker = buy.ticker || sell.ticker || '';
       const label = exchange && ticker ? ` (${exchange}: ${ticker})` : ticker ? ` (${ticker})` : '';
       const gainLoss = buy.price > 0 ? ((sell.price - buy.price) / buy.price) * 100 : null;
       return { code: `${buy.title}${label}`, avgBuy: buy.price, avgSell: sell.price, gainLoss };
-    })
-    .filter((r): r is { code: string; avgBuy: number; avgSell: number; gainLoss: number | null } => r !== null);
+    }))
+    .filter((r): r is { code: string; avgBuy: number; avgSell: number; gainLoss: number | null } => r !== null)
+    .slice(0, 5);
 
   const validGains = homeRecs.filter(r => r.gainLoss !== null).map(r => r.gainLoss as number);
   const avgGain = validGains.length > 0 ? validGains.reduce((s, v) => s + v, 0) / validGains.length : null;

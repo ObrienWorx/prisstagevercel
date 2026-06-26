@@ -20,7 +20,11 @@ type PopulatedReport = {
   recommendation?: string;
   createdAt: string | Date;
   pastStockRecommendation?: PopulatedReport | null;
+  pastStockRecommendations?: PopulatedReport[];
 };
+
+// BUY and SPECULATIVE BUY are treated identically as "buy" recommendations.
+const isBuyReco = (r?: string) => r === 'BUY' || r === 'SPECULATIVE BUY';
 
 type LiveQuote = {
   price: number;
@@ -112,37 +116,38 @@ export default async function PastRecommendationsPage() {
 
   const reports = await Report.find({
     publishStatus: 'published',
-    recommendation: { $in: ['BUY', 'SELL'] },
+    recommendation: { $in: ['BUY', 'SELL', 'SPECULATIVE BUY'] },
   })
-    .populate('pastStockRecommendation', 'title slug ticker upsellTicker price recommendation createdAt')
+    .populate('pastStockRecommendations', 'title slug ticker upsellTicker price recommendation createdAt')
     .sort({ createdAt: -1 })
     .lean() as unknown as PopulatedReport[];
 
   const soldBuyIds = new Set<string>();
 
+  // A SELL closes every linked buy → emit one row per buy (newest sells first).
   const pastRows = reports
-    .filter((report) => report.recommendation === 'SELL' && report.pastStockRecommendation)
-    .map((sellReport) => {
-      const buyReport = sellReport.pastStockRecommendation as PopulatedReport;
-      const buy = serializeReport(buyReport);
+    .filter((report) => report.recommendation === 'SELL' && (report.pastStockRecommendations?.length))
+    .flatMap((sellReport) => {
       const sell = serializeReport(sellReport);
-      soldBuyIds.add(buy.id);
-
-      return {
-        ticker: buy.ticker,
-        index: buy.index,
-        buyingDate: formatDate(buy.createdAt),
-        buyReportSlug: buy.slug,
-        sellingDate: formatDate(sell.createdAt),
-        sellReportSlug: sell.slug,
-        buyingPrice: buy.price,
-        sellingPrice: sell.price,
-        profitLoss: profitLossPercent(buy.price, sell.price),
-      };
+      return (sellReport.pastStockRecommendations as PopulatedReport[]).map((buyReport) => {
+        const buy = serializeReport(buyReport);
+        soldBuyIds.add(buy.id);
+        return {
+          ticker: buy.ticker,
+          index: buy.index,
+          buyingDate: formatDate(buy.createdAt),
+          buyReportSlug: buy.slug,
+          sellingDate: formatDate(sell.createdAt),
+          sellReportSlug: sell.slug,
+          buyingPrice: buy.price,
+          sellingPrice: sell.price,
+          profitLoss: profitLossPercent(buy.price, sell.price),
+        };
+      });
     });
 
   const currentBuyReports = reports
-    .filter((report) => report.recommendation === 'BUY' && !soldBuyIds.has(report._id.toString()))
+    .filter((report) => isBuyReco(report.recommendation) && !soldBuyIds.has(report._id.toString()))
     .map((report) => serializeReport(report));
 
   const liveQuotes = new Map<string, LiveQuote | null>();

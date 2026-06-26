@@ -1,18 +1,19 @@
 // scripts/map-past-recommendations.mjs
-// Auto-link each SELL report to the matching BUY / SPECULATIVE BUY report (same INDEX
-// + TICKER) via `pastStockRecommendation`. This is what /past-recommendations + the
-// homepage read (SELL.pastStockRecommendation -> the original buy).
+// Link each SELL report to EVERY prior open BUY / SPECULATIVE BUY of the same INDEX
+// + TICKER via `pastStockRecommendations` (array). One sell closes all the buys that
+// were opened since the previous sell. This is what /past-recommendations + the
+// homepage read (a row per buy -> sell). `pastStockRecommendation` (singular) is kept
+// in sync with the primary/earliest buy for back-compat.
 //
 // Rules (per user):
 //   - Match on upsellTicker (INDEX) + ticker.
-//   - Classify by the primary `recommendation` column: BUY/SPECULATIVE BUY = buy, SELL = sell.
-//   - Only fill sells that are currently UNLINKED (skip ones already mapped).
-//   - When several buys exist for a ticker, link to BUY_PICK (default: earliest by date).
+//   - BUY and SPECULATIVE BUY are the same ("buy"); SELL is a sell.
+//   - A sell closes every buy opened after the previous sell and before it.
+//   - Deterministic + idempotent: re-running recomputes the same links.
 //
 // Usage:
 //   DRY=1 node scripts/map-past-recommendations.mjs            # preview (no writes)
 //   node scripts/map-past-recommendations.mjs                  # apply
-//   BUY_PICK=earliest|latest|lowest DRY=1 node scripts/...     # change tie-break
 
 import mongoose from 'mongoose';
 import { readFileSync } from 'node:fs';
@@ -21,7 +22,6 @@ import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DRY = !!process.env.DRY;
-const BUY_PICK = (process.env.BUY_PICK || 'earliest').toLowerCase();
 
 function loadEnv() {
   const raw = readFileSync(path.join(__dirname, '..', '.env'), 'utf8');
@@ -38,21 +38,14 @@ const Report = mongoose.model('Report', new mongoose.Schema({}, { strict: false 
 const isBuy = (r) => r.recommendation === 'BUY' || r.recommendation === 'SPECULATIVE BUY';
 const isSell = (r) => r.recommendation === 'SELL';
 
-function pickBuy(buys) {
-  const byDate = [...buys].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  if (BUY_PICK === 'latest') return byDate[byDate.length - 1];
-  if (BUY_PICK === 'lowest') return [...buys].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))[0];
-  return byDate[0]; // earliest
-}
-
 async function main() {
   loadEnv();
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not found in .env');
   await mongoose.connect(process.env.MONGODB_URI, { bufferCommands: false });
-  console.log(`Connected to MongoDB${DRY ? '  (DRY RUN — no writes)' : ''}  | buy pick: ${BUY_PICK}`);
+  console.log(`Connected to MongoDB${DRY ? '  (DRY RUN — no writes)' : ''}`);
 
   const rs = await Report.find({ ticker: { $nin: ['', null] }, upsellTicker: { $nin: ['', null] } })
-    .select('title ticker upsellTicker recommendation price pastStockRecommendation createdAt').lean();
+    .select('title ticker upsellTicker recommendation price pastStockRecommendation pastStockRecommendations createdAt').lean();
 
   const groups = new Map();
   for (const r of rs) {
@@ -61,25 +54,29 @@ async function main() {
     groups.get(k).push(r);
   }
 
-  let mapped = 0, skippedLinked = 0, skippedNoBuy = 0;
+  let mapped = 0, linkedBuys = 0, skippedNoBuy = 0;
   const rows = [];
   for (const [k, arr] of groups) {
-    const buys = arr.filter(isBuy);
-    const sells = arr.filter(isSell);
-    if (sells.length === 0) continue;
-    for (const sell of sells) {
-      if (sell.pastStockRecommendation) { skippedLinked++; continue; }
-      if (buys.length === 0) { skippedNoBuy++; continue; }
-      const buy = pickBuy(buys);
-      const gain = buy.price > 0 ? ((sell.price - buy.price) / buy.price) * 100 : null;
-      rows.push(`  ${k.padEnd(12)} SELL $${sell.price} <- BUY $${buy.price}${buys.length > 1 ? ` (of ${buys.length} buys)` : ''}  ${gain != null ? (gain >= 0 ? '+' : '') + gain.toFixed(1) + '%' : 'n/a'}`);
-      if (!DRY) await Report.updateOne({ _id: sell._id }, { $set: { pastStockRecommendation: buy._id } });
+    // Walk the group oldest -> newest, accumulating open buys; each sell closes them all.
+    const sorted = [...arr].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    let openBuys = [];
+    for (const r of sorted) {
+      if (isBuy(r)) { openBuys.push(r); continue; }
+      if (!isSell(r)) continue;
+      if (openBuys.length === 0) { skippedNoBuy++; continue; }
+      const buyIds = openBuys.map((b) => b._id);
+      const avgBuy = openBuys.reduce((s, b) => s + (b.price || 0), 0) / openBuys.length;
+      const gain = avgBuy > 0 ? ((r.price - avgBuy) / avgBuy) * 100 : null;
+      rows.push(`  ${k.padEnd(12)} SELL $${r.price} <- ${openBuys.length} buy(s) avg $${avgBuy.toFixed(3)}  ${gain != null ? (gain >= 0 ? '+' : '') + gain.toFixed(1) + '%' : 'n/a'}`);
+      if (!DRY) await Report.updateOne({ _id: r._id }, { $set: { pastStockRecommendations: buyIds, pastStockRecommendation: buyIds[0] } });
       mapped++;
+      linkedBuys += buyIds.length;
+      openBuys = []; // position closed
     }
   }
 
   rows.sort().forEach((r) => console.log(r));
-  console.log(`\n${DRY ? 'Would map' : 'Mapped'} ${mapped} sell report(s). Skipped — already linked ${skippedLinked}, no buy for ticker ${skippedNoBuy}.`);
+  console.log(`\n${DRY ? 'Would map' : 'Mapped'} ${mapped} sell report(s) covering ${linkedBuys} buy link(s). Skipped — no open buy for ${skippedNoBuy} sell(s).`);
   await mongoose.disconnect();
 }
 
