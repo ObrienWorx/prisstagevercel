@@ -75,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     localStorage.removeItem('admin_token');
     setUser(null);
     await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-    router.replace('/login');
+    router.replace('/OnlyAdminPanel');
   }, [router]);
 
   const verifyAdminSession = useCallback(async () => {
@@ -139,7 +139,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     localStorage.removeItem('user');
     localStorage.removeItem('admin_token');
     setUser(null);
-    router.replace('/login');
+    router.replace('/OnlyAdminPanel');
   };
 
   const canSee = (module: string | null) => {

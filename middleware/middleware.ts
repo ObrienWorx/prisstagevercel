@@ -10,13 +10,13 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
 
   // Pages that don't need auth
-  const publicPaths = ['/login', '/api/auth/login'];
+  const publicPaths = ['/OnlyAdminPanel', '/api/auth/login'];
   const isPublic = publicPaths.some((path) => pathname.startsWith(path));
 
   // If it's a public page, allow through
   if (isPublic) {
     // If already logged in and trying to visit login, redirect to dashboard
-    if (pathname === '/login' && token) {
+    if (pathname === '/OnlyAdminPanel' && token) {
       const user = verifyToken(token);
       if (user) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
@@ -27,13 +27,13 @@ export function middleware(request: NextRequest) {
 
   // For protected pages: check if token exists and is valid
   if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/OnlyAdminPanel', request.url));
   }
 
   const user = verifyToken(token);
   if (!user) {
     // Token is invalid/expired — clear it and redirect to login
-    const response = NextResponse.redirect(new URL('/login', request.url));
+    const response = NextResponse.redirect(new URL('/OnlyAdminPanel', request.url));
     response.cookies.delete('token');
     return response;
   }
@@ -52,6 +52,6 @@ export const config = {
     '/products/:path*',
     '/reports/:path*',
     '/blogs/:path*',
-    '/login',
+    '/OnlyAdminPanel',
   ],
 };

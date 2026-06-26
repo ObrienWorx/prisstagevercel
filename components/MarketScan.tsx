@@ -113,7 +113,7 @@ export default function MarketScan() {
 
       {updatedAt && (
         <div className="home-scan-powered">
-          Data Powered by EODHD as on <strong>{updatedAt} AEST</strong>
+          Data Powered by Yahoo Finance as on <strong>{updatedAt} AEST</strong>
         </div>
       )}
     </div>
