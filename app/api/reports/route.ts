@@ -6,6 +6,7 @@ import '@/models/ReportCategory';
 import '@/models/Product';
 import { authenticate, requirePermission } from '@/middleware/authMiddleware';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
+import { dateRangeFilter } from '@/lib/dateRange';
 import { slugify } from '@/lib/slugify';
 
 export async function GET(req: NextRequest) {
@@ -45,6 +46,8 @@ export async function GET(req: NextRequest) {
     const index = sp.get('index')?.trim();
     const ticker = sp.get('ticker')?.trim();
     const recommendation = sp.get('recommendation')?.trim();
+    const dateFrom = sp.get('dateFrom')?.trim();
+    const dateTo = sp.get('dateTo')?.trim();
     const filter: Record<string, unknown> = {};
     if (search) filter.title = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     if (category) filter.category = category;
@@ -54,6 +57,8 @@ export async function GET(req: NextRequest) {
     if (ticker) filter.ticker = ticker.toUpperCase();
     // Match the multi-select tags array, falling back to the legacy single `recommendation` field.
     if (recommendation) filter.$or = [{ recommendations: recommendation }, { recommendation }];
+    const createdAt = dateRangeFilter(dateFrom, dateTo);
+    if (createdAt) filter.createdAt = createdAt;
     const [items, total] = await Promise.all([
       Report.find(filter)
         .select('-content') // omit heavy HTML body; fetched on demand via /api/reports/[id]

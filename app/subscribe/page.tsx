@@ -34,13 +34,13 @@ export default async function SubscribePage() {
             </div>
           ) : (
             <div className="row g-4 justify-content-center">
-              {products.map((p, i) => {
+              {products.map((p) => {
                 const rc = p.riskRating ? RISK_COLORS[p.riskRating] : null;
                 return (
                   <div className="col-md-6 col-lg-4" key={p._id.toString()}>
-                    <div className={`product-card h-100 ${i === 1 && products.length >= 3 ? 'featured' : ''}`}>
-                      {i === 1 && products.length >= 3 && (
-                        <div className="popular-banner">Most Popular</div>
+                    <div className={`product-card h-100 ${p.isMostPopular ? 'featured' : ''}`}>
+                      {p.isMostPopular && (
+                        <div className="popular-banner">{p.popularBadgeText?.trim() || 'Most Popular'}</div>
                       )}
                       {p.featuredImage
                         ? <img src={p.featuredImage} alt={p.name} className="product-card-img" />

@@ -31,6 +31,8 @@ export interface IProduct extends Document {
   status: 'draft' | 'published';
   isActive: boolean;
   showOnFrontend: boolean;
+  isMostPopular: boolean;
+  popularBadgeText: string;
   bundledProducts: mongoose.Types.ObjectId[];
   sortOrder: number;
   metaTitle: string;
@@ -76,6 +78,10 @@ const ProductSchema = new Schema<IProduct>(
     // Controls whether the product appears in public frontend listings (independent of publish/active).
     // Hidden products are still reachable/purchasable by direct link if published.
     showOnFrontend: { type: Boolean, default: true },
+    // Shows the highlight banner (and "featured" styling) on the public subscribe card.
+    isMostPopular: { type: Boolean, default: false },
+    // Custom text for that banner — falls back to "Most Popular" when blank.
+    popularBadgeText: { type: String, default: '' },
     // Other products automatically granted (for the same duration as this product) when this one is purchased.
     bundledProducts: { type: [{ type: Schema.Types.ObjectId, ref: 'Product' }], default: [] },
     // Manual display order (lower = first) for all frontend listings & menus. Set via admin drag-and-drop.

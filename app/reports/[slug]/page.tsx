@@ -91,7 +91,8 @@ export default async function ReportSlugPage({ params }: P) {
 
   if (!report) notFound();
 
-  let hasAccess = false;
+  // Featured reports are public samples; reports with no product gate are also open to all.
+  let hasAccess = !!report.featured || !report.product;
   let isLoggedIn = false;
 
   const cookieStore = await cookies();

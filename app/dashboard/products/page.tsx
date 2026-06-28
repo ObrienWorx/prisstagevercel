@@ -29,6 +29,8 @@ interface Product {
   featuredImage: string; saleBanner: string; saleOverBanner: string;
   status: 'draft' | 'published'; isActive: boolean;
   showOnFrontend?: boolean;
+  isMostPopular?: boolean;
+  popularBadgeText?: string;
   bundledProducts?: string[];
   metaTitle: string; metaDescription: string; metaImage: string;
 }
@@ -53,6 +55,8 @@ const empty = {
   featuredImage: '', saleBanner: '', saleOverBanner: '',
   status: 'published' as 'draft' | 'published', isActive: true,
   showOnFrontend: true,
+  isMostPopular: false,
+  popularBadgeText: '',
   bundledProducts: [] as string[],
   metaTitle: '', metaDescription: '', metaImage: '',
 };
@@ -132,6 +136,8 @@ export default function ProductsPage() {
       featuredImage: item.featuredImage ?? '', saleBanner: item.saleBanner ?? '', saleOverBanner: item.saleOverBanner ?? '',
       status: item.status ?? 'published', isActive: item.isActive ?? true,
       showOnFrontend: item.showOnFrontend ?? true,
+      isMostPopular: item.isMostPopular ?? false,
+      popularBadgeText: item.popularBadgeText ?? '',
       bundledProducts: (item.bundledProducts ?? []).map(String),
       metaTitle: item.metaTitle ?? '', metaDescription: item.metaDescription ?? '', metaImage: item.metaImage ?? '',
     });
@@ -575,6 +581,21 @@ export default function ProductsPage() {
                         onChange={(e) => setForm({ ...form, showOnFrontend: e.target.checked })} />
                       <label className="form-check-label" htmlFor="showOnFrontend">Show on frontend (uncheck to hide from public listings)</label>
                     </div>
+                  </div>
+
+                  <div className="col-md-4 d-flex align-items-end">
+                    <div className="form-check form-switch mb-2">
+                      <input type="checkbox" className="form-check-input" id="isMostPopular" checked={form.isMostPopular}
+                        onChange={(e) => setForm({ ...form, isMostPopular: e.target.checked })} />
+                      <label className="form-check-label" htmlFor="isMostPopular">Mark as &quot;Most Popular</label>
+                    </div>
+                  </div>
+                  <div className="col-md-8">
+                    <label className="form-label">Most Popular Badge Text</label>
+                    <input className="form-control" value={form.popularBadgeText}
+                      disabled={!form.isMostPopular}
+                      onChange={(e) => setForm({ ...form, popularBadgeText: e.target.value })}
+                      placeholder="Most Popular" />
                   </div>
 
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">SEO Settings</div></div>

@@ -4,6 +4,7 @@ import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import BlogSidebarPromo from '@/components/BlogSidebarPromo';
+import LeadCapturePopup from '@/components/LeadCapturePopup';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,16 +58,9 @@ export default async function BlogDetailPage({ params }: P) {
 
   return (
     <SiteLayout>
+      <LeadCapturePopup source={category?.slug || categorySlug} />
       <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #101251 100%)', color: '#fff', padding: '4rem 0 3rem' }}>
         <div className="container">
-          {category && (
-            <Link
-              href={`/${category.slug}`}
-              style={{ fontSize: 12, color: '#93c5fd', textDecoration: 'none', fontWeight: 600, display: 'inline-block', marginBottom: 12 }}
-            >
-              ← {category.name}
-            </Link>
-          )}
           <h1 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.5px', margin: '0 0 1rem', lineHeight: 1.2 }}>
             {blog.title}
           </h1>

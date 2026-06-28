@@ -32,6 +32,8 @@ export default function BlogsPage() {
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [category, setCategory] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -48,12 +50,12 @@ export default function BlogsPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
-  const load = useCallback(async (p = 1, q = '', cat = '') => {
+  const load = useCallback(async (p = 1, q = '', cat = '', from = '', to = '') => {
     setLoading(true);
     try {
       const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
       const [bR, cR] = await Promise.all([
-        fetch(`/api/blogs?page=${p}&search=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}`, { headers }),
+        fetch(`/api/blogs?page=${p}&search=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}&dateFrom=${encodeURIComponent(from)}&dateTo=${encodeURIComponent(to)}`, { headers }),
         fetch('/api/blog-categories', { headers }),
       ]);
       const [b, c] = await Promise.all([bR.json(), cR.json()]);
@@ -67,13 +69,13 @@ export default function BlogsPage() {
     } finally { setLoading(false); }
   }, [token]);
 
-  // Reload list whenever the committed search term or category filter changes (and on first mount).
+  // Reload list whenever the committed search term or any filter changes (and on first mount).
   useEffect(() => {
-    const initialLoad = window.setTimeout(() => { void load(1, search, category); }, 0);
+    const initialLoad = window.setTimeout(() => { void load(1, search, category, dateFrom, dateTo); }, 0);
     return () => window.clearTimeout(initialLoad);
-  }, [load, search, category]);
+  }, [load, search, category, dateFrom, dateTo]);
 
-  const goToPage = (p: number) => { void load(p, search, category); };
+  const goToPage = (p: number) => { void load(p, search, category, dateFrom, dateTo); };
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
 
@@ -119,7 +121,7 @@ export default function BlogsPage() {
       const url = editing ? `/api/blogs/${editing._id}` : '/api/blogs';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
       const d = await r.json();
-      if (d.success) { flash(d.message); setShowModal(false); load(page, search, category); }
+      if (d.success) { flash(d.message); setShowModal(false); load(page, search, category, dateFrom, dateTo); }
       else setErr(d.error || 'Something went wrong');
     } finally { setSaving(false); }
   };
@@ -213,7 +215,7 @@ export default function BlogsPage() {
     try {
       const r = await fetch(`/api/blogs/${del._id}`, { method: 'DELETE', headers: h });
       const d = await r.json();
-      if (d.success) { flash('Blog deleted'); setDel(null); load(page, search, category); }
+      if (d.success) { flash('Blog deleted'); setDel(null); load(page, search, category, dateFrom, dateTo); }
       else { setErr(d.error || 'Delete failed'); setDel(null); }
     } finally { setSaving(false); }
   };
@@ -261,6 +263,33 @@ export default function BlogsPage() {
           <option value="">All categories</option>
           {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
         </select>
+        <div className="d-flex align-items-center gap-1">
+          <label className="form-label mb-0 small text-muted">From</label>
+          <input
+            type="date"
+            className="form-control"
+            style={{ maxWidth: 170 }}
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+          <label className="form-label mb-0 small text-muted">To</label>
+          <input
+            type="date"
+            className="form-control"
+            style={{ maxWidth: 170 }}
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
+        {(dateFrom || dateTo) && (
+          <button
+            className="btn btn-outline-secondary"
+            type="button"
+            onClick={() => { setDateFrom(''); setDateTo(''); }}
+          >Clear dates</button>
+        )}
       </div>
 
       <div className="card">

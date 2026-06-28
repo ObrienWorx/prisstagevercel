@@ -20,6 +20,8 @@ export default function FrontNav() {
   const [sectorOpen, setSectorOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileProductOpen, setMobileProductOpen] = useState(false);
+  const [mobileSectorOpen, setMobileSectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const sectorRef = useRef<HTMLDivElement>(null);
   const productRef = useRef<HTMLDivElement>(null);
@@ -120,7 +122,7 @@ export default function FrontNav() {
             <div className="header-main-inner d-flex align-items-center flex-wrap flex-lg-nowrap gap-3 gap-xl-4 pt-3">
               <Link href="/" className="header-logo flex-shrink-0">
                 <picture>
-                  <source media="(max-width: 991px)" srcSet="/logo2.png" />
+                  <source media="(max-width: 991px)" srcSet="/logo.png" />
                   <img src="/logo.png" alt="Pristine Gaze" />
                 </picture>
               </Link>
@@ -253,36 +255,67 @@ export default function FrontNav() {
       <div className={`mobile-nav ${mobileOpen ? 'open' : ''}`}>
         <div className="mobile-nav-overlay" onClick={() => setMobileOpen(false)} />
         <div className="mobile-nav-panel">
-          <button className="mobile-nav-close" onClick={() => setMobileOpen(false)}>x</button>
+          <div className="mobile-nav-header">
+            <Link href="/" className="mobile-nav-logo" onClick={() => setMobileOpen(false)}>
+              <img src="/logo2.png" alt="Pristine Gaze" />
+            </Link>
+            <button className="mobile-nav-close" onClick={() => setMobileOpen(false)} aria-label="Close menu">×</button>
+          </div>
 
           <Link href="/" className={`mobile-nav-link ${pathname === '/' ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Home</Link>
-          <Link href="/about-us" className="mobile-nav-link" onClick={() => setMobileOpen(false)}>About Us</Link>
-          <Link href="/subscribe" className={`mobile-nav-link ${isActive('/subscribe') ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Subscribe</Link>
+          <Link href="/about-us" className={`mobile-nav-link ${isActive('/about-us') ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>About Us</Link>
 
-          {products.length > 0 && (
-            <>
-              <div className="mobile-section-label">Products</div>
-              {products.map(p => (
-                <Link key={p._id} href={`/subscribe/${p.slug}`} className="mobile-nav-link mobile-nav-sub nav-product-item" onClick={() => setMobileOpen(false)}>
-                  <span className="nav-product-name">{p.name}</span>
-                  <ProductLock productId={p._id} />
-                </Link>
-              ))}
-            </>
-          )}
+          <div className="mobile-nav-group">
+            <button
+              className={`mobile-nav-link mobile-nav-toggle ${mobileProductOpen ? 'open' : ''}`}
+              onClick={() => setMobileProductOpen(o => !o)}
+              aria-expanded={mobileProductOpen}
+            >
+              Product
+              <span className="mobile-nav-caret" aria-hidden="true">⌄</span>
+            </button>
+            {mobileProductOpen && (
+              <div className="mobile-nav-submenu">
+                {products.length === 0 ? (
+                  <span className="mobile-nav-link mobile-nav-sub">No products yet</span>
+                ) : products.map(p => {
+                  const unlocked = unlockedProducts.has(p._id);
+                  const href = unlocked ? `/reports/${p.slug}` : `/subscribe/${p.slug}`;
+                  return (
+                    <Link key={p._id} href={href} className={`mobile-nav-link mobile-nav-sub nav-product-item ${isActive(href) ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>
+                      <span className="nav-product-name">{p.name}</span>
+                      <ProductLock productId={p._id} />
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-          {sectors.length > 0 && (
-            <>
-              <div className="mobile-section-label">Sectors</div>
-              {sectors.map(s => (
-                <Link key={s._id} href={`/sectors/${s.slug}`} className="mobile-nav-link mobile-nav-sub" onClick={() => setMobileOpen(false)}>
-                  {s.name}
-                </Link>
-              ))}
-            </>
-          )}
+          <Link href="/subscribe" className={`mobile-nav-link ${isActive('/subscribe') && !isActive('/subscribe/') ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Subscribe</Link>
 
-          <Link href="/editorial" className={`mobile-nav-link ${isActive('/editorial') ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Editorial</Link>
+          <div className="mobile-nav-group">
+            <button
+              className={`mobile-nav-link mobile-nav-toggle ${mobileSectorOpen ? 'open' : ''}`}
+              onClick={() => setMobileSectorOpen(o => !o)}
+              aria-expanded={mobileSectorOpen}
+            >
+              Sector
+              <span className="mobile-nav-caret" aria-hidden="true">⌄</span>
+            </button>
+            {mobileSectorOpen && (
+              <div className="mobile-nav-submenu">
+                {sectors.length === 0 ? (
+                  <span className="mobile-nav-link mobile-nav-sub">No sectors yet</span>
+                ) : sectors.map(s => (
+                  <Link key={s._id} href={`/sectors/${s.slug}`} className={`mobile-nav-link mobile-nav-sub ${isActive(`/sectors/${s.slug}`) ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>
+                    {s.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
           <Link href="/videos" className={`mobile-nav-link ${isActive('/videos') ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>Videos</Link>
 
           {blogTypes.map(bt => (

@@ -56,12 +56,14 @@ const Q = '["“”‘’]';
 
 const toText = (html) => decodeEntities(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
-// Recommendation(s) from the body line: '...consider a "Buy" on "<stock>"...'.
+// Recommendation(s) from the body line. Two phrasings are supported:
+//   '...consider a "Buy" on "<stock>" at the closing price...'   (standard)
+//   '...consider a "Sell" (At a profit of 64%...)'               (profit/loss-taking sell)
 // Accepts quoted or unquoted reco words and validates each against RECO_MAP, so
 // only real recommendation words are kept. Order is preserved, duplicates removed.
 function parseBodyRecommendations(html) {
   const text = toText(html);
-  const re = new RegExp(`consider(?:ing)?\\s+(?:a|an)\\s+${Q}?\\s*([A-Za-z][A-Za-z ]*?)\\s*${Q}?\\s+on\\b`, 'gi');
+  const re = new RegExp(`consider(?:ing)?\\s+(?:a|an)\\s+${Q}?\\s*([A-Za-z][A-Za-z ]*?)\\s*${Q}?\\s*(?:on\\b|\\(\\s*at\\b)`, 'gi');
   const out = [];
   let m;
   while ((m = re.exec(text))) {

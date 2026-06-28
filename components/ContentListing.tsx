@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import LeadCaptureForm from './LeadCaptureForm';
 import ReportSidebar from './ReportSidebar';
@@ -59,7 +59,6 @@ interface Props {
   loadMore?: LoadMore;
   pagination?: Pagination;   // server-side page pagination (numbered Prev/Next links)
   leadSource?: string;       // source tag stored on the captured lead (e.g. category slug)
-  autoOpenLead?: boolean;    // auto-open the claim popup after 10s or a small scroll
 }
 
 function pageWindow(current: number, total: number) {
@@ -245,25 +244,8 @@ function BlogReportPromo({ onClaim }: { onClaim: () => void }) {
   );
 }
 
-function BlogCategoryListing({ title, items, categories, emptyMessage, footer, leadSource = 'unlock-ticker', autoOpenLead = false }: Pick<Props, 'title' | 'items' | 'categories' | 'emptyMessage' | 'leadSource' | 'autoOpenLead'> & { footer?: React.ReactNode }) {
+function BlogCategoryListing({ title, items, categories, emptyMessage, footer, leadSource = 'unlock-ticker' }: Pick<Props, 'title' | 'items' | 'categories' | 'emptyMessage' | 'leadSource'> & { footer?: React.ReactNode }) {
   const [showModal, setShowModal] = useState(false);
-  const autoShown = useRef(false);
-
-  useEffect(() => {
-    if (!autoOpenLead) return;
-    if (typeof window !== 'undefined' && localStorage.getItem('pg_lead_submitted') === '1') return;
-    const open = () => {
-      if (autoShown.current) return;
-      autoShown.current = true;
-      setShowModal(true);
-      cleanup();
-    };
-    const onScroll = () => { if (window.scrollY > 300) open(); };
-    const timer = setTimeout(open, 10000);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    function cleanup() { clearTimeout(timer); window.removeEventListener('scroll', onScroll); }
-    return cleanup;
-  }, [autoOpenLead]);
 
   return (
     <>
@@ -349,13 +331,13 @@ function BlogCategoryListing({ title, items, categories, emptyMessage, footer, l
   );
 }
 
-export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage, loadMore, pagination, leadSource, autoOpenLead }: Props) {
+export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage, loadMore, pagination, leadSource }: Props) {
   const { displayItems, button } = useLoadMore(items, loadMore);
   // Server-side page pagination is mutually exclusive with the "Load more" button.
   const footer = pagination ? <Pagination {...pagination} /> : button;
 
   if (sidebarType === 'blog') {
-    return <BlogCategoryListing title={title} items={displayItems} categories={categories} emptyMessage={emptyMessage} footer={footer} leadSource={leadSource} autoOpenLead={autoOpenLead} />;
+    return <BlogCategoryListing title={title} items={displayItems} categories={categories} emptyMessage={emptyMessage} footer={footer} leadSource={leadSource} />;
   }
 
   return (

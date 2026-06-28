@@ -119,7 +119,7 @@ export default function HomePicks() {
             </div>
           );
         })}
-        <p className="home-picks-note">Performance visuals shown as a preview. Data source can be connected later.</p>
+        <p className="home-picks-note">Potential returns are based on our research estimates and should not be relied upon as guarantees. Always conduct your own research and invest responsibly.</p>
       </div>
 
       {showModal && (

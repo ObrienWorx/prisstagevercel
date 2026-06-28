@@ -147,10 +147,7 @@ export default async function HomePage() {
       return { code: `${buy.title}${label}`, avgBuy: buy.price, avgSell: sell.price, gainLoss };
     }))
     .filter((r): r is { code: string; avgBuy: number; avgSell: number; gainLoss: number | null } => r !== null)
-    .slice(0, 5);
-
-  const validGains = homeRecs.filter(r => r.gainLoss !== null).map(r => r.gainLoss as number);
-  const avgGain = validGains.length > 0 ? validGains.reduce((s, v) => s + v, 0) / validGains.length : null;
+    .slice(0, 7);
 
   const fmtPrice = (p: HomeProduct) => {
     const price = p.salePrice ?? p.regularPrice ?? 0;
@@ -372,11 +369,6 @@ export default async function HomePage() {
                 <div className="home-past-recs-header">
                   <div>
                     <h2 className="home-past-recs-title">Past Recommendations</h2>
-                    {avgGain !== null && (
-                      <div className={`home-past-recs-avg ${avgGain >= 0 ? 'gain' : 'loss'}`}>
-                        Avg Return: <strong>{avgGain >= 0 ? '+' : ''}{avgGain.toFixed(2)}%</strong> across closed picks
-                      </div>
-                    )}
                   </div>
                   <Link href="/past-recommendations" className="home-past-recs-viewall">View All ↗</Link>
                 </div>

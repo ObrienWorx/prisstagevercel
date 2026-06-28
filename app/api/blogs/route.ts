@@ -6,6 +6,7 @@ import { authenticate, requirePermission } from '@/middleware/authMiddleware';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { normalizeBlogCategories } from '@/lib/blogCategories';
 import { normalizeBlogTags } from '@/lib/blogTags';
+import { dateRangeFilter } from '@/lib/dateRange';
 import { slugify } from '@/lib/slugify';
 
 export async function GET(req: NextRequest) {
@@ -17,9 +18,13 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(sp.get('limit') ?? '20', 10)));
     const search = sp.get('search')?.trim();
     const category = sp.get('category')?.trim();
+    const dateFrom = sp.get('dateFrom')?.trim();
+    const dateTo = sp.get('dateTo')?.trim();
     const filter: Record<string, unknown> = {};
     if (search) filter.title = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     if (category) filter.$or = [{ category }, { categories: category }];
+    const createdAt = dateRangeFilter(dateFrom, dateTo);
+    if (createdAt) filter.createdAt = createdAt;
     const [items, total] = await Promise.all([
       Blog.find(filter)
         .select('-content') // omit heavy HTML body; fetched on demand via /api/blogs/[id]

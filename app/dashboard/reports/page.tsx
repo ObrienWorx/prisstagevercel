@@ -221,6 +221,8 @@ export default function ReportsPage() {
   const [indexFilter, setIndexFilter] = useState('');
   const [tickerFilter, setTickerFilter] = useState('');
   const [recommendationFilter, setRecommendationFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -234,11 +236,11 @@ export default function ReportsPage() {
   const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
 
   // Load the paginated report list for the current page/search/filters.
-  const load = useCallback(async (p = 1, q = '', cat = '', sec = '', prod = '', idx = '', tic = '', reco = '') => {
+  const load = useCallback(async (p = 1, q = '', cat = '', sec = '', prod = '', idx = '', tic = '', reco = '', from = '', to = '') => {
     setLoading(true);
     try {
       const r = await fetch(
-        `/api/reports?page=${p}&limit=${PER_PAGE}&search=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}&sector=${encodeURIComponent(sec)}&product=${encodeURIComponent(prod)}&index=${encodeURIComponent(idx)}&ticker=${encodeURIComponent(tic)}&recommendation=${encodeURIComponent(reco)}`,
+        `/api/reports?page=${p}&limit=${PER_PAGE}&search=${encodeURIComponent(q)}&category=${encodeURIComponent(cat)}&sector=${encodeURIComponent(sec)}&product=${encodeURIComponent(prod)}&index=${encodeURIComponent(idx)}&ticker=${encodeURIComponent(tic)}&recommendation=${encodeURIComponent(reco)}&dateFrom=${encodeURIComponent(from)}&dateTo=${encodeURIComponent(to)}`,
         { headers: h },
       ).then((res) => res.json());
       if (r.success) {
@@ -279,9 +281,9 @@ export default function ReportsPage() {
 
   // Reload list whenever the committed search term or any filter changes (and on first mount).
   useEffect(() => {
-    const timeout = window.setTimeout(() => { void load(1, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter); }, 0);
+    const timeout = window.setTimeout(() => { void load(1, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter, dateFrom, dateTo); }, 0);
     return () => { window.clearTimeout(timeout); };
-  }, [load, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter]);
+  }, [load, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter, dateFrom, dateTo]);
 
   // Open edit modal when navigated from search with ?edit=<id>
   useEffect(() => {
@@ -293,7 +295,7 @@ export default function ReportsPage() {
   }, [searchParams]);
 
   const flash = (msg: string) => { setOk(msg); setTimeout(() => setOk(''), 3000); };
-  const goToPage = (p: number) => { void load(p, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter); };
+  const goToPage = (p: number) => { void load(p, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter, dateFrom, dateTo); };
 
   const fillForm = (item: Report) => {
     setEditing(item);
@@ -341,7 +343,7 @@ export default function ReportsPage() {
       const url = editing ? `/api/reports/${editing._id}` : '/api/reports';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
       const d = await r.json();
-      if (d.success) { flash(d.message); setShowModal(false); load(page, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter); loadRefs(); }
+      if (d.success) { flash(d.message); setShowModal(false); load(page, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter, dateFrom, dateTo); loadRefs(); }
       else setErr(d.error || 'Something went wrong');
     } finally { setSaving(false); }
   };
@@ -351,7 +353,7 @@ export default function ReportsPage() {
     try {
       const r = await fetch(`/api/reports/${del._id}`, { method: 'DELETE', headers: h });
       const d = await r.json();
-      if (d.success) { flash('Report deleted'); setDel(null); load(page, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter); loadRefs(); }
+      if (d.success) { flash('Report deleted'); setDel(null); load(page, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter, dateFrom, dateTo); loadRefs(); }
       else { setErr(d.error || 'Delete failed'); setDel(null); }
     } finally { setSaving(false); }
   };
@@ -442,13 +444,34 @@ export default function ReportsPage() {
           <option value="">All recommendations</option>
           {RECOMMENDATION_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        {(categoryFilter || sectorFilter || productFilter || indexFilter || tickerFilter || recommendationFilter) && (
+        <div className="d-flex align-items-center gap-1">
+          <label className="form-label mb-0 small text-muted">From</label>
+          <input
+            type="date"
+            className="form-control"
+            style={{ maxWidth: 170 }}
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+          <label className="form-label mb-0 small text-muted">To</label>
+          <input
+            type="date"
+            className="form-control"
+            style={{ maxWidth: 170 }}
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
+        {(categoryFilter || sectorFilter || productFilter || indexFilter || tickerFilter || recommendationFilter || dateFrom || dateTo) && (
           <button
             className="btn btn-outline-secondary"
             type="button"
             onClick={() => {
               setCategoryFilter(''); setSectorFilter(''); setProductFilter('');
               setIndexFilter(''); setTickerFilter(''); setRecommendationFilter('');
+              setDateFrom(''); setDateTo('');
             }}
           >Clear filters</button>
         )}
@@ -458,7 +481,7 @@ export default function ReportsPage() {
         {loading ? (
           <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
         ) : items.length === 0 ? (
-          <div className="empty-state"><div className="empty-icon">📈</div><p>{search ? `No reports match “${search}”.` : (categoryFilter || sectorFilter || productFilter || indexFilter || tickerFilter || recommendationFilter) ? 'No reports match the selected filters.' : 'No reports yet. Create your first one.'}</p></div>
+          <div className="empty-state"><div className="empty-icon">📈</div><p>{search ? `No reports match “${search}”.` : (categoryFilter || sectorFilter || productFilter || indexFilter || tickerFilter || recommendationFilter || dateFrom || dateTo) ? 'No reports match the selected filters.' : 'No reports yet. Create your first one.'}</p></div>
         ) : (
           <div className="table-responsive">
             <table className="table">

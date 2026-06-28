@@ -766,6 +766,11 @@ body {
 .site-body {
   background: #fff;
   color: #1e293b;
+  /* Guard against stray horizontal overflow on mobile (e.g. row gutters wider than
+     the container padding). `clip` — not `hidden` — so it doesn't create a scroll
+     container and position:sticky sidebars keep working. */
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -3817,6 +3822,12 @@ body {
   margin: 0 auto;
 }
 
+/* Blur for locked report cards on /reports (no Bootstrap utility for filter: blur). */
+.report-blur {
+  filter: blur(4px);
+  user-select: none;
+}
+
 .popular-banner {
   background: #3b82f6;
   color: #fff;
@@ -4045,6 +4056,26 @@ body {
   box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
 }
 
+.mobile-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.mobile-nav-logo {
+  display: block;
+  width: min(150px, 55%);
+  flex-shrink: 0;
+}
+
+.mobile-nav-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .mobile-nav-close {
   background: rgba(255, 255, 255, 0.1);
   border: none;
@@ -4057,8 +4088,36 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: auto;
-  margin-bottom: 2rem;
+  flex-shrink: 0;
+}
+
+/* Collapsible Product / Sector submenus in the mobile drawer */
+.mobile-nav-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-nav-caret {
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.mobile-nav-toggle.open .mobile-nav-caret {
+  transform: rotate(180deg);
+}
+
+.mobile-nav-submenu {
+  display: flex;
+  flex-direction: column;
 }
 
 .mobile-nav-link {
@@ -5512,15 +5571,6 @@ body {
   border-radius: 4px;
   font-weight: 800;
   letter-spacing: 0.3px;
-}
-
-.mobile-section-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: rgba(255, 255, 255, 0.3);
-  margin: 1rem 0 0.5rem;
 }
 
 .mobile-nav-sub {
@@ -7200,8 +7250,19 @@ body {
   }
 
   .header-search-input {
-    min-height: 42px;
-    font-size: 0.95rem;
+    min-height: 34px;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.9rem;
+  }
+
+  .header-search-btn {
+    padding: 0.2rem 0.7rem 0.2rem 0.4rem;
+  }
+
+  .header-search-btn svg {
+    width: 22px;
+    height: 22px;
   }
 
   .mobile-auth-section .header-account-btn {
@@ -8411,20 +8472,6 @@ a.cu-info-value:hover {
   font-weight: 700;
   color: #0f172a;
   margin: 0 0 4px;
-}
-
-.home-past-recs-avg {
-  font-size: 0.85rem;
-  color: #64748b;
-  margin-top: 2px;
-}
-
-.home-past-recs-avg.gain strong {
-  color: #16a34a;
-}
-
-.home-past-recs-avg.loss strong {
-  color: #dc2626;
 }
 
 .home-past-recs-viewall {
