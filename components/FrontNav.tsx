@@ -119,7 +119,7 @@ export default function FrontNav() {
       <header className="site-header">
         <div className="header-main">
           <div className="container">
-            <div className="header-main-inner d-flex align-items-center flex-wrap flex-lg-nowrap gap-3 gap-xl-4 pt-3">
+            <div className="header-main-inner d-flex align-items-center flex-wrap flex-lg-nowrap gap-1 gap-xl-4 pt-3">
               <Link href="/" className="header-logo flex-shrink-0">
                 <picture>
                   <source media="(max-width: 991px)" srcSet="/logo.png" />
