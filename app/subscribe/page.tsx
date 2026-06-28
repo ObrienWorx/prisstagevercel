@@ -81,7 +81,7 @@ export default async function SubscribePage() {
 
           <div className="guarantee-strip text-center">
             <div className="guarantee-items">
-              {['✓ Cancel anytime', '✓ Instant access', '✓ Australian market focus', '✓ Daily updates'].map(t => (
+              {['✓ Instant access', '✓ Australian market focus', '✓ Daily updates'].map(t => (
                 <span key={t}>{t}</span>
               ))}
             </div>
