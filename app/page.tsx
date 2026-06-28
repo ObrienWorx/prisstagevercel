@@ -460,7 +460,7 @@ export default async function HomePage() {
                   </label>
                 </form>
                 <p className="home-newsletter-copy">
-                  By providing your details, you agree to receive marketing offers by email. Before you access our services, please read the <Link href="/financial-service-guide">Financial Service Guide</Link> available here.
+                  By providing your details, you agree to receive marketing offers by email. Before you access our services, please read the <Link href="/financial-services-guide">Financial Service Guide</Link> available here.
                 </p>
                 <div className="home-newsletter-footer">We respect your privacy. Unsubscribe at any time.</div>
               </div>
