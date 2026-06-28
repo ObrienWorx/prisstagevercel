@@ -21,7 +21,7 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // --- config -------------------------------------------------------------
-const WP_BASE = 'https://pristinegaze.com.au';
+const WP_BASE = 'https://devstage.pristinegaze.com.au';
 const JOBS = [
   { restBase: 'posts', categorySlug: 'trending-stock-market-news' },
   { restBase: 'case', categorySlug: 'editorials' },
@@ -122,6 +122,7 @@ function featuredImageOf(post) {
 }
 
 async function migrate({ restBase, categorySlug }) {
+  const DRY = !!process.env.DRY; // preview only — counts new vs existing, writes nothing
   console.log(`\n=== ${restBase} -> ${categorySlug} ===`);
   const cat = await getCategory(categorySlug);
   const posts = await fetchAll(restBase);
@@ -134,19 +135,24 @@ async function migrate({ restBase, categorySlug }) {
 
     if (await Blog.exists({ slug: baseSlug })) { skipped++; continue; }
 
-    await Blog.create({
-      title,
-      slug: await uniqueSlug(baseSlug),
-      content: p?.content?.rendered || '',
-      featuredImage: featuredImageOf(p),
-      category: cat._id,
-      categories: [cat._id],
-      publishStatus: 'published',
-      createdAt: p?.date ? new Date(p.date) : undefined,
-    });
-    created++;
+    if (DRY) {
+      created++;
+      console.log(`  + would add: ${title}  [${baseSlug}]`);
+    } else {
+      await Blog.create({
+        title,
+        slug: await uniqueSlug(baseSlug),
+        content: p?.content?.rendered || '',
+        featuredImage: featuredImageOf(p),
+        category: cat._id,
+        categories: [cat._id],
+        publishStatus: 'published',
+        createdAt: p?.date ? new Date(p.date) : undefined,
+      });
+      created++;
+    }
   }
-  console.log(`  done: ${created} created, ${skipped} skipped (already existed / no title)`);
+  console.log(`  ${DRY ? '[DRY] ' : ''}done: ${created} ${DRY ? 'WOULD BE created' : 'created'}, ${skipped} skipped (already existed / no title)`);
 }
 
 // --- run ----------------------------------------------------------------

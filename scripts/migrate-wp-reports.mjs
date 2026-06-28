@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const WP_BASE = 'https://pristinegaze.com.au';
+const WP_BASE = 'https://devstage.pristinegaze.com.au';
 
 // --- WP service-category term name -> target segment + new DB name -------
 const CATEGORY_MAP = { // -> ReportCategory
@@ -156,6 +156,7 @@ async function main() {
   loadEnv();
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not found in .env');
   const limit = Number(process.env.LIMIT || 0); // 0 = all eligible
+  const DRY = !!process.env.DRY; // preview only — counts new vs existing, writes nothing
 
   await mongoose.connect(process.env.MONGODB_URI, { bufferCommands: false });
   console.log('Connected to MongoDB');
@@ -212,18 +213,23 @@ async function main() {
       if (!recommendation) noReco.push(title);
       const { upsellTicker, ticker } = extractIndexTicker(p?.title?.rendered || '');
 
-      await Report.create({
-        title,
-        slug: await uniqueSlug(baseSlug),
-        content: p?.content?.rendered || '',
-        featuredImage: featuredImageOf(p),
-        category, sector, product, featured,
-        upsellTicker, ticker, price, recommendation,
-        recommendations: actions,
-        publishStatus: 'published',
-        createdAt: postDate || undefined,
-      });
-      created++;
+      if (DRY) {
+        created++;
+        console.log(`  + would add: ${title}  [${baseSlug}]`);
+      } else {
+        await Report.create({
+          title,
+          slug: await uniqueSlug(baseSlug),
+          content: p?.content?.rendered || '',
+          featuredImage: featuredImageOf(p),
+          category, sector, product, featured,
+          upsellTicker, ticker, price, recommendation,
+          recommendations: actions,
+          publishStatus: 'published',
+          createdAt: postDate || undefined,
+        });
+        created++;
+      }
       if (limit && created >= limit) break outer;
     }
 
@@ -233,7 +239,7 @@ async function main() {
   }
   process.stdout.write('\n');
 
-  console.log(`\nDone: ${created} reports created, ${excluded} excluded (Daily Newsletter), ${skipped} skipped (dupe/no title)`);
+  console.log(`\n${DRY ? '[DRY] ' : ''}Done: ${created} reports ${DRY ? 'WOULD BE created' : 'created'}, ${excluded} excluded (Daily Newsletter), ${skipped} skipped (dupe/no title)`);
   if (unresolved.size) console.log('UNRESOLVED mappings (left blank):', [...unresolved]);
   if (noReco.length) console.log(`Posts with no parsed recommendation (${noReco.length}):`, noReco.slice(0, 15));
 
