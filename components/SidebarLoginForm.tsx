@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 export default function SidebarLoginForm({ redirectPath }: { redirectPath: string }) {
   const router = useRouter();
@@ -15,10 +16,11 @@ export default function SidebarLoginForm({ redirectPath }: { redirectPath: strin
     setLoading(true);
     setError('');
     try {
+      const recaptchaToken = await getRecaptchaToken('login');
       const res  = await fetch('/api/subscriber/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, recaptchaToken }),
       });
       const data = await res.json();
       if (data.success) {

@@ -4,12 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import LeadCaptureForm from './LeadCaptureForm';
 
 interface Props {
-  source?: string;   // source tag stored on the captured lead (e.g. category slug)
+  source?: string;
 }
 
-// Auto-opening lead-capture modal: fires after 10s or once the reader scrolls
-// a little, whichever comes first. Stays closed for visitors who already
-// submitted (tracked via the `pg_lead_submitted` flag set by LeadCaptureForm).
 export default function LeadCapturePopup({ source = 'unlock-ticker' }: Props) {
   const [showModal, setShowModal] = useState(false);
   const autoShown = useRef(false);

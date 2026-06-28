@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     if (createdAt) filter.createdAt = createdAt;
     const [items, total] = await Promise.all([
       Blog.find(filter)
-        .select('-content') // omit heavy HTML body; fetched on demand via /api/blogs/[id]
+        .select('-content')
         .populate('category', 'name slug')
         .populate('categories', 'name slug')
         .sort({ createdAt: -1 })

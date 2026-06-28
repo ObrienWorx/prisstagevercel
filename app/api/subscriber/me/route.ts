@@ -76,7 +76,6 @@ export async function PUT(req: NextRequest) {
 
   await subscriber.save();
 
-  // Force-write plainPassword outside the pre-save hook to guarantee persistence
   if (newPassword) {
     await Subscriber.findByIdAndUpdate(subscriber._id, { $set: { plainPassword: newPassword } });
   }

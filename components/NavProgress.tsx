@@ -23,7 +23,6 @@ export default function NavProgress() {
     trickle.current = setInterval(() => {
       setWidth(w => (w < 90 ? w + Math.max(0.5, (90 - w) * 0.08) : w));
     }, 200);
-    // Safety: never leave the bar stuck if a navigation is cancelled.
     timers.current.push(setTimeout(() => done(), 15000));
   };
 

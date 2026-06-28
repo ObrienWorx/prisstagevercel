@@ -21,7 +21,6 @@ export async function POST(req: NextRequest) {
     if (!body.plans?.length) return errorResponse('At least one plan is required');
     const finalSlug = body.slug ? slugify(body.slug) : slugify(body.name);
     if (await Product.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
-    // Append new products to the end of the manual display order.
     const last = await Product.findOne({}).sort({ sortOrder: -1 }).select('sortOrder').lean();
     const sortOrder = last ? (last.sortOrder ?? 0) + 1 : 0;
     const product = await Product.create({ ...body, slug: finalSlug, sortOrder });

@@ -23,7 +23,6 @@ type PopulatedReport = {
   pastStockRecommendations?: PopulatedReport[];
 };
 
-// BUY and SPECULATIVE BUY are treated identically as "buy" recommendations.
 const isBuyReco = (r?: string) => r === 'BUY' || r === 'SPECULATIVE BUY';
 
 type LiveQuote = {
@@ -124,7 +123,6 @@ export default async function PastRecommendationsPage() {
 
   const soldBuyIds = new Set<string>();
 
-  // A SELL closes every linked buy → emit one row per buy (newest sells first).
   const pastRows = reports
     .filter((report) => report.recommendation === 'SELL' && (report.pastStockRecommendations?.length))
     .flatMap((sellReport) => {

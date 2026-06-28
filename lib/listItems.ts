@@ -1,5 +1,3 @@
-// Shared shapers for public listing pages + the "load more" API, so the first
-// server-rendered page and the client-appended batches always match exactly.
 import { normalizeBlogTags } from './blogTags';
 
 export const LISTING_PER_PAGE = 12;

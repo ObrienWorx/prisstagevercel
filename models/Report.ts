@@ -8,13 +8,13 @@ export interface IReport extends Document {
   category: Types.ObjectId | null;
   sector: Types.ObjectId | null;
   product: Types.ObjectId | null;
-  pastStockRecommendation: Types.ObjectId | null;   // primary (= pastStockRecommendations[0]); kept for back-compat
-  pastStockRecommendations: Types.ObjectId[];        // a SELL closes every prior BUY / SPECULATIVE BUY of the same index+ticker
+  pastStockRecommendation: Types.ObjectId | null;
+  pastStockRecommendations: Types.ObjectId[];
   upsellTicker: string;
   ticker: string;
   price: number;
-  recommendation: string;       // primary (= recommendations[0]); used by /past-recommendations
-  recommendations: string[];    // multi-select tags: BUY / SELL / HOLD / SPECULATIVE BUY / REFRAIN / Security Under Review
+  recommendation: string;
+  recommendations: string[];
   currentPrice: number;
   currentPriceCurrency: string;
   currentPriceUpdatedAt: Date | null;

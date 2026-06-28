@@ -36,7 +36,6 @@ export default async function ReportSlugPage({ params }: P) {
   const { slug } = await params;
   await connectDB();
 
-  // ── 1. Check if this slug belongs to a Product ──────────────────────────
   const product = await Product.findOne({ slug, isActive: true }).lean() as any;
 
   if (product) {
@@ -91,7 +90,6 @@ export default async function ReportSlugPage({ params }: P) {
 
   if (!report) notFound();
 
-  // Featured reports are public samples; reports with no product gate are also open to all.
   let hasAccess = !!report.featured || !report.product;
   let isLoggedIn = false;
 

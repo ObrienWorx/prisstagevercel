@@ -14,7 +14,7 @@ export interface InvoiceModalProps {
   purchaseDate: string;
   billTo: { name?: string; email?: string; phone?: string };
   items: InvoiceItem[];
-  total: number;   // the amount shown as Total (selling price when set, else price paid)
+  total: number;
   paid: boolean;
   onClose: () => void;
 }

@@ -31,10 +31,6 @@ const TransactionSchema = new Schema<ITransaction>(
 
 TransactionSchema.pre('save', async function () {
   if (!this.transactionNumber) {
-    // Derive from the highest existing transactionNumber, not the document count:
-    // historical imports created transactions with explicit (gapped) numbers, so
-    // count+1 collides with already-used numbers. Numbers are 6-digit zero-padded,
-    // so a descending sort yields the true max.
     const Transaction = this.constructor as Model<ITransaction>;
     const last = await Transaction.findOne({}).sort({ transactionNumber: -1 }).select('transactionNumber').lean();
     const seq = last?.transactionNumber ? parseInt(String(last.transactionNumber).replace(/\D/g, ''), 10) || 0 : 0;

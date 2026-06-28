@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
     const status = (searchParams.get('status') || 'all').trim();
     const pageParam = searchParams.get('page');
 
-    // search filter (does NOT include status, so tab counts reflect the search)
     const searchFilter: Record<string, unknown> = {};
     if (search) {
       const rx = new RegExp(escapeRegex(search), 'i');
@@ -41,7 +40,6 @@ export async function GET(req: NextRequest) {
       .populate('order', 'orderNumber')
       .sort({ createdAt: -1 });
 
-    // No page param → full list (legacy callers)
     if (!pageParam) {
       return successResponse(await baseQuery(searchFilter));
     }

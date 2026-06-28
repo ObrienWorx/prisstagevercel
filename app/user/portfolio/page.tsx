@@ -43,10 +43,8 @@ export default function PortfolioPage() {
   const [adding, setAdding] = useState(false);
   const [addErr, setAddErr] = useState('');
 
-  /* ── New Portfolio modal ── */
   const [npModal, setNpModal] = useState({ open: false, name: '', err: '', saving: false });
 
-  /* ── Delete Portfolio modal ── */
   const [delModal, setDelModal] = useState<{ portfolio: Portfolio | null; saving: boolean }>({ portfolio: null, saving: false });
 
   const tokenRef = useRef('');
@@ -57,7 +55,6 @@ export default function PortfolioPage() {
     Authorization: `Bearer ${tokenRef.current}`,
   });
 
-  /* ── load portfolios ── */
   useEffect(() => {
     tokenRef.current = localStorage.getItem('subscriber_token') ?? '';
     fetch('/api/subscriber/portfolios', { headers: authHeaders() })
@@ -72,7 +69,6 @@ export default function PortfolioPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── fetch prices for active portfolio ── */
   useEffect(() => {
     if (!activePortfolio || activePortfolio.stocks.length === 0) { setPrices({}); return; }
     const symbols = [...new Set(activePortfolio.stocks.map(s => s.symbol))].join(',');
@@ -83,14 +79,12 @@ export default function PortfolioPage() {
       });
   }, [activeId, activePortfolio?.stocks.length]); // eslint-disable-line
 
-  /* ── summary calculations ── */
   const stocks = activePortfolio?.stocks ?? [];
   const totalInvested = stocks.reduce((s, h) => s + h.quantity * h.buyPrice, 0);
   const currentValue  = stocks.reduce((s, h) => s + h.quantity * (prices[h.symbol]?.price ?? h.buyPrice), 0);
   const overallPL     = currentValue - totalInvested;
   const plPct         = totalInvested > 0 ? (overallPL / totalInvested) * 100 : 0;
 
-  /* ── new portfolio (opens modal) ── */
   const createPortfolio = () => setNpModal({ open: true, name: '', err: '', saving: false });
 
   const handleCreatePortfolio = async () => {
@@ -110,7 +104,6 @@ export default function PortfolioPage() {
     }
   };
 
-  /* ── delete portfolio (opens modal) ── */
   const deletePortfolio = (id: string) => {
     const p = portfolios.find(x => x._id === id);
     if (p) setDelModal({ portfolio: p, saving: false });
@@ -131,7 +124,6 @@ export default function PortfolioPage() {
     }
   };
 
-  /* ── add stock ── */
   const addStock = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddErr('');
@@ -169,7 +161,6 @@ export default function PortfolioPage() {
     }
   };
 
-  /* ── delete stock ── */
   const deleteStock = async (stockId: string) => {
     if (!activeId) return;
     const r = await fetch(`/api/subscriber/portfolios/${activeId}/stocks/${stockId}`, {
@@ -179,7 +170,6 @@ export default function PortfolioPage() {
     if (d.success) setPortfolios(p => p.map(x => x._id === activeId ? d.data : x));
   };
 
-  /* ── pagination ── */
   const totalPages = Math.max(1, Math.ceil(stocks.length / PER_PAGE));
   const pageStocks = stocks.slice((page - 1) * PER_PAGE, page * PER_PAGE);
   useEffect(() => setPage(1), [activeId]);

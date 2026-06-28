@@ -6,10 +6,10 @@ import LeadCaptureForm from './LeadCaptureForm';
 import ReportSidebar from './ReportSidebar';
 
 interface LoadMore {
-  endpoint: string;                  // '/api/public/reports' | '/api/public/blogs'
-  query: Record<string, string>;     // e.g. { product: '<id>' } | { category: '<slug>' } | { sector: '<slug>' }
-  total: number;                     // total matching items
-  perPage: number;                   // batch size (matches the server's first page)
+  endpoint: string;
+  query: Record<string, string>;
+  total: number;
+  perPage: number;
 }
 
 interface Item {
@@ -41,10 +41,10 @@ interface NavLink {
 }
 
 interface Pagination {
-  page: number;        // current page (1-based)
-  totalPages: number;  // total number of pages
-  basePath: string;    // path to link to (e.g. '/search')
-  query: string;       // querystring to preserve, without `page` (e.g. 'q=daily%20digest')
+  page: number;
+  totalPages: number;
+  basePath: string;
+  query: string;
 }
 
 interface Props {
@@ -57,8 +57,8 @@ interface Props {
   sectors?: NavLink[];
   emptyMessage?: string;
   loadMore?: LoadMore;
-  pagination?: Pagination;   // server-side page pagination (numbered Prev/Next links)
-  leadSource?: string;       // source tag stored on the captured lead (e.g. category slug)
+  pagination?: Pagination;
+  leadSource?: string;
 }
 
 function pageWindow(current: number, total: number) {
@@ -85,14 +85,11 @@ function Pagination({ page, totalPages, basePath, query }: Pagination) {
   );
 }
 
-// Merges the server-rendered first page with client-fetched batches.
 function useLoadMore(initial: Item[], loadMore?: LoadMore) {
   const [extra, setExtra] = useState<Item[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Reset when the listing context changes (soft navigation between pages).
-  // Render-phase state adjustment is the React-recommended pattern for this.
   const key = loadMore ? `${loadMore.endpoint}?${new URLSearchParams(loadMore.query)}` : '';
   const [prevKey, setPrevKey] = useState(key);
   if (prevKey !== key) {
@@ -333,7 +330,6 @@ function BlogCategoryListing({ title, items, categories, emptyMessage, footer, l
 
 export default function ContentListing({ title, items, latestItems, latestLabel, sidebarType, categories, sectors, emptyMessage, loadMore, pagination, leadSource }: Props) {
   const { displayItems, button } = useLoadMore(items, loadMore);
-  // Server-side page pagination is mutually exclusive with the "Load more" button.
   const footer = pagination ? <Pagination {...pagination} /> : button;
 
   if (sidebarType === 'blog') {

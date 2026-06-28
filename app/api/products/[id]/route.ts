@@ -28,7 +28,6 @@ export async function PUT(req: NextRequest, { params }: P) {
       body.slug = s;
     }
     Object.assign(product, body);
-    // Explicitly mark arrays/subdocs modified so Mongoose detects the change
     product.markModified('plans');
     product.markModified('bundledProducts');
     await product.save();

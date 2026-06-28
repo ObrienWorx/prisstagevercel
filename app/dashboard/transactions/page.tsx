@@ -51,7 +51,6 @@ export default function TransactionsPage() {
     } finally { setLoading(false); }
   }, [page, debouncedSearch, filter]);
 
-  // debounce the search box; reset to page 1 on a new query
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
     return () => clearTimeout(t);
@@ -59,7 +58,6 @@ export default function TransactionsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // keep page in range when the result set shrinks
   useEffect(() => { if (page > pages) setPage(pages); }, [pages, page]);
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });

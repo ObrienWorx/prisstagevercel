@@ -10,7 +10,6 @@ export async function GET() {
     await connectDB();
     const sectors = await Sector.find({}).select('name slug featuredImage description').sort({ name: 1 }).lean();
 
-    // Add report count per sector
     const withCounts = await Promise.all(
       sectors.map(async (s) => {
         const count = await Report.countDocuments({ sector: s._id, publishStatus: 'published' });

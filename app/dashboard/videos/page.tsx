@@ -18,7 +18,7 @@ export default function VideosPage() {
   const [page, setPage] = useState(1);
 
   const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
-  const safePage = Math.min(page, pages); // clamp during render (e.g. after a delete)
+  const safePage = Math.min(page, pages);
   const paged = items.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';

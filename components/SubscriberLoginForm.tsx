@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 type Props = {
   plan?: string | null;
@@ -28,7 +29,6 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
   const [otpMsg, setOtpMsg] = useState('');
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // First-time password setup (migrated users who logged in via OTP with no password yet)
   const [setupMode, setSetupMode] = useState(false);
   const [pending, setPending] = useState<{ token: string; subscriber: unknown } | null>(null);
   const [newPw, setNewPw] = useState('');
@@ -67,10 +67,11 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
     if (!form.email || !form.password) { setErr('Please fill in all fields'); return; }
     setErr(''); setOtpHint(false); setLoading(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('login');
       const r = await fetch('/api/subscriber/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, recaptchaToken }),
       });
       const d = await r.json();
       if (d.success) {
@@ -95,10 +96,11 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
     if (!otpEmail) { setErr('Please enter your email address'); return; }
     setErr(''); setOtpLoading(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('send_otp');
       const r = await fetch('/api/subscriber/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: otpEmail, purpose: 'login' }),
+        body: JSON.stringify({ email: otpEmail, purpose: 'login', recaptchaToken }),
       });
       const d = await r.json();
       if (d.success) {
@@ -174,10 +176,11 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
   const resendOtp = async () => {
     setOtpLoading(true); setErr(''); setOtpMsg('');
     try {
+      const recaptchaToken = await getRecaptchaToken('send_otp');
       const r = await fetch('/api/subscriber/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: otpEmail, purpose: 'login' }),
+        body: JSON.stringify({ email: otpEmail, purpose: 'login', recaptchaToken }),
       });
       const d = await r.json();
       if (d.success) { setOtpMsg('A new code has been sent.'); setCountdown(60); }

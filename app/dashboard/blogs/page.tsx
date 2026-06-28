@@ -69,7 +69,6 @@ export default function BlogsPage() {
     } finally { setLoading(false); }
   }, [token]);
 
-  // Reload list whenever the committed search term or any filter changes (and on first mount).
   useEffect(() => {
     const initialLoad = window.setTimeout(() => { void load(1, search, category, dateFrom, dateTo); }, 0);
     return () => window.clearTimeout(initialLoad);
@@ -90,7 +89,6 @@ export default function BlogsPage() {
     setShowModal(true);
   };
   const openEdit = async (item: Blog) => {
-    // The list omits `content` for payload size; fetch the full document for editing.
     let full = item;
     try {
       const r = await fetch(`/api/blogs/${item._id}`, { headers: h });

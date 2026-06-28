@@ -21,13 +21,11 @@ const UA = {
   Accept: '*/*',
 };
 
-// AU large caps: listed on an Australian exchange with market cap >= AUD 500m.
 const AU_BASE = [
   { operator: 'eq', operands: ['region', 'au'] },
   { operator: 'gt', operands: ['intradaymarketcap', 500_000_000] },
 ];
 
-// Yahoo's screener needs a cookie + crumb pair; cache it per server process (~30 min).
 let creds: { cookie: string; crumb: string; ts: number } | null = null;
 async function getCreds() {
   if (creds && Date.now() - creds.ts < 30 * 60 * 1000) return creds;
@@ -50,7 +48,7 @@ async function screener(operands: object[], sortField: string, sortType: 'ASC' |
   const res = await fetch(`https://query1.finance.yahoo.com/v1/finance/screener?crumb=${encodeURIComponent(crumb)}&lang=en-AU&region=AU`, {
     method: 'POST', headers: { ...UA, cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   });
-  if (!res.ok) { creds = null; throw new Error(`screener HTTP ${res.status}`); } // force a fresh crumb next call
+  if (!res.ok) { creds = null; throw new Error(`screener HTTP ${res.status}`); }
   const json = await res.json();
   return json?.finance?.result?.[0]?.quotes ?? [];
 }
@@ -65,7 +63,6 @@ function toRow(q: YahooQuote) {
   };
 }
 
-// 5-minute in-memory cache per tab to keep Yahoo calls light.
 const cache = new Map<Tab, { data: ReturnType<typeof toRow>[]; updatedAt: string; ts: number }>();
 
 async function buildTab(tab: Tab): Promise<ReturnType<typeof toRow>[]> {
@@ -77,7 +74,6 @@ async function buildTab(tab: Tab): Promise<ReturnType<typeof toRow>[]> {
     const q = await screener([{ operator: 'lt', operands: ['percentchange', 0] }, { operator: 'gt', operands: ['percentchange', -300] }], 'percentchange', 'ASC', 6);
     return q.map(toRow);
   }
-  // 52-week high / low: take the largest AU caps and rank by closeness to the extreme.
   const universe = await screener([], 'intradaymarketcap', 'DESC', 100);
   if (tab === '52h') {
     return universe
@@ -107,7 +103,6 @@ export async function GET(req: NextRequest) {
     cache.set(tab, { data, updatedAt, ts: Date.now() });
     return NextResponse.json({ data, updatedAt });
   } catch (e) {
-    // Serve stale data if we have any, otherwise surface the error to the widget.
     if (cached) return NextResponse.json({ data: cached.data, updatedAt: cached.updatedAt });
     return NextResponse.json({ data: [], updatedAt: null, error: String(e) });
   }

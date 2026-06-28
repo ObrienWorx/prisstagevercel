@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 interface Props {
   endDate: string;
   onExpired?: () => void;
-  compact?: boolean; // smaller inline version for the PurchaseCard
+  compact?: boolean;
 }
 
 function pad(n: number) { return String(n).padStart(2, '0'); }

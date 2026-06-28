@@ -24,7 +24,6 @@ export async function GET(req: NextRequest) {
       else return successResponse(paged ? { items: [], total: 0, page: 1, pages: 0 } : []);
     }
 
-    // Paginated, shaped output for the public "load more" UI.
     if (paged) {
       const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
       const limit = Math.min(48, Math.max(1, parseInt(searchParams.get('limit') || String(LISTING_PER_PAGE), 10)));

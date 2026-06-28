@@ -1,5 +1,3 @@
-// lib/jwt.ts
-// Helper functions for creating and verifying JWT tokens
 
 import jwt from 'jsonwebtoken';
 

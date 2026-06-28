@@ -1,6 +1,3 @@
-// app/api/auth/seed/route.ts
-// POST /api/auth/seed — Creates the first admin user (run once, then disable)
-// ⚠️ DELETE THIS FILE or add IP restriction in production!
 
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';

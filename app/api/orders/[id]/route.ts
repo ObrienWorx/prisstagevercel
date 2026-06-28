@@ -19,7 +19,6 @@ export async function GET(req: NextRequest, { params }: P) {
     .lean() as Record<string, unknown> | null;
   if (!order) return errorResponse('Order not found', 404);
 
-  // Manually populate items.product — handles both ObjectId and legacy string storage
   const rawItems = (order.items as { product: unknown; pricePaid: number; startDate: string; expiryDate: string; durationValue: number; durationType: string }[]) ?? [];
   if (rawItems.length > 0) {
     const objectIds = rawItems.map(item => {
@@ -39,8 +38,6 @@ export async function GET(req: NextRequest, { params }: P) {
 
   const transactions = await Transaction.find({ order: id }).sort({ createdAt: -1 }).lean();
 
-  // Access records granted by this order — includes bundled products (which are
-  // not in order.items) and carries live isActive + expiry per product.
   const userProducts = await UserProduct.find({ order: id })
     .populate('product', 'name featuredImage durationType durationValue')
     .sort({ startDate: 1 })
@@ -58,18 +55,15 @@ export async function PUT(req: NextRequest, { params }: P) {
   const order = await Order.findById(id);
   if (!order) return errorResponse('Order not found', 404);
 
-  // Update order fields
   if (paymentStatus) order.paymentStatus = paymentStatus;
   if (orderStatus) order.orderStatus = orderStatus;
   if (notes !== undefined) order.notes = notes;
   await order.save();
 
-  // Sync transactions with the new payment status
   if (paymentStatus) {
     await Transaction.updateMany({ order: id }, { paymentStatus });
   }
 
-  // Sync UserProduct.isActive based on final order state
   if (order.orderStatus === 'completed') {
     await UserProduct.updateMany({ order: id }, { isActive: true });
   } else if (order.orderStatus === 'cancelled' || order.orderStatus === 'refunded') {

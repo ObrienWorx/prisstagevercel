@@ -10,9 +10,6 @@ function getToken(req: NextRequest) {
   return req.cookies.get('subscriber_token')?.value ?? null;
 }
 
-// First-time password setup for accounts with no password (e.g. migrated users who
-// signed in via OTP). Requires a valid subscriber token. Refuses if a password already
-// exists — those must use the normal change/reset flow.
 export async function POST(req: NextRequest) {
   const token = getToken(req);
   if (!token) return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
@@ -32,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   sub.password = password;
-  await sub.save(); // pre-save hook hashes + sets plainPassword
+  await sub.save();
   await Subscriber.findByIdAndUpdate(sub._id, { $set: { plainPassword: password } });
 
   await ActivityLog.create({

@@ -24,10 +24,8 @@ export async function createOrderRecord({
 
   let start: Date;
   if (startDate) {
-    // Admin explicitly set a start date — respect it
     start = startDate;
   } else {
-    // Auto: stack after the latest active subscription for this product
     const existing = await UserProduct.findOne({
       subscriber: subscriberId,
       product: productId,
@@ -35,7 +33,6 @@ export async function createOrderRecord({
       expiryDate: { $gt: purchaseDate },
     }).sort({ expiryDate: -1 });
     if (existing) {
-      // Start the day AFTER the current subscription expires (no overlap)
       start = new Date(existing.expiryDate);
       start.setDate(start.getDate() + 1);
     } else {
@@ -77,7 +74,6 @@ export async function createOrderRecord({
     isActive: paymentStatus === 'completed',
   });
 
-  // Bundle: grant access to any included products for the SAME period as the purchased product.
   const bundled = (product.bundledProducts ?? [])
     .map((id) => id.toString())
     .filter((id) => id !== productId);

@@ -61,7 +61,6 @@ export async function POST(req: NextRequest) {
         : product.regularPrice;
     const pricePaid = parseFloat(capture?.amount?.value ?? String(fallbackPrice));
 
-    // Find or auto-create subscriber
     let subscriber = await Subscriber.findOne({ email });
     let isNewAccount = false;
 

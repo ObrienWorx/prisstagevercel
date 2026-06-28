@@ -26,7 +26,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   await connectDB();
 
-  // Resolve product filter
   let filterProduct: any = null;
   let hasAccess = false;
   let isLoggedIn = false;
@@ -36,7 +35,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     filterProduct = await Product.findOne({ slug: productSlug, isActive: true }).lean() as any;
   }
 
-  // Check subscriber access
   const cookieStore = await cookies();
   const token = cookieStore.get('subscriber_token')?.value;
   if (token) {
@@ -57,7 +55,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     }
   }
 
-  // Fetch reports
   const filter: Record<string, unknown> = { publishStatus: 'published' };
   if (filterProduct) {
     filter.product = filterProduct._id;
@@ -75,7 +72,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  // Map each recommendation to a Bootstrap contextual badge class.
   const REC_BADGE: Record<string, string> = {
     BUY: 'text-bg-success', HOLD: 'text-bg-warning', SELL: 'text-bg-danger',
     'SPECULATIVE BUY': 'text-bg-primary', REFRAIN: 'text-bg-secondary',
@@ -126,8 +122,6 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
             {reports.map((r: any) => {
               const reportProductId = r.product ? String(r.product._id) : null;
-              // Featured reports are public samples — readable by everyone. Otherwise a report is
-              // open only if it has no product gate or the visitor owns the gating product.
               const isUnlocked = r.featured || !reportProductId || unlockedProductIds.includes(reportProductId);
               const excerpt = r.content ? r.content.replace(/<[^>]+>/g, '').slice(0, 140) + '…' : '';
 

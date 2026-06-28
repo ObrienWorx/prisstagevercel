@@ -13,7 +13,7 @@ export async function GET() {
       .lean();
 
     const data = cats.map((c: any) => ({
-      _id: c.slug,           // keep _id as slug so existing nav href logic works
+      _id: c.slug,
       label: c.name,
       navHighlight: c.navHighlight ?? false,
       count: 0,

@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
   const product = await Product.findOne({ slug: planSlug, status: 'published', isActive: true });
   if (!product) return errorResponse('Product not found', 404);
 
-  // Only genuinely free products may use this path — price is verified server-side.
   const price = effectivePrice(product, saleOffer === true);
   if (price > 0) return errorResponse('This product is not free', 400);
 

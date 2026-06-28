@@ -40,7 +40,6 @@ export async function GET(req: NextRequest) {
     .populate('items.product', 'name')
     .sort({ _id: -1 });
 
-  // No page param → full list (legacy callers)
   if (!pageParam) {
     return successResponse(await baseQuery().lean());
   }
@@ -80,7 +79,6 @@ export async function POST(req: NextRequest) {
     if (l.startDate) {
       start = new Date(l.startDate);
     } else {
-      // Stack after the latest active subscription for this product + subscriber
       const existing = await UserProduct.findOne({
         subscriber: subscriberId,
         product: l.productId,
@@ -117,8 +115,6 @@ export async function POST(req: NextRequest) {
     notes: notes || '',
   });
 
-  // Set items via raw update — avoids Mongoose 9 subdocument-array cast quirks in create()
-  // product must be cast to ObjectId manually since we bypass Mongoose here
   const itemsPayload = resolved.map(r => ({
     product: new Types.ObjectId(r.productId),
     pricePaid: r.price,
@@ -130,8 +126,6 @@ export async function POST(req: NextRequest) {
   await Order.collection.updateOne({ _id: order._id }, { $set: { items: itemsPayload } });
 
   const isActive = order.orderStatus === 'completed';
-  // Track which products already have a UserProduct on this order to avoid duplicates
-  // (a bundled product may also be an explicit line, or be bundled by multiple lines).
   const granted = new Set<string>();
 
   for (const r of resolved) {
@@ -142,7 +136,6 @@ export async function POST(req: NextRequest) {
     });
     granted.add(r.productId);
 
-    // Bundle: grant access to any included products for the SAME period as this line.
     const bundled = (r.prod.bundledProducts ?? [])
       .map((bid) => bid.toString())
       .filter((bid) => bid !== r.productId && !granted.has(bid));

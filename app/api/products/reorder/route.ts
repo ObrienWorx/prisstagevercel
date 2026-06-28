@@ -4,7 +4,6 @@ import Product from '@/models/Product';
 import { requirePermission } from '@/middleware/authMiddleware';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 
-// Persist a new display order for products. Body: { ids: string[] } in the desired order.
 export async function PUT(req: NextRequest) {
   const { error } = await requirePermission(req, 'products'); if (error) return error;
   try {

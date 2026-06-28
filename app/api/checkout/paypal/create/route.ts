@@ -73,7 +73,6 @@ export async function POST(req: NextRequest) {
     });
     const data = await res.json();
     if (!res.ok) {
-      // Log the full PayPal payload so the real cause is visible server-side.
       console.error('PayPal create-order failed:', res.status, JSON.stringify(data));
       const issue = data?.details?.[0];
       const detail = issue?.description || issue?.issue || data?.message || data?.name || `PayPal rejected the order (HTTP ${res.status})`;

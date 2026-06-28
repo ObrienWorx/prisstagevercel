@@ -136,7 +136,6 @@ export default async function HomePage() {
     .limit(10)
     .lean() as unknown as HomeRecPopulated[];
 
-  // Each SELL closes one or more buys — emit a row per buy, newest first, capped at 5.
   const homeRecs = pastRecReports
     .flatMap((sell) => (sell.pastStockRecommendations || []).map((buy) => {
       if (!buy || !buy.price) return null;

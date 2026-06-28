@@ -37,8 +37,6 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (!planSlug) { router.replace('/subscribe'); return; }
-    // Fetch the single product by slug (NOT the filtered list) so hidden/unlisted
-    // products can still be purchased via a direct link.
     fetch(`/api/public/products/${planSlug}`)
       .then(r => r.json())
       .then(d => {
@@ -51,7 +49,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (payMethod !== 'paypal' || !product || paypalRendered.current) return;
-    if (computePrice(product, saleOffer) <= 0) return; // free product — no PayPal needed
+    if (computePrice(product, saleOffer) <= 0) return;
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
     if (!clientId) { setErr('PayPal is not configured. Please choose another payment method.'); return; }
     const scriptId = 'paypal-sdk';
@@ -88,8 +86,6 @@ function CheckoutContent() {
           }
           return d.data.orderId;
         } catch (e) {
-          // The PayPal SDK swallows this thrown error and re-fires onError with a
-          // generic "PayPal error" message, so capture the real reason here for display.
           const detail = e instanceof Error ? e.message : 'Failed to create PayPal order';
           createErrRef.current = detail;
           console.error('PayPal createOrder failed:', e);
@@ -110,7 +106,6 @@ function CheckoutContent() {
       },
       onError: (e: Error) => {
         console.error('PayPal onError:', e);
-        // Prefer the specific reason captured in createOrder over the SDK's generic message.
         setErr(createErrRef.current || 'PayPal error: ' + (e?.message || 'Something went wrong. Please try again.'));
       },
       onCancel: () => setMsg(''),

@@ -51,3 +51,6 @@ next-env.d.ts
 members-export.json
 *.export.json
 .scratch/
+
+# one-time / local-only scripts (not part of the app)
+scripts/strip-comments.mjs

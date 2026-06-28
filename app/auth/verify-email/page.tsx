@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, KeyboardEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SiteLayout from '@/components/SiteLayout';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 function VerifyEmailForm() {
   const router = useRouter();
@@ -70,10 +71,11 @@ function VerifyEmailForm() {
   const resend = async () => {
     setResendLoading(true); setErr(''); setMsg('');
     try {
+      const recaptchaToken = await getRecaptchaToken('send_otp');
       const r = await fetch('/api/subscriber/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, purpose: 'email-verify' }),
+        body: JSON.stringify({ email, purpose: 'email-verify', recaptchaToken }),
       });
       const d = await r.json();
       if (d.success) { setMsg('A new code has been sent to your email.'); setCountdown(60); }

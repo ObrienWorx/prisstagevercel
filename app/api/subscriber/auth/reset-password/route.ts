@@ -3,10 +3,13 @@ import connectDB from '@/lib/mongoose';
 import Subscriber from '@/models/Subscriber';
 import ActivityLog from '@/models/ActivityLog';
 import OTP from '@/models/OTP';
+import { verifyRecaptcha } from '@/lib/recaptcha';
 
 export async function POST(req: NextRequest) {
   await connectDB();
-  const { email, code, password } = await req.json();
+  const { email, code, password, recaptchaToken } = await req.json();
+  const captcha = await verifyRecaptcha(recaptchaToken, 'reset_password');
+  if (!captcha.ok) return NextResponse.json({ success: false, error: captcha.reason || 'Captcha verification failed' }, { status: 400 });
   if (!email || !code || !password) return NextResponse.json({ success: false, error: 'email, code, and password required' }, { status: 400 });
   if (password.length < 6) return NextResponse.json({ success: false, error: 'Password must be at least 6 characters' }, { status: 400 });
 

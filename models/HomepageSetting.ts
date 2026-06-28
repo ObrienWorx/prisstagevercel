@@ -8,8 +8,8 @@ export interface IHomepageSetting extends Document {
   videoSectionButtonText: string;
   videoSectionButtonHref: string;
   videoSectionYoutubeUrl: string;
-  tickerLeadPdf: string;    // report emailed to homepage "Ticker" unlock leads
-  blogLeadPdf: string;      // report emailed to blog-category "claim your free copy" leads
+  tickerLeadPdf: string;
+  blogLeadPdf: string;
   createdAt: Date;
   updatedAt: Date;
 }

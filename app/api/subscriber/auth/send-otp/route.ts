@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongoose';
 import Subscriber from '@/models/Subscriber';
 import OTP from '@/models/OTP';
 import { sendOTPEmail } from '@/lib/email';
+import { verifyRecaptcha } from '@/lib/recaptcha';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
@@ -12,7 +13,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     console.log('[send-otp] request body:', body);
 
-    const { email, purpose } = body;
+    const { email, purpose, recaptchaToken } = body;
+    const captcha = await verifyRecaptcha(recaptchaToken, 'send_otp');
+    if (!captcha.ok) return NextResponse.json({ success: false, error: captcha.reason || 'Captcha verification failed' }, { status: 400 });
     if (!email || !purpose) {
       console.log('[send-otp] missing email or purpose');
       return NextResponse.json({ success: false, error: 'email and purpose required' }, { status: 400 });

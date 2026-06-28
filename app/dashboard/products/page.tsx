@@ -76,7 +76,6 @@ function plansFromItem(item: Product): Plan[] {
       durationType: (pl.durationType as 'days' | 'months' | 'years') ?? 'months',
     }));
   }
-  // Migrate legacy single-plan data
   return [{
     name: '',
     regularPrice: item.regularPrice != null ? String(item.regularPrice) : '',
@@ -498,7 +497,6 @@ export default function ProductsPage() {
                     </div>
                   )}
 
-
                   <div className="col-12">
                     <label className="form-label">Short Description</label>
                     <textarea className="form-control" rows={2} value={form.shortDescription}
@@ -612,7 +610,6 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-
                 <div className="col-12 mt-5 bg-secondary bg-opacity-10 p-3 rounded">
                   <hr className="my-1" />
                   <button
@@ -673,7 +670,6 @@ export default function ProductsPage() {
                     </div>
                   )}
                 </div>
-
 
               </div>
               <div className="modal-footer">

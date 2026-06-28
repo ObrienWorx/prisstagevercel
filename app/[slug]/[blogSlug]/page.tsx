@@ -37,14 +37,12 @@ export default async function BlogDetailPage({ params }: P) {
 
   if (!blog) notFound();
 
-  // Keep legacy single-category blogs readable while allowing the same post in many categories.
   const legacyCategory = blog.category as { _id: unknown; name: string; slug: string } | null;
   const categories = (blog.categories as { _id: unknown; name: string; slug: string }[] | undefined) ?? [];
   const category = categories.find(item => item.slug === categorySlug)
     ?? (legacyCategory?.slug === categorySlug ? legacyCategory : null);
   if ((categories.length > 0 || legacyCategory) && !category) notFound();
 
-  // Latest in same category for sidebar
   const latestFilter: Record<string, unknown> = {
     publishStatus: 'published',
     _id: { $ne: blog._id },

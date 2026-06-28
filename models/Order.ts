@@ -13,14 +13,14 @@ export interface IOrderItem {
 export interface IOrder extends Document {
   orderNumber: string;
   subscriber: Types.ObjectId;
-  product: Types.ObjectId;       // primary product (first item) — kept for compat
-  pricePaid: number;             // total across all items
-  sellingPrice?: number;         // invoice display price (admin-set, optional)
+  product: Types.ObjectId;
+  pricePaid: number;
+  sellingPrice?: number;
   paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
   orderStatus: 'pending' | 'completed' | 'cancelled' | 'refunded';
   purchaseDate: Date;
-  expiryDate: Date;              // first item expiry — kept for compat
-  items: IOrderItem[];           // all line-items (populated on multi-product orders)
+  expiryDate: Date;
+  items: IOrderItem[];
   notes: string;
   createdAt: Date;
   updatedAt: Date;
@@ -58,10 +58,6 @@ const OrderSchema = new Schema<IOrder>(
 
 OrderSchema.pre('save', async function () {
   if (!this.orderNumber) {
-    // Derive from the highest existing orderNumber, not the document count:
-    // historical imports created orders with explicit (gapped) ORD-##### numbers,
-    // so count+1 collides with already-used numbers. Numbers are 5-digit
-    // zero-padded, so a descending sort yields the true max.
     const Order = this.constructor as Model<IOrder>;
     const last = await Order.findOne({}).sort({ orderNumber: -1 }).select('orderNumber').lean();
     const seq = last?.orderNumber ? parseInt(String(last.orderNumber).replace(/\D/g, ''), 10) || 0 : 0;

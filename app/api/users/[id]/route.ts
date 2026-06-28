@@ -30,7 +30,6 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const user = await User.findById(id);
   if (!user) return errorResponse('User not found', 404);
 
-  // Prevent demoting the only admin
   if (user.role === 'admin' && role === 'sub-admin') {
     const adminCount = await User.countDocuments({ role: 'admin' });
     if (adminCount <= 1) {
@@ -66,7 +65,6 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
   if (!user) return errorResponse('User not found', 404);
 
-  // Prevent deleting the only admin
   if (user.role === 'admin') {
     const adminCount = await User.countDocuments({ role: 'admin' });
     if (adminCount <= 1) {

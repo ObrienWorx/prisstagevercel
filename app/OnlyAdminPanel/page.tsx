@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,16 +44,16 @@ export default function LoginPage() {
     setError('');
 
     try {
+      const recaptchaToken = await getRecaptchaToken('admin_login');
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, recaptchaToken }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        // Save token in localStorage too (for API calls from frontend)
         localStorage.setItem('token', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data.user));
         router.push('/dashboard');

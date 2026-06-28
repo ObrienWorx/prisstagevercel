@@ -43,8 +43,6 @@ const empty = {
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
-// Searchable dropdown over a plain string list (used by the Ticker filter, which
-// can have a long list of symbols). A native <select> can't host a search box.
 function SearchSelect({ options, value, onChange, placeholder, style }: {
   options: string[]; value: string; onChange: (v: string) => void; placeholder: string; style?: React.CSSProperties;
 }) {
@@ -115,8 +113,6 @@ function SearchSelect({ options, value, onChange, placeholder, style }: {
   );
 }
 
-// Multi-select variant of ReportSearchSelect: a SELL can close several prior buys,
-// so this lets you tick every matching report. Shows selected titles as chips.
 function ReportMultiSelect({ options, value, onChange, empty = 'No reports available.' }: {
   options: ReportRef[]; value: string[]; onChange: (ids: string[]) => void; empty?: string;
 }) {
@@ -235,7 +231,6 @@ export default function ReportsPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = useMemo(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }), [token]);
 
-  // Load the paginated report list for the current page/search/filters.
   const load = useCallback(async (p = 1, q = '', cat = '', sec = '', prod = '', idx = '', tic = '', reco = '', from = '', to = '') => {
     setLoading(true);
     try {
@@ -252,7 +247,6 @@ export default function ReportsPage() {
     } finally { setLoading(false); }
   }, [h]);
 
-  // Supporting lists for the form selects — loaded once, they change rarely.
   const loadRefs = useCallback(async () => {
     const [cR, sR, pR, tR] = await Promise.all([
       fetch('/api/report-categories', { headers: h }),
@@ -269,7 +263,6 @@ export default function ReportsPage() {
 
   useEffect(() => { void loadRefs(); }, [loadRefs]);
 
-  // Distinct INDEX and TICKER values, derived from the lightweight titles list.
   const indexOptions = useMemo(
     () => Array.from(new Set(titles.map((t) => t.upsellTicker).filter(Boolean) as string[])).sort(),
     [titles],
@@ -279,13 +272,11 @@ export default function ReportsPage() {
     [titles],
   );
 
-  // Reload list whenever the committed search term or any filter changes (and on first mount).
   useEffect(() => {
     const timeout = window.setTimeout(() => { void load(1, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter, dateFrom, dateTo); }, 0);
     return () => { window.clearTimeout(timeout); };
   }, [load, search, categoryFilter, sectorFilter, productFilter, indexFilter, tickerFilter, recommendationFilter, dateFrom, dateTo]);
 
-  // Open edit modal when navigated from search with ?edit=<id>
   useEffect(() => {
     const editId = searchParams.get('edit');
     if (!editId) return;
@@ -312,7 +303,6 @@ export default function ReportsPage() {
   };
 
   const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowModal(true); };
-  // The list omits `content` for payload size; fetch the full document for editing.
   const openEdit = async (item: Report) => {
     try {
       const d = await fetch(`/api/reports/${item._id}`, { headers: h }).then((r) => r.json());

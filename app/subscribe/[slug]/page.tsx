@@ -90,7 +90,6 @@ export default async function ProductDetailPage({ params }: P) {
   const showExpiredOffer = isSaleOffer && saleEnded;
   if (isSaleOffer && !saleActive && !showExpiredOffer) notFound();
 
-  // Build plans array — fall back to legacy top-level fields if no plans saved yet
   const now = new Date();
   const isSaleActive = (sp: number | null, sd?: Date | string | null, ed?: Date | string | null) => {
     if (sp == null) return false;
@@ -99,7 +98,6 @@ export default async function ProductDetailPage({ params }: P) {
     return true;
   };
 
-  // Determine if any plan has an active sale and there's an end date for the countdown
   const savedPlans = p.plans ?? [];
   const anySaleActive = isSaleOffer && saleActive && (savedPlans.length > 0
     ? savedPlans.some((pl) => isSaleActive(pl.salePrice ?? null, p.saleStartDate, p.saleEndDate))

@@ -127,7 +127,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [verifyAdminSession]);
 
-  // Close sidebar when route changes (mobile nav)
   useEffect(() => {
     const timeout = window.setTimeout(() => { setSidebarOpen(false); }, 0);
     return () => { window.clearTimeout(timeout); };

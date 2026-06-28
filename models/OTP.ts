@@ -18,7 +18,6 @@ const OTPSchema = new Schema<IOTP>({
 OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 OTPSchema.index({ email: 1, purpose: 1 });
 
-// In development, always re-register so HMR schema changes take effect without a restart
 if (process.env.NODE_ENV !== 'production') delete (mongoose.models as Record<string, unknown>).OTP;
 const OTP: Model<IOTP> = mongoose.models.OTP || mongoose.model<IOTP>('OTP', OTPSchema);
 export default OTP;

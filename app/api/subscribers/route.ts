@@ -20,7 +20,6 @@ export async function GET(req: NextRequest) {
     filter.$or = [{ name: rx }, { email: rx }, { phone: rx }];
   }
 
-  // No page param → full list (used by dropdowns / legacy callers)
   if (!pageParam) {
     const subscribers = await Subscriber.find(filter).select('-password').sort({ createdAt: -1 });
     return successResponse(subscribers);

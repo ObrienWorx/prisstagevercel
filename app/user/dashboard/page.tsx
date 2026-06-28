@@ -41,10 +41,8 @@ function DashboardContent() {
     { href: '/user/profile', icon: '👤', label: 'Edit Profile', sub: 'Update your details' },
   ];
 
-  // Mark which products are already active for the subscriber
   const activeProductIds = new Set(activeProducts.map(up => up.product?._id).filter(Boolean));
 
-  // Show unlocked (active) products first, preserving original order within each group.
   const sortedProducts = [...allProducts].sort((a, b) => {
     const aUnlocked = activeProductIds.has(a._id) ? 0 : 1;
     const bUnlocked = activeProductIds.has(b._id) ? 0 : 1;

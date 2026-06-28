@@ -1,6 +1,3 @@
-// lib/mongoose.ts
-// This file handles MongoDB connection using Mongoose
-// We use a cached connection so the DB doesn't reconnect on every API call (important for Next.js)
 
 import mongoose from 'mongoose';
 

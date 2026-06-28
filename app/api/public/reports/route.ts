@@ -19,7 +19,6 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    // Full-text search mode
     if (q) {
       const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       const matchingSectors = await Sector.find({ name: regex }, '_id');
@@ -71,7 +70,6 @@ export async function GET(req: NextRequest) {
 
     if (productId) filter.product = productId;
 
-    // Paginated, shaped output for the public "load more" UI.
     if (paged) {
       const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
       const limit = Math.min(48, Math.max(1, parseInt(searchParams.get('limit') || String(LISTING_PER_PAGE), 10)));
@@ -89,7 +87,6 @@ export async function GET(req: NextRequest) {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Return reports without full content (just preview)
     const preview = reports.map((r: any) => ({
       _id: r._id,
       title: r.title,

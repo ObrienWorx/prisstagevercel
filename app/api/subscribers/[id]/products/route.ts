@@ -10,7 +10,6 @@ import { calculateExpiryDate } from '@/lib/orderHelpers';
 
 type P = { params: Promise<{ id: string }> };
 
-// GET subscriber's products
 export async function GET(req: NextRequest, { params }: P) {
   const { error } = await requireAdmin(req); if (error) return error;
   await connectDB(); const { id } = await params;
@@ -21,7 +20,6 @@ export async function GET(req: NextRequest, { params }: P) {
   return successResponse(products);
 }
 
-// POST — assign one or more products, always creates a single Order
 export async function POST(req: NextRequest, { params }: P) {
   const { error } = await requireAdmin(req); if (error) return error;
   await connectDB();
@@ -72,8 +70,6 @@ export async function POST(req: NextRequest, { params }: P) {
   });
 
   const isActive = order.orderStatus === 'completed';
-  // Track which products already have a UserProduct on this order to avoid duplicates
-  // (a bundled product may also be an explicit line, or be bundled by multiple lines).
   const granted = new Set<string>();
 
   for (const r of resolved) {
@@ -92,7 +88,6 @@ export async function POST(req: NextRequest, { params }: P) {
       paymentDate: r.start,
     });
 
-    // Bundle: grant access to any included products for the SAME period as this line.
     const bundled = (r.prod.bundledProducts ?? [])
       .map((bid) => bid.toString())
       .filter((bid) => bid !== r.productId && !granted.has(bid));

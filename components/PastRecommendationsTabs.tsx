@@ -92,7 +92,6 @@ export default function PastRecommendationsTabs({
     return [...filteredRows].sort((a, b) => {
       const av = (a as Record<string, unknown>)[sort.key];
       const bv = (b as Record<string, unknown>)[sort.key];
-      // Missing values always sort to the bottom, regardless of direction.
       const aMissing = av === null || av === undefined || av === '';
       const bMissing = bv === null || bv === undefined || bv === '';
       if (aMissing && bMissing) return 0;

@@ -1,5 +1,3 @@
-// app/api/auth/logout/route.ts
-// POST /api/auth/logout — Clears the auth cookie
 
 import { NextResponse } from 'next/server';
 

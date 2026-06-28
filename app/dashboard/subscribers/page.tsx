@@ -75,7 +75,6 @@ export default function SubscribersPage() {
     } finally { setLoading(false); }
   }, [page, debouncedSearch]);
 
-  // debounce the search box; reset to page 1 on a new query
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
     return () => clearTimeout(t);
@@ -83,12 +82,10 @@ export default function SubscribersPage() {
 
   useEffect(() => { loadSubscribers(); }, [loadSubscribers]);
 
-  // product catalog loads once (for the assign-product dropdowns)
   useEffect(() => {
     fetch('/api/products', { headers: h }).then(r => r.json()).then(d => { if (d.success) setProducts(d.data); }).catch(() => {});
   }, []);
 
-  // keep page in range when the result set shrinks (e.g. after a delete)
   useEffect(() => { if (page > pages) setPage(pages); }, [pages, page]);
 
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };
@@ -351,7 +348,6 @@ export default function SubscribersPage() {
 
             <div className="modal-body">
               {err && <div className="alert alert-danger">{err}</div>}
-
 
               {showAssign && (
                 <div className="card mb-3 border-primary">

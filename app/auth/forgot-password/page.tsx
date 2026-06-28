@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import SiteLayout from '@/components/SiteLayout';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -16,10 +17,11 @@ export default function ForgotPasswordPage() {
     if (!email) { setErr('Please enter your email address'); return; }
     setErr(''); setLoading(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('forgot_password');
       const r = await fetch('/api/subscriber/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, recaptchaToken }),
       });
       const d = await r.json();
       if (d.success) {

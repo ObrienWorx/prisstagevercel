@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SiteLayout from '@/components/SiteLayout';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 function RegisterForm() {
   const router = useRouter();
@@ -27,10 +28,11 @@ function RegisterForm() {
     if (!form.name || !form.email || !form.phone) { setErr('Please fill in all required fields'); return; }
     setErr(''); setLoading(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('register');
       const r = await fetch('/api/subscriber/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone }),
+        body: JSON.stringify({ name: form.name, email: form.email, phone: form.phone, recaptchaToken }),
       });
       const d = await r.json();
       if (d.success) {

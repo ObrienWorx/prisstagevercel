@@ -132,7 +132,6 @@ export default function OrdersPage() {
     } finally { setLoading(false); }
   }, [page, debouncedSearch]);
 
-  // debounce the search box; reset to page 1 on a new query
   useEffect(() => {
     const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 350);
     return () => clearTimeout(t);
@@ -140,7 +139,6 @@ export default function OrdersPage() {
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
-  // subscribers + products for the create-order dropdowns (loaded once)
   useEffect(() => {
     Promise.all([
       fetch('/api/subscribers', { headers: h }).then(r => r.json()),
@@ -148,7 +146,6 @@ export default function OrdersPage() {
     ]).then(([s, p]) => { if (s.success) setSubscribers(s.data); if (p.success) setProducts(p.data); }).catch(() => {});
   }, []);
 
-  // keep page in range when the result set shrinks (e.g. after a delete)
   useEffect(() => { if (page > pages) setPage(pages); }, [pages, page]);
 
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(''), 3000); };

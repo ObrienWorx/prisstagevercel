@@ -1,5 +1,3 @@
-// app/api/auth/me/route.ts
-// GET /api/auth/me — Returns current logged-in user info
 
 import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongoose';
@@ -14,7 +12,6 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    // Fetch fresh user data from DB (minus password)
     const dbUser = await User.findById(user!.userId).select('-password');
 
     if (!dbUser) {

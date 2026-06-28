@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 interface Props {
   badge?: string;
@@ -53,12 +54,14 @@ export default function LeadCaptureForm({
     setLoading(true);
     setError('');
     try {
+      const recaptchaToken = await getRecaptchaToken('lead');
       const res = await fetch('/api/public/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form, phone, postalCode, consent, source,
           sourceUrl: typeof window !== 'undefined' ? window.location.href : '',
+          recaptchaToken,
         }),
       });
       const data = await res.json();

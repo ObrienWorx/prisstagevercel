@@ -46,7 +46,6 @@ export default async function CatchAllPage({ params }: P) {
   const normalSlug = slug.toLowerCase();
   await connectDB();
 
-  // ── 1. Static page ────────────────────────────────────────────────────────
   const page = await StaticPage.findOne({ slug: normalSlug, isPublished: true }).lean() as any;
   if (page) {
     if (page.slug === 'about-us') {
@@ -168,7 +167,6 @@ export default async function CatchAllPage({ params }: P) {
     );
   }
 
-  // ── 2. Blog category listing ──────────────────────────────────────────────
   const blogCat = await BlogCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
   if (blogCat) {
     const blogFilter: Record<string, unknown> = {
@@ -222,7 +220,6 @@ export default async function CatchAllPage({ params }: P) {
     );
   }
 
-  // ── 3. Report category listing ────────────────────────────────────────────
   const reportCat = await ReportCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
   if (reportCat) {
     const reportFilter: Record<string, unknown> = { category: reportCat._id, publishStatus: 'published' };

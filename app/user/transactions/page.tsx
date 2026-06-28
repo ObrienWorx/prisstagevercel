@@ -47,7 +47,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     const raw = localStorage.getItem('subscriber_user');
-    if (raw) { try { setSubscriber(JSON.parse(raw)); } catch { /* ignore */ } }
+    if (raw) { try { setSubscriber(JSON.parse(raw)); } catch { } }
     const token = localStorage.getItem('subscriber_token');
     if (!token) return;
     fetch('/api/subscriber/my-transactions', { headers: { Authorization: `Bearer ${token}` } })

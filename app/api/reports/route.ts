@@ -31,7 +31,6 @@ export async function GET(req: NextRequest) {
       return successResponse(reports);
     }
 
-    // Lightweight id+title list for picker dropdowns (e.g. "Past Stock Recommendations").
     if (sp.get('titles')) {
       const titles = await Report.find({}, 'title upsellTicker ticker').sort({ createdAt: -1 }).lean();
       return successResponse(titles);
@@ -55,13 +54,12 @@ export async function GET(req: NextRequest) {
     if (product) filter.product = product;
     if (index) filter.upsellTicker = index.toUpperCase();
     if (ticker) filter.ticker = ticker.toUpperCase();
-    // Match the multi-select tags array, falling back to the legacy single `recommendation` field.
     if (recommendation) filter.$or = [{ recommendations: recommendation }, { recommendation }];
     const createdAt = dateRangeFilter(dateFrom, dateTo);
     if (createdAt) filter.createdAt = createdAt;
     const [items, total] = await Promise.all([
       Report.find(filter)
-        .select('-content') // omit heavy HTML body; fetched on demand via /api/reports/[id]
+        .select('-content')
         .populate('category', 'name slug')
         .populate('sector', 'name slug')
         .populate('product', 'name regularPrice salePrice')
@@ -86,7 +84,6 @@ export async function POST(req: NextRequest) {
   const finalSlug = slug ? slugify(slug) : slugify(title);
   if (await Report.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
   const recoTags = Array.isArray(recommendations) ? recommendations.filter(Boolean) : (recommendation ? [recommendation] : []);
-  // A SELL may close several prior buys — keep the singular field synced to the first for back-compat.
   const pastBuys = Array.isArray(pastStockRecommendations) ? pastStockRecommendations.filter(Boolean) : (pastStockRecommendation ? [pastStockRecommendation] : []);
   const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, pastStockRecommendations: pastBuys, pastStockRecommendation: pastBuys[0] || null, upsellTicker: (upsellTicker || '').trim().toUpperCase(), ticker: (ticker || '').trim().toUpperCase(), price: price ?? 0, recommendation: recoTags[0] || '', recommendations: recoTags, featured: !!featured, publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
   await report.populate([{ path: 'category', select: 'name slug' }, { path: 'sector', select: 'name slug' }, { path: 'product', select: 'name' }, { path: 'pastStockRecommendations', select: 'title slug ticker upsellTicker' }]);

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, KeyboardEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SiteLayout from '@/components/SiteLayout';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -51,10 +52,11 @@ function ResetPasswordForm() {
     if (password !== confirmPassword) { setErr('Passwords do not match'); return; }
     setErr(''); setLoading(true);
     try {
+      const recaptchaToken = await getRecaptchaToken('reset_password');
       const r = await fetch('/api/subscriber/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code, password }),
+        body: JSON.stringify({ email, code, password, recaptchaToken }),
       });
       const d = await r.json();
       if (d.success) {
@@ -69,10 +71,11 @@ function ResetPasswordForm() {
   const resend = async () => {
     setResendLoading(true); setErr(''); setMsg('');
     try {
+      const recaptchaToken = await getRecaptchaToken('forgot_password');
       const r = await fetch('/api/subscriber/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, recaptchaToken }),
       });
       const d = await r.json();
       if (d.success) { setMsg('A new code has been sent.'); setCountdown(60); }

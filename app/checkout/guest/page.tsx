@@ -36,8 +36,6 @@ function GuestCheckoutContent() {
 
   useEffect(() => {
     if (!planSlug) { router.replace('/subscribe'); return; }
-    // Fetch the single product by slug (NOT the filtered list) so hidden/unlisted
-    // products can still be purchased via a direct link.
     fetch(`/api/public/products/${planSlug}`)
       .then(r => r.json())
       .then(d => {
@@ -50,7 +48,7 @@ function GuestCheckoutContent() {
 
   useEffect(() => {
     if (!product || paypalRendered.current) return;
-    if (computePrice(product, saleOffer) <= 0) return; // free product — no PayPal needed
+    if (computePrice(product, saleOffer) <= 0) return;
     const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
     if (!clientId) { setErr('PayPal is not configured.'); return; }
     const scriptId = 'paypal-sdk';
@@ -92,7 +90,6 @@ function GuestCheckoutContent() {
         });
         const d = await res.json();
         if (d.success) {
-          // Save the auto-generated token so the user is logged in
           if (d.data.token) {
             localStorage.setItem('subscriber_token', d.data.token);
             setSavedToken(d.data.token);

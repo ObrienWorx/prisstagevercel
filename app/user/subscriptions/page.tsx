@@ -46,21 +46,19 @@ export default function SubscriptionsPage() {
 
   useEffect(() => {
     const raw = localStorage.getItem('subscriber_user');
-    if (raw) { try { setSubscriber(JSON.parse(raw)); } catch { /* */ } }
+    if (raw) { try { setSubscriber(JSON.parse(raw)); } catch { } }
     if (!token) return;
     fetch('/api/subscriber/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
         if (d.success) {
           setProducts(d.data.products ?? []);
-          // Prefer the server's subscriber (localStorage copy can be missing/stale).
           if (d.data.subscriber) setSubscriber({ name: d.data.subscriber.name, email: d.data.subscriber.email, phone: d.data.subscriber.phone });
         }
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // Group UserProducts by order — one card per order
   const orderGroups = useMemo<OrderGroup[]>(() => {
     const map = new Map<string, OrderGroup>();
     products.forEach(up => {
@@ -118,8 +116,6 @@ export default function SubscriptionsPage() {
   const activeCount = orderGroups.filter(g => g.isAnyActive).length;
   const expiredCount = orderGroups.filter(g => !g.isAnyActive).length;
 
-  // Invoice line items come from the order (items.product + product are populated by the
-  // order API), so per-line amounts and names are available — same as the admin invoice.
   const invItems: OrderItem[] = invoiceOrder
     ? (invoiceOrder.items?.length ? invoiceOrder.items : invoiceOrder.product
       ? [{ product: invoiceOrder.product, pricePaid: invoiceOrder.pricePaid, startDate: invoiceOrder.purchaseDate, expiryDate: invoiceOrder.expiryDate, durationValue: invoiceOrder.product.durationValue ?? 0, durationType: invoiceOrder.product.durationType ?? '' }]

@@ -4,7 +4,6 @@ import StaticPage from '@/models/StaticPage';
 import { requireAdmin } from '@/middleware/authMiddleware';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 
-// Persist a new display order for static pages. Body: { ids: string[] } in the desired order.
 export async function PUT(req: NextRequest) {
   const { error } = await requireAdmin(req); if (error) return error;
   try {

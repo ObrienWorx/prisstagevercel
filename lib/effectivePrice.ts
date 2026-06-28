@@ -1,5 +1,3 @@
-// Shared sale-aware price resolver — mirrors the logic used across checkout routes & pages.
-// Returns the price a buyer actually pays right now, given whether they came via a sale-offer link.
 
 interface PricedProduct {
   regularPrice: number;
