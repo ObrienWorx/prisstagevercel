@@ -97,6 +97,7 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
   const sendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpEmail) { setErr('Please enter your email address'); return; }
+    if (!agree) { setErr('Please agree to the Terms and Conditions and Financial Services Guide to continue.'); return; }
     setErr(''); setOtpLoading(true);
     try {
       const recaptchaToken = await getRecaptchaToken('send_otp');
@@ -370,6 +371,19 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
               autoFocus
             />
           </div>
+
+          <label className="auth-check">
+            <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
+            <span>Remember Me</span>
+          </label>
+          <label className="auth-check">
+            <input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} />
+            <span>
+              I agree to the Pristine Gaze{' '}
+              <Link href="/terms-of-use" className="auth-text-link">Terms and Conditions</Link> and{' '}
+              <Link href="/financial-services-guide" className="auth-text-link">Financial Services Guide</Link>.
+            </span>
+          </label>
 
           <button type="submit" className="auth-btn mt-2" disabled={otpLoading}>
             {otpLoading ? 'Sending code...' : 'Send Login Code ->'}
