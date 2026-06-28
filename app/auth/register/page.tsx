@@ -11,6 +11,8 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
+  const [remember, setRemember] = useState(false);
+  const [agree, setAgree] = useState(false);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +28,7 @@ function RegisterForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.phone) { setErr('Please fill in all required fields'); return; }
+    if (!agree) { setErr('Please agree to the Terms and Conditions and Financial Services Guide to continue.'); return; }
     setErr(''); setLoading(true);
     try {
       const recaptchaToken = await getRecaptchaToken('register');
@@ -88,6 +91,19 @@ function RegisterForm() {
             autoComplete="tel"
           />
         </div>
+
+        <label className="auth-check">
+          <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
+          <span>Remember Me</span>
+        </label>
+        <label className="auth-check">
+          <input type="checkbox" checked={agree} onChange={e => setAgree(e.target.checked)} />
+          <span>
+            I agree to the Pristine Gaze{' '}
+            <Link href="/terms-of-use" className="auth-text-link">Terms and Conditions</Link> and{' '}
+            <Link href="/financial-services-guide" className="auth-text-link">Financial Services Guide</Link>.
+          </span>
+        </label>
 
         <button type="submit" className="auth-btn mt-2" disabled={loading}>
           {loading ? 'Creating account...' : 'Create Account & Verify Email →'}

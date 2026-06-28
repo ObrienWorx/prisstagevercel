@@ -2987,6 +2987,30 @@ body {
   line-height: 1.6;
 }
 
+.auth-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 0.85rem;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.auth-check input {
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 15px;
+  height: 15px;
+  accent-color: #0049AC;
+  cursor: pointer;
+}
+
+.auth-check .auth-text-link {
+  font-weight: 600;
+}
+
 .auth-required {
   color: #ef4444;
 }
