@@ -433,6 +433,8 @@ body {
   border-radius: 6px;
   padding: 0.3em 0.65em;
   letter-spacing: 0.2px;
+      height: max-content;
+    width: max-content;
 }
 
 /* ── MODALS ──────────────────────────────── */

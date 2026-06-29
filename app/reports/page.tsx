@@ -79,7 +79,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <SiteLayout>
-      <section className="bg-dark text-white py-5">
+      <section className="cl-hero text-white py-5">
         <div className="container">
           {filterProduct ? (
             <>
