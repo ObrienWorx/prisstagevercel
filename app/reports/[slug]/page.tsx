@@ -111,7 +111,7 @@ export default async function ReportSlugPage({ params }: P) {
     const reportFilter: Record<string, unknown> = { product: product._id, publishStatus: 'published' };
     const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
       Report.find(reportFilter)
-        .select('title slug featuredImage createdAt recommendation')
+        .select('title slug featuredImage createdAt publishedAt recommendation')
         .sort({ createdAt: -1 })
         .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,
@@ -225,7 +225,7 @@ export default async function ReportSlugPage({ params }: P) {
           <h1 className="display-6 fw-bold mb-3">{report.title}</h1>
 
           <div className="d-flex align-items-center flex-wrap gap-2 small text-white-50">
-            <span>Published {fmtDate(report.createdAt)}</span>
+            <span>Published {fmtDate(report.publishedAt ?? report.createdAt)}</span>
             {report.product && (
               <Link href={`/reports/${report.product.slug}`} className="badge rounded-pill text-bg-light text-decoration-none">
                 {report.product.name}

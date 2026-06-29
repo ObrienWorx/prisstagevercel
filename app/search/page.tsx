@@ -20,7 +20,7 @@ export async function generateMetadata({ searchParams }: P) {
 }
 
 function fmtDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' });
 }
 
 export default async function SearchPage({ searchParams }: P) {
@@ -53,7 +53,7 @@ export default async function SearchPage({ searchParams }: P) {
     const filter: any = { publishStatus: 'published', $or: orClauses };
     totalCount = await Report.countDocuments(filter);
     results = await Report.find(filter)
-      .select('title slug featuredImage createdAt recommendation')
+      .select('title slug featuredImage createdAt publishedAt recommendation')
       .sort({ createdAt: -1 })
       .skip((page - 1) * PER_PAGE)
       .limit(PER_PAGE)
@@ -67,7 +67,7 @@ export default async function SearchPage({ searchParams }: P) {
     title: r.title,
     slug: r.slug,
     featuredImage: r.featuredImage,
-    date: fmtDate(r.createdAt),
+    date: fmtDate(r.publishedAt ?? r.createdAt),
     href: `/reports/${r.slug}`,
     cta: 'Read Report »',
     recommendation: r.recommendation || '',

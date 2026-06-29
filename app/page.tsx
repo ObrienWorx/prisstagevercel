@@ -42,6 +42,7 @@ interface HomeBlog {
   slug: string;
   featuredImage?: string;
   createdAt?: Date;
+  publishedAt?: Date | null;
   categorySlug: string;
 }
 
@@ -60,6 +61,7 @@ function formatPostDate(date?: Date) {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    timeZone: 'Australia/Sydney',
   }).format(new Date(date));
 }
 
@@ -96,7 +98,7 @@ export default async function HomePage() {
       publishStatus: 'published',
       $or: [{ category: categoryId }, { categories: categoryId }],
     })
-      .select('title slug featuredImage createdAt')
+      .select('title slug featuredImage createdAt publishedAt')
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean() as Omit<HomeBlog, 'categorySlug'>[];
@@ -225,7 +227,7 @@ export default async function HomePage() {
                       <div className="home-news-content">
                         <span className="home-news-badge">Market</span>
                         <h3>{post.title}</h3>
-                        {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.createdAt)}</div>}
+                        {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.publishedAt ?? post.createdAt)}</div>}
                       </div>
                     </Link>
                   ))}
@@ -263,7 +265,7 @@ export default async function HomePage() {
                     <div className="home-news-content">
                       <span className="home-news-badge">ASX</span>
                       <h3>{post.title}</h3>
-                      {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.createdAt)}</div>}
+                      {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.publishedAt ?? post.createdAt)}</div>}
                     </div>
                   </Link>
                 ))}
@@ -277,7 +279,7 @@ export default async function HomePage() {
                     <div className="home-analysis-small-body">
                       <span className="home-news-badge">Market</span>
                       <h3>{post.title}</h3>
-                      {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.createdAt)}</div>}
+                      {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.publishedAt ?? post.createdAt)}</div>}
                     </div>
                   </Link>
                 ))}
@@ -432,7 +434,7 @@ export default async function HomePage() {
                       <div className="home-sector-body">
                         <span className="home-sector-badge">Market</span>
                         <h3>{post.title}</h3>
-                        {post.createdAt && <div className="home-sector-date">□ {formatPostDate(post.createdAt)}</div>}
+                        {post.createdAt && <div className="home-sector-date">□ {formatPostDate(post.publishedAt ?? post.createdAt)}</div>}
                       </div>
                     </Link>
                   ))}

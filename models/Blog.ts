@@ -10,6 +10,7 @@ export interface IBlog extends Document {
   category: Types.ObjectId | null;
   categories: Types.ObjectId[];
   publishStatus: 'draft' | 'published';
+  publishedAt: Date | null;
   metaTitle: string;
   metaDescription: string;
   metaImage: string;
@@ -28,12 +29,21 @@ const BlogSchema = new Schema<IBlog>(
     category: { type: Schema.Types.ObjectId, ref: 'BlogCategory', default: null },
     categories: [{ type: Schema.Types.ObjectId, ref: 'BlogCategory' }],
     publishStatus: { type: String, enum: ['draft', 'published'], default: 'draft' },
+    // Manually-settable publish date shown on the site. Falls back to createdAt when null.
+    publishedAt: { type: Date, default: null },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },
     metaImage: { type: String, default: '' },
   },
   { timestamps: true }
 );
+
+if (mongoose.models.Blog) {
+  const cachedBlogSchema = mongoose.models.Blog.schema;
+  if (!cachedBlogSchema.path('publishedAt')) {
+    cachedBlogSchema.add({ publishedAt: { type: Date, default: null } });
+  }
+}
 
 const Blog: Model<IBlog> =
   mongoose.models.Blog || mongoose.model<IBlog>('Blog', BlogSchema);

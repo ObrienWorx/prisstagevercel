@@ -79,13 +79,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'reports'); if (error) return error;
   await connectDB();
-  const { title, slug, content, featuredImage, category, sector, product, pastStockRecommendation, pastStockRecommendations, upsellTicker, ticker, price, recommendation, recommendations, featured, publishStatus, metaTitle, metaDescription, metaImage } = await req.json();
+  const { title, slug, content, featuredImage, category, sector, product, pastStockRecommendation, pastStockRecommendations, upsellTicker, ticker, price, recommendation, recommendations, featured, publishStatus, publishedAt, metaTitle, metaDescription, metaImage } = await req.json();
   if (!title) return errorResponse('Title is required');
   const finalSlug = slug ? slugify(slug) : slugify(title);
   if (await Report.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
   const recoTags = Array.isArray(recommendations) ? recommendations.filter(Boolean) : (recommendation ? [recommendation] : []);
   const pastBuys = Array.isArray(pastStockRecommendations) ? pastStockRecommendations.filter(Boolean) : (pastStockRecommendation ? [pastStockRecommendation] : []);
-  const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, pastStockRecommendations: pastBuys, pastStockRecommendation: pastBuys[0] || null, upsellTicker: (upsellTicker || '').trim().toUpperCase(), ticker: (ticker || '').trim().toUpperCase(), price: price ?? 0, recommendation: recoTags[0] || '', recommendations: recoTags, featured: !!featured, publishStatus: publishStatus || 'draft', metaTitle, metaDescription, metaImage });
+  const report = await Report.create({ title, slug: finalSlug, content, featuredImage, category: category || null, sector: sector || null, product: product || null, pastStockRecommendations: pastBuys, pastStockRecommendation: pastBuys[0] || null, upsellTicker: (upsellTicker || '').trim().toUpperCase(), ticker: (ticker || '').trim().toUpperCase(), price: price ?? 0, recommendation: recoTags[0] || '', recommendations: recoTags, featured: !!featured, publishStatus: publishStatus || 'draft', publishedAt: publishedAt ? new Date(publishedAt) : new Date(), metaTitle, metaDescription, metaImage });
   await report.populate([{ path: 'category', select: 'name slug' }, { path: 'sector', select: 'name slug' }, { path: 'product', select: 'name' }, { path: 'pastStockRecommendations', select: 'title slug ticker upsellTicker' }]);
   return successResponse(report, 'Report created', 201);
 }

@@ -175,7 +175,7 @@ export default async function CatchAllPage({ params }: P) {
     };
     const [blogs, total, latestBlogs, allBlogCats] = await Promise.all([
       Blog.find(blogFilter)
-        .select('title slug featuredImage tags authorName createdAt metaDescription content')
+        .select('title slug featuredImage tags authorName createdAt publishedAt metaDescription content')
         .sort({ createdAt: -1 })
         .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,
@@ -226,7 +226,7 @@ export default async function CatchAllPage({ params }: P) {
     const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
       Report.find(reportFilter)
         .populate('sector', 'name slug')
-        .select('title slug featuredImage createdAt sector recommendation')
+        .select('title slug featuredImage createdAt publishedAt sector recommendation')
         .sort({ createdAt: -1 })
         .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,

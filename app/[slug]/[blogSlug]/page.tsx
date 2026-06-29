@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: P) {
 }
 
 function fmtDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' });
 }
 
 export default async function BlogDetailPage({ params }: P) {
@@ -63,7 +63,7 @@ export default async function BlogDetailPage({ params }: P) {
             {blog.title}
           </h1>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)' }}>
-            Published {fmtDate(blog.createdAt)}
+            Published {fmtDate(blog.publishedAt ?? blog.createdAt)}
           </div>
         </div>
       </div>

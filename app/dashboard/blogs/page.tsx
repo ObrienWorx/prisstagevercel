@@ -13,6 +13,7 @@ interface Blog {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
   tags: string[]; authorName: string;
   category: Ref | null; categories?: Ref[]; publishStatus: 'draft' | 'published';
+  publishedAt?: string | null; createdAt?: string;
   metaTitle: string; metaDescription: string; metaImage: string;
 }
 
@@ -20,8 +21,14 @@ const empty = {
   title: '', slug: '', content: '', featuredImage: '',
   tags: '', authorName: '',
   categories: [] as string[], publishStatus: 'draft' as 'draft' | 'published',
+  publishedAt: '',
   metaTitle: '', metaDescription: '', metaImage: '',
 };
+
+// Format a stored date as YYYY-MM-DD in Sydney time for a <input type="date">.
+const toSydneyDateInput = (d?: string | Date | null) =>
+  d ? new Date(d).toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }) : '';
+const todaySydney = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
 
 export default function BlogsPage() {
   const [items, setItems] = useState<Blog[]>([]);
@@ -80,7 +87,7 @@ export default function BlogsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm(empty);
+    setForm({ ...empty, publishedAt: todaySydney() });
     setCategoryQuery('');
     setCategoryOpen(false);
     setTagInput('');
@@ -101,6 +108,7 @@ export default function BlogsPage() {
       tags: full.tags?.join(', ') || '', authorName: full.authorName || '',
       categories: full.categories?.map(category => category._id) || (full.category?._id ? [full.category._id] : []),
       publishStatus: full.publishStatus,
+      publishedAt: toSydneyDateInput(full.publishedAt ?? full.createdAt),
       metaTitle: full.metaTitle,
       metaDescription: full.metaDescription, metaImage: full.metaImage,
     });
@@ -445,6 +453,13 @@ export default function BlogsPage() {
                       <option value="draft">Draft</option>
                       <option value="published">Published</option>
                     </select>
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label">Publish Date</label>
+                    <input type="date" className="form-control" value={form.publishedAt}
+                      onChange={(e) => setForm({ ...form, publishedAt: e.target.value })} />
+                    <div className="form-text">Date shown on the site (AEST/AEDT)</div>
                   </div>
 
                   <div className="col-md-6">

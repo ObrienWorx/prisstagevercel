@@ -20,9 +20,15 @@ interface Report {
   upsellTicker: string; ticker: string; price: number; recommendation: string; recommendations?: string[];
   publishStatus: 'draft' | 'published';
   featured: boolean;
+  publishedAt?: string | null;
   metaTitle: string; metaDescription: string; metaImage: string;
   createdAt: string;
 }
+
+// Format a stored date as YYYY-MM-DD in Sydney time for a <input type="date">.
+const toSydneyDateInput = (d?: string | Date | null) =>
+  d ? new Date(d).toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }) : '';
+const todaySydney = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
 
 const RECOMMENDATION_OPTIONS = ['BUY', 'SELL', 'HOLD', 'SPECULATIVE BUY', 'REFRAIN', 'Security Under Review'];
 
@@ -40,6 +46,7 @@ const empty = {
   upsellTicker: '', ticker: '', price: '', recommendations: [] as string[],
   publishStatus: 'draft' as 'draft' | 'published',
   featured: false,
+  publishedAt: '',
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
@@ -297,12 +304,13 @@ export default function ReportsPage() {
       upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), recommendations: item.recommendations?.length ? item.recommendations : (item.recommendation ? [item.recommendation] : []),
       publishStatus: item.publishStatus,
       featured: item.featured ?? false,
+      publishedAt: toSydneyDateInput(item.publishedAt ?? item.createdAt),
       metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
     setErr(''); setShowModal(true);
   };
 
-  const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm({ ...empty, publishedAt: todaySydney() }); setErr(''); setShowModal(true); };
   const openEdit = async (item: Report) => {
     try {
       const d = await fetch(`/api/reports/${item._id}`, { headers: h }).then((r) => r.json());
@@ -496,8 +504,15 @@ export default function ReportsPage() {
                         : <span className="text-muted small">—</span>}
                     </td>
                     <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap', fontSize: 13 }}>
-                      {item.createdAt
-                        ? new Date(item.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                      {(item.publishedAt ?? item.createdAt)
+                        ? <>
+                            {new Date(item.publishedAt ?? item.createdAt!).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Australia/Sydney' })}
+                            {item.createdAt && (
+                              <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                                added {new Date(item.createdAt).toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Australia/Sydney' })}
+                              </div>
+                            )}
+                          </>
                         : <span className="text-muted small">—</span>}
                     </td>
                     <td className="d-flex">
@@ -525,7 +540,7 @@ export default function ReportsPage() {
               <div className="modal-body">
                 {err && <div className="alert alert-danger mb-3">{err}</div>}
                 <div className="row g-3 mb-3">
-                  <div className="col-md-6">
+                  <div className="col-md-4">
                     <label className="form-label">Publish Status</label>
                     <select className="form-select" value={form.publishStatus}
                       onChange={(e) => setForm(prev => ({ ...prev, publishStatus: e.target.value as 'draft' | 'published' }))}>
@@ -533,7 +548,13 @@ export default function ReportsPage() {
                       <option value="published">Published</option>
                     </select>
                   </div>
-                  <div className="col-md-6 d-flex align-items-end">
+                  <div className="col-md-4">
+                    <label className="form-label">Publish Date</label>
+                    <input type="date" className="form-control" value={form.publishedAt}
+                      onChange={(e) => setForm(prev => ({ ...prev, publishedAt: e.target.value }))} />
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Date shown on the site (AEST/AEDT)</div>
+                  </div>
+                  <div className="col-md-4 d-flex align-items-end">
                     <div className="form-check">
                       <input className="form-check-input" type="checkbox" id="featuredCheck"
                         checked={form.featured}

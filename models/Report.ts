@@ -20,6 +20,7 @@ export interface IReport extends Document {
   currentPriceUpdatedAt: Date | null;
   publishStatus: 'draft' | 'published';
   featured: boolean;
+  publishedAt: Date | null;
   metaTitle: string;
   metaDescription: string;
   metaImage: string;
@@ -48,6 +49,8 @@ const ReportSchema = new Schema<IReport>(
     recommendation: { type: String, enum: ['', 'BUY', 'HOLD', 'SELL', 'SPECULATIVE BUY', 'REFRAIN', 'Security Under Review'], default: '' },
     publishStatus: { type: String, enum: ['draft', 'published'], default: 'draft' },
     featured: { type: Boolean, default: false },
+    // Manually-settable publish date shown on the site. Falls back to createdAt when null.
+    publishedAt: { type: Date, default: null },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },
     metaImage: { type: String, default: '' },
@@ -91,6 +94,10 @@ if (mongoose.models.Report) {
 
   if (!cachedReportSchema.path('featured')) {
     missingPaths.featured = { type: Boolean, default: false };
+  }
+
+  if (!cachedReportSchema.path('publishedAt')) {
+    missingPaths.publishedAt = { type: Date, default: null };
   }
 
   if (Object.keys(missingPaths).length) {

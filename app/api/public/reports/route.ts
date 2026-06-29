@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
         category: r.category,
         upsellTicker: r.upsellTicker,
         recommendation: r.recommendation,
-        createdAt: r.createdAt,
+        createdAt: r.publishedAt ?? r.createdAt,
         excerpt: r.content ? r.content.replace(/<[^>]+>/g, '').slice(0, 200) + '...' : '',
       }));
 
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
       const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
       const limit = Math.min(48, Math.max(1, parseInt(searchParams.get('limit') || String(LISTING_PER_PAGE), 10)));
       const [docs, total] = await Promise.all([
-        Report.find(filter).select('title slug featuredImage createdAt recommendation').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+        Report.find(filter).select('title slug featuredImage createdAt publishedAt recommendation').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
         Report.countDocuments(filter),
       ]);
       const showRibbons = productId ? await hasActiveProductAccess(req, productId) : false;
@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
       product: r.product,
       category: r.category,
       upsellTicker: r.upsellTicker,
-      createdAt: r.createdAt,
+      createdAt: r.publishedAt ?? r.createdAt,
       excerpt: r.content ? r.content.replace(/<[^>]+>/g, '').slice(0, 200) + '...' : '',
     }));
 

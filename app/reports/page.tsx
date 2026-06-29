@@ -63,14 +63,14 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   }
 
   const reports = await Report.find(filter)
-    .select('title slug featuredImage ticker recommendation category sector product featured createdAt content')
+    .select('title slug featuredImage ticker recommendation category sector product featured createdAt publishedAt content')
     .populate('sector', 'name slug')
     .populate('product', 'name slug')
     .populate('category', 'name')
     .sort({ createdAt: -1 })
     .lean() as any[];
 
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Australia/Sydney' });
 
   const REC_BADGE: Record<string, string> = {
     BUY: 'text-bg-success', HOLD: 'text-bg-warning', SELL: 'text-bg-danger',
@@ -160,7 +160,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                         <p className={`small text-muted flex-grow-1${isUnlocked ? '' : ' report-blur'}`}>{excerpt}</p>
                       )}
                       <div className="d-flex align-items-center justify-content-between mt-auto">
-                        <span className="small text-muted">{fmtDate(r.createdAt)}</span>
+                        <span className="small text-muted">{fmtDate(r.publishedAt ?? r.createdAt)}</span>
                         {isUnlocked ? (
                           <Link href={`/reports/${r.slug}`} className="btn btn-primary btn-sm fw-bold">
                             Read Report →
