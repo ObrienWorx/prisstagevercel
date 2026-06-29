@@ -217,7 +217,10 @@ function CheckoutContent() {
 
             {!isFree && (
             <div className="d-flex gap-2 mb-4">
-              {([{ id: 'paypal', icon: '💳', label: 'PayPal' }, { id: 'cod', icon: '💵', label: 'Cash on Delivery' }] as const).map(m => (
+              {([
+                { id: 'paypal', icon: '💳', label: 'PayPal' },
+                ...(process.env.NEXT_PUBLIC_SHOW_COD === 'true' ? [{ id: 'cod', icon: '💵', label: 'Cash on Delivery' }] : []),
+              ] as { id: 'paypal' | 'cod'; icon: string; label: string }[]).map(m => (
                 <button
                   key={m.id}
                   onClick={() => { setPayMethod(m.id); setErr(''); if (m.id === 'paypal') paypalRendered.current = false; }}
