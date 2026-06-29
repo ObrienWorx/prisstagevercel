@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, type ClipboardEvent, type FocusEvent, type KeyboardEvent } from 'react';
 import { slugify } from '@/lib/slugify';
+import { toDateInput, todayInput } from '@/lib/dates';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
 import Pagination from '@/components/Pagination';
@@ -24,11 +25,6 @@ const empty = {
   publishedAt: '',
   metaTitle: '', metaDescription: '', metaImage: '',
 };
-
-// Format a stored date as YYYY-MM-DD in Sydney time for a <input type="date">.
-const toSydneyDateInput = (d?: string | Date | null) =>
-  d ? new Date(d).toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }) : '';
-const todaySydney = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
 
 export default function BlogsPage() {
   const [items, setItems] = useState<Blog[]>([]);
@@ -87,7 +83,7 @@ export default function BlogsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...empty, publishedAt: todaySydney() });
+    setForm({ ...empty, publishedAt: todayInput() });
     setCategoryQuery('');
     setCategoryOpen(false);
     setTagInput('');
@@ -108,7 +104,7 @@ export default function BlogsPage() {
       tags: full.tags?.join(', ') || '', authorName: full.authorName || '',
       categories: full.categories?.map(category => category._id) || (full.category?._id ? [full.category._id] : []),
       publishStatus: full.publishStatus,
-      publishedAt: toSydneyDateInput(full.publishedAt ?? full.createdAt),
+      publishedAt: toDateInput(full.publishedAt ?? full.createdAt),
       metaTitle: full.metaTitle,
       metaDescription: full.metaDescription, metaImage: full.metaImage,
     });

@@ -11,6 +11,7 @@ import Report from '@/models/Report';
 import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
 import { getYouTubeId } from '@/lib/orderHelpers';
+import { fmtDateShort } from '@/lib/dates';
 import type { Types } from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -53,16 +54,6 @@ interface HomepagePublicSettings {
   videoSectionButtonText?: string;
   videoSectionButtonHref?: string;
   videoSectionYoutubeUrl?: string;
-}
-
-function formatPostDate(date?: Date) {
-  if (!date) return '';
-  return new Intl.DateTimeFormat('en-AU', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Australia/Sydney',
-  }).format(new Date(date));
 }
 
 export default async function HomePage() {
@@ -227,7 +218,7 @@ export default async function HomePage() {
                       <div className="home-news-content">
                         <span className="home-news-badge">Market</span>
                         <h3>{post.title}</h3>
-                        {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.publishedAt ?? post.createdAt)}</div>}
+                        {post.createdAt && <div className="home-news-date">□ {fmtDateShort(post.publishedAt ?? post.createdAt)}</div>}
                       </div>
                     </Link>
                   ))}
@@ -265,7 +256,7 @@ export default async function HomePage() {
                     <div className="home-news-content">
                       <span className="home-news-badge">ASX</span>
                       <h3>{post.title}</h3>
-                      {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.publishedAt ?? post.createdAt)}</div>}
+                      {post.createdAt && <div className="home-news-date">□ {fmtDateShort(post.publishedAt ?? post.createdAt)}</div>}
                     </div>
                   </Link>
                 ))}
@@ -279,7 +270,7 @@ export default async function HomePage() {
                     <div className="home-analysis-small-body">
                       <span className="home-news-badge">Market</span>
                       <h3>{post.title}</h3>
-                      {post.createdAt && <div className="home-news-date">□ {formatPostDate(post.publishedAt ?? post.createdAt)}</div>}
+                      {post.createdAt && <div className="home-news-date">□ {fmtDateShort(post.publishedAt ?? post.createdAt)}</div>}
                     </div>
                   </Link>
                 ))}
@@ -434,7 +425,7 @@ export default async function HomePage() {
                       <div className="home-sector-body">
                         <span className="home-sector-badge">Market</span>
                         <h3>{post.title}</h3>
-                        {post.createdAt && <div className="home-sector-date">□ {formatPostDate(post.publishedAt ?? post.createdAt)}</div>}
+                        {post.createdAt && <div className="home-sector-date">□ {fmtDateShort(post.publishedAt ?? post.createdAt)}</div>}
                       </div>
                     </Link>
                   ))}

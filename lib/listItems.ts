@@ -1,10 +1,9 @@
 import { normalizeBlogTags } from './blogTags';
+import { fmtDate } from './dates';
 
 export const LISTING_PER_PAGE = 12;
 
-export function fmtListDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' });
-}
+export const fmtListDate = fmtDate;
 
 export function cleanExcerpt(html: string, len = 160) {
   if (!html) return '';

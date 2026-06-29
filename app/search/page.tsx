@@ -5,6 +5,7 @@ import ReportCategory from '@/models/ReportCategory';
 import '@/models/Product';
 import SiteLayout from '@/components/SiteLayout';
 import ContentListing from '@/components/ContentListing';
+import { fmtDate } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,10 +18,6 @@ export async function generateMetadata({ searchParams }: P) {
   return {
     title: q ? `Search: "${q}" – PristineGaze` : 'Search – PristineGaze',
   };
-}
-
-function fmtDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' });
 }
 
 export default async function SearchPage({ searchParams }: P) {

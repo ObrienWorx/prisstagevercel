@@ -10,6 +10,7 @@ import SidebarLoginForm from '@/components/SidebarLoginForm';
 import ReportSidebar from '@/components/ReportSidebar';
 import ProductCardImage from '@/components/ProductCardImage';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
+import { fmtDate } from '@/lib/dates';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
@@ -27,10 +28,6 @@ export async function generateMetadata({ params }: P) {
   const r = await Report.findOne({ slug, publishStatus: 'published' }).lean() as any;
   if (!r) return { title: 'Report Not Found – PristineGaze' };
   return { title: `${r.title} – PristineGaze`, description: r.metaDescription || r.title };
-}
-
-function fmtDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' });
 }
 
 const RISK_COLORS: Record<string, { bg: string; text: string }> = {

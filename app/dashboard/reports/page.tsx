@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { slugify } from '@/lib/slugify';
+import { fmtDateShort, fmtDateTime, toDateInput, todayInput } from '@/lib/dates';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
 import Pagination from '@/components/Pagination';
@@ -25,10 +26,6 @@ interface Report {
   createdAt: string;
 }
 
-// Format a stored date as YYYY-MM-DD in Sydney time for a <input type="date">.
-const toSydneyDateInput = (d?: string | Date | null) =>
-  d ? new Date(d).toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' }) : '';
-const todaySydney = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
 
 const RECOMMENDATION_OPTIONS = ['BUY', 'SELL', 'HOLD', 'SPECULATIVE BUY', 'REFRAIN', 'Security Under Review'];
 
@@ -304,13 +301,13 @@ export default function ReportsPage() {
       upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), recommendations: item.recommendations?.length ? item.recommendations : (item.recommendation ? [item.recommendation] : []),
       publishStatus: item.publishStatus,
       featured: item.featured ?? false,
-      publishedAt: toSydneyDateInput(item.publishedAt ?? item.createdAt),
+      publishedAt: toDateInput(item.publishedAt ?? item.createdAt),
       metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
     setErr(''); setShowModal(true);
   };
 
-  const openCreate = () => { setEditing(null); setForm({ ...empty, publishedAt: todaySydney() }); setErr(''); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm({ ...empty, publishedAt: todayInput() }); setErr(''); setShowModal(true); };
   const openEdit = async (item: Report) => {
     try {
       const d = await fetch(`/api/reports/${item._id}`, { headers: h }).then((r) => r.json());
@@ -506,11 +503,9 @@ export default function ReportsPage() {
                     <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap', fontSize: 13 }}>
                       {(item.publishedAt ?? item.createdAt)
                         ? <>
-                            {new Date(item.publishedAt ?? item.createdAt!).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Australia/Sydney' })}
+                            {fmtDateShort(item.publishedAt ?? item.createdAt)}
                             {item.createdAt && (
-                              <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                                added {new Date(item.createdAt).toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Australia/Sydney' })}
-                              </div>
+                              <div style={{ fontSize: 11, color: '#94a3b8' }}>added {fmtDateTime(item.createdAt)}</div>
                             )}
                           </>
                         : <span className="text-muted small">—</span>}

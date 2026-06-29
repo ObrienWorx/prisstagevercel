@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import BlogSidebarPromo from '@/components/BlogSidebarPromo';
 import LeadCapturePopup from '@/components/LeadCapturePopup';
+import { fmtDate } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +21,6 @@ export async function generateMetadata({ params }: P) {
     description: blog.metaDescription || '',
     openGraph: blog.metaImage ? { images: [blog.metaImage] } : undefined,
   };
-}
-
-function fmtDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' });
 }
 
 export default async function BlogDetailPage({ params }: P) {
