@@ -47,9 +47,14 @@ pristinegaze-server.zip
 *.tsbuildinfo
 next-env.d.ts
 
-# WP migration: member export contains PII — never commit
+# WP migration: member/order exports contain PII — never commit
 members-export.json
+all-subscribers-export.json
+*-export.json
 *.export.json
+data-task.xlsx
+*.xlsx
+~$*
 .scratch/
 
 # one-time / local-only scripts (not part of the app)
