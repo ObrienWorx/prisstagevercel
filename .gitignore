@@ -57,5 +57,6 @@ data-task.xlsx
 ~$*
 .scratch/
 
-# one-time / local-only scripts (not part of the app)
-scripts/strip-comments.mjs
+# one-time / local-only scripts (not part of the app) — ignore new scripts
+# going forward (already-committed scripts stay tracked).
+scripts/
