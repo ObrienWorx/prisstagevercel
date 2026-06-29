@@ -8,6 +8,7 @@ import SiteLayout from '@/components/SiteLayout';
 import ContentListing from '@/components/ContentListing';
 import SidebarLoginForm from '@/components/SidebarLoginForm';
 import ReportSidebar from '@/components/ReportSidebar';
+import ProductCardImage from '@/components/ProductCardImage';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -29,8 +30,15 @@ export async function generateMetadata({ params }: P) {
 }
 
 function fmtDate(d: string | Date) {
-  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Sydney' });
 }
+
+const RISK_COLORS: Record<string, { bg: string; text: string }> = {
+  Low: { bg: '#dcfce7', text: '#15803d' },
+  Medium: { bg: '#fef9c3', text: '#854d0e' },
+  High: { bg: '#ffedd5', text: '#c2410c' },
+  'Very High': { bg: '#fee2e2', text: '#991b1b' },
+};
 
 export default async function ReportSlugPage({ params }: P) {
   const { slug } = await params;
@@ -39,6 +47,67 @@ export default async function ReportSlugPage({ params }: P) {
   const product = await Product.findOne({ slug, isActive: true }).lean() as any;
 
   if (product) {
+    if (product.bundledProducts?.length > 0) {
+      const bundledProducts = await Product.find({
+        _id: { $in: product.bundledProducts },
+        isActive: true,
+      })
+        .select('name slug featuredImage shortDescription riskRating durationValue durationType')
+        .sort({ sortOrder: 1, name: 1 })
+        .lean() as any[];
+
+      return (
+        <SiteLayout>
+
+          <div className="cl-hero">
+            <div className="cl-hero-overlay" />
+            <div className="container" style={{ position: 'relative', zIndex: 2 }}>
+              <h1 className="cl-hero-title">{product.name}</h1>
+            </div>
+          </div>
+
+          <div className="site-section">
+            <div className="container">
+              <h2 className="h4 fw-bold mb-4">What&apos;s included</h2>
+              {bundledProducts.length === 0 ? (
+                <div className="text-muted">No products in this bundle yet.</div>
+              ) : (
+                <div className="row g-4">
+                  {bundledProducts.map((p) => {
+                    const rc = p.riskRating ? RISK_COLORS[p.riskRating] : null;
+                    return (
+                      <div className="col-md-6 col-lg-4" key={p._id.toString()}>
+                        <Link href={`/reports/${p.slug}`} className="text-decoration-none">
+                          <div className="product-card h-100">
+                            <ProductCardImage src={p.featuredImage} alt={p.name} />
+                            <div className="product-card-body">
+                              <div className="product-card-name">{p.name}</div>
+                              {p.durationValue && (
+                                <div className="product-card-duration">{p.durationValue} {p.durationType} access</div>
+                              )}
+                              {rc && (
+                                <div className="risk-badge" style={{ background: rc.bg, color: rc.text }}>
+                                  Risk: {p.riskRating}
+                                </div>
+                              )}
+                              {p.shortDescription && (
+                                <p className="small text-muted mb-3" style={{ lineHeight: 1.6 }}>{p.shortDescription}</p>
+                              )}
+                              <span className="btn-subscribe">VIEW REPORTS →</span>
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </SiteLayout>
+      );
+    }
+
     const reportFilter: Record<string, unknown> = { product: product._id, publishStatus: 'published' };
     const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
       Report.find(reportFilter)
@@ -56,8 +125,6 @@ export default async function ReportSlugPage({ params }: P) {
       ReportCategory.find({ status: 'active' }).select('name slug icon').sort({ name: 1 }).lean(),
     ]);
 
-    // Recommendation ribbons (BUY / SPECULATIVE BUY / …) are subscriber-only.
-    // Show them only when the current user has active access to THIS product.
     let hasProductAccess = false;
     const cookieStore = await cookies();
     const token = cookieStore.get('subscriber_token')?.value;
@@ -217,7 +284,7 @@ export default async function ReportSlugPage({ params }: P) {
                         {isLoggedIn ? 'Subscribe Now →' : 'View Plans →'}
                       </Link>
                       {!isLoggedIn && (
-                        <Link href="/auth/login" className="btn btn-outline-light fw-semibold px-4">
+                        <Link href="/member-account" className="btn btn-outline-light fw-semibold px-4">
                           Sign In
                         </Link>
                       )}

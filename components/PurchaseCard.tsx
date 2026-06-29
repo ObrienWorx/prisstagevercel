@@ -75,7 +75,7 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
 
       {savings && <div className="pc-savings">You save ${savings}!</div>}
 
-      <p>By providing your details and clicking on the button below, you agree to Pristine Gaze Pty. Ltd.&nbsp;<a href="https://pristinegaze.com.au//terms-of-use/">Terms and Conditions</a>&nbsp;and&nbsp;<a href="https://pristinegaze.com.au//privacy-policy/">Privacy Policy</a>. And you consent to receive marketing offers by email, text message or phone call from us or our agents until you opt out. Before you access our services,. I understand and agree that these calls may be made using an auto-dialer. please read the&nbsp;<a href="https://pristinegaze.com.au/financial-services-guide/">Financial Service Guide</a>&nbsp;available here.</p>
+      <p>By providing your details and clicking on the button below, you agree to Pristine Gaze Pty. Ltd.&nbsp;<a href="https://pristinegaze.com.au//terms-of-use/">Terms and Conditions</a>&nbsp;and&nbsp;<a href="https://pristinegaze.com.au//privacy-policy/">Privacy Policy</a>. And you consent to receive marketing offers by email, text message or phone call from us or our agents until you opt out. Before you access our services. I understand and agree that these calls may be made using an auto-dialer. please read the&nbsp;<a href="https://pristinegaze.com.au/financial-services-guide/">Financial Service Guide</a>&nbsp;available here.</p>
       {loggedIn === null ? (
         <div className="pc-skeleton" />
       ) : loggedIn ? (
@@ -90,7 +90,7 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
             Subscribe Now — Pay with PayPal →
           </Link>
           <div className="pc-divider">— or —</div>
-          <Link href={`/auth/login?plan=${authPlanSlug}`} className="btn-subscribe outlined pc-btn-outline">
+          <Link href={`/member-account?plan=${authPlanSlug}`} className="btn-subscribe outlined pc-btn-outline">
             I already have an account
           </Link>
           <Link href={`/auth/register?plan=${authPlanSlug}`} className="pc-link-sm">

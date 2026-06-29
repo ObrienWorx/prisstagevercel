@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
 
           <div className="auth-link-row">
             Remembered your password?{' '}
-            <Link href="/auth/login" className="auth-text-link">Back to login</Link>
+            <Link href="/member-account" className="auth-text-link">Back to login</Link>
           </div>
         </div>
       </div>

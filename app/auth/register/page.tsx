@@ -112,7 +112,7 @@ function RegisterForm() {
 
       <div className="auth-link-row">
         Already have an account?{' '}
-        <Link href={`/auth/login${plan ? `?plan=${plan}` : ''}`} className="auth-text-link">Sign in</Link>
+        <Link href={`/member-account${plan ? `?plan=${plan}` : ''}`} className="auth-text-link">Sign in</Link>
       </div>
 
       <p className="auth-terms">

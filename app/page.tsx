@@ -180,7 +180,7 @@ export default async function HomePage() {
                 <li>Designed for investors who value research over speculation</li>
               </ul>
               <div className="homepage-hero-actions">
-                <Link href="/subscribe" className="homepage-hero-btn">Start your free Trial</Link>
+                <Link href="/subscribe/7-day-free-trial" className="homepage-hero-btn">Start your free Trial</Link>
                 <Link href="/reports" className="homepage-hero-btn">Get Sample Report</Link>
               </div>
               <div className="homepage-hero-trust">

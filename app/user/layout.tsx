@@ -22,14 +22,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     const token = localStorage.getItem('subscriber_token');
-    if (!token) { router.replace('/auth/login'); return; }
+    if (!token) { router.replace('/member-account'); return; }
     fetch('/api/subscriber/me', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => {
         if (d.success) { setUser(d.data.subscriber); }
-        else { localStorage.removeItem('subscriber_token'); localStorage.removeItem('subscriber_user'); router.replace('/auth/login'); }
+        else { localStorage.removeItem('subscriber_token'); localStorage.removeItem('subscriber_user'); router.replace('/member-account'); }
       })
-      .catch(() => router.replace('/auth/login'))
+      .catch(() => router.replace('/member-account'))
       .finally(() => setChecking(false));
   }, [router]);
 

@@ -60,7 +60,7 @@ function ResetPasswordForm() {
       });
       const d = await r.json();
       if (d.success) {
-        router.push('/auth/login?reset=1');
+        router.push('/member-account?reset=1');
       } else {
         setErr(d.error || 'Reset failed');
       }

@@ -73,7 +73,10 @@ export default function FrontNav() {
   }, [mobileOpen]);
 
 
-  const logout = () => {
+  const logout = async () => {
+    // Clear the httpOnly subscriber_token cookie server-side; otherwise
+    // server-rendered pages keep treating the user as logged in / subscribed.
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
     localStorage.removeItem('subscriber_token');
     localStorage.removeItem('subscriber_user');
     setSub(null);
@@ -89,7 +92,7 @@ export default function FrontNav() {
   };
 
   const goLogin = () => {
-    window.location.href = '/auth/login';
+    window.location.href = '/member-account';
   };
 
   const unlockedProducts = new Set(unlockedProductIds);

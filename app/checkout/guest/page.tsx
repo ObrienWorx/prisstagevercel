@@ -294,7 +294,7 @@ function GuestCheckoutContent() {
 
                   <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: 8, fontSize: 12.5, color: '#64748b', lineHeight: 1.6 }}>
                     Already have an account?{' '}
-                    <Link href={`/auth/login?plan=${product.slug}${saleOffer ? '-limited-sale-offer' : ''}`} style={{ color: '#3b82f6' }}>Sign in here</Link>
+                    <Link href={`/member-account?plan=${product.slug}${saleOffer ? '-limited-sale-offer' : ''}`} style={{ color: '#3b82f6' }}>Sign in here</Link>
                   </div>
                 </div>
               </div>
