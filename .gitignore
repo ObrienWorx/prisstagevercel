@@ -54,6 +54,7 @@ all-subscribers-export.json
 *.export.json
 data-task.xlsx
 *.xlsx
+orders.json
 ~$*
 .scratch/
 
