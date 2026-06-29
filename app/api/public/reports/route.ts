@@ -6,6 +6,24 @@ import '@/models/Product';
 import '@/models/ReportCategory';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
+import { verifySubscriberToken } from '@/lib/subscriberJwt';
+import UserProduct from '@/models/UserProduct';
+
+// Recommendation ribbons are subscriber-only: true only when the request's
+// subscriber has active access to the given product.
+async function hasActiveProductAccess(req: NextRequest, productId: string) {
+  const token = req.cookies.get('subscriber_token')?.value;
+  if (!token) return false;
+  const payload = verifySubscriberToken(token);
+  if (!payload) return false;
+  const up = await UserProduct.findOne({
+    subscriber: payload.subscriberId,
+    product: productId,
+    isActive: true,
+    expiryDate: { $gt: new Date() },
+  }).lean();
+  return !!up;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -77,7 +95,11 @@ export async function GET(req: NextRequest) {
         Report.find(filter).select('title slug featuredImage createdAt recommendation').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
         Report.countDocuments(filter),
       ]);
-      return successResponse({ items: docs.map(toReportListItem), total, page, pages: Math.ceil(total / limit) });
+      const showRibbons = productId ? await hasActiveProductAccess(req, productId) : false;
+      const items = docs
+        .map(toReportListItem)
+        .map((it) => (showRibbons ? it : { ...it, recommendation: '' }));
+      return successResponse({ items, total, page, pages: Math.ceil(total / limit) });
     }
 
     const reports = await Report.find(filter)

@@ -56,7 +56,27 @@ export default async function ReportSlugPage({ params }: P) {
       ReportCategory.find({ status: 'active' }).select('name slug icon').sort({ name: 1 }).lean(),
     ]);
 
-    const items = reports.map(toReportListItem);
+    // Recommendation ribbons (BUY / SPECULATIVE BUY / …) are subscriber-only.
+    // Show them only when the current user has active access to THIS product.
+    let hasProductAccess = false;
+    const cookieStore = await cookies();
+    const token = cookieStore.get('subscriber_token')?.value;
+    if (token) {
+      const payload = verifySubscriberToken(token);
+      if (payload) {
+        const up = await UserProduct.findOne({
+          subscriber: payload.subscriberId,
+          product: product._id,
+          isActive: true,
+          expiryDate: { $gt: new Date() },
+        }).lean();
+        hasProductAccess = !!up;
+      }
+    }
+
+    const items = reports
+      .map(toReportListItem)
+      .map((it) => (hasProductAccess ? it : { ...it, recommendation: '' }));
 
     const latestItems = latestReports.map((r: any) => ({
       _id: r._id.toString(),
