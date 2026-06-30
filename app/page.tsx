@@ -1,5 +1,8 @@
 import HomePicks from '@/components/HomePicks';
 import HeroSlider from '@/components/HeroSlider';
+import WhatsAppCta from '@/components/WhatsAppCta';
+import ReviewCarousel from '@/components/ReviewCarousel';
+import HomeFaq from '@/components/HomeFaq';
 import TickerTape from '@/components/TickerTape';
 import MarketScan from '@/components/MarketScan';
 import connectDB from '@/lib/mongoose';
@@ -422,7 +425,7 @@ export default async function HomePage() {
 
       <section className="home-sector-stories">
         <div className="container">
-          <div className="row g-4 align-items-start">
+          <div className="row g-4 align-items-stretch">
             <div className="col-lg-8">
               <div className="home-section-head home-section-head-large">
                 <h2>Sector Stories</h2>
@@ -449,32 +452,46 @@ export default async function HomePage() {
               )}
             </div>
 
-            <div className="col-lg-4">
+            <div className="col-lg-4 d-flex flex-column">
               <div className="home-section-head home-newsletter-heading">
-                <h2>Subscribe to our News Letter</h2>
+                <h2>What Our Members Say</h2>
               </div>
               <div className="home-title-rule" />
-              <div className="home-newsletter-card">
-                <h3>Daily Newsletter</h3>
-                <p className="home-newsletter-sub">Get all the top stories from Blogs to keep track.</p>
-                <form className="home-newsletter-form" action="#" method="post">
-                  <label className="visually-hidden" htmlFor="home-newsletter-email">Email address</label>
-                  <input id="home-newsletter-email" type="email" name="email" placeholder="Enter your email" />
-                  <button type="submit">Subscribe</button>
-                  <label className="home-newsletter-consent">
-                    <input type="checkbox" name="terms" />
-                    <span>I agree to the <Link href="/terms-of-use">terms and conditions</Link></span>
-                  </label>
-                </form>
-                <p className="home-newsletter-copy">
-                  By providing your details, you agree to receive marketing offers by email. Before you access our services, please read the <Link href="/financial-services-guide">Financial Service Guide</Link> available here.
-                </p>
-                <div className="home-newsletter-footer">We respect your privacy. Unsubscribe at any time.</div>
+              <ReviewCarousel />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="home-tools">
+        <div className="container">
+          <div className="home-tools-head">
+            <span className="home-tools-eyebrow">— Investor Tools</span>
+            <h2>Tools That Give You an Extra Edge</h2>
+            <p>Practical tools to keep tabs on your holdings, spot opportunities early, and act with confidence — and they come with every plan.</p>
+          </div>
+          <div className="home-tools-grid">
+            <div className="home-tool-card">
+              <div className="home-tool-icon">📊</div>
+              <div className="home-tool-body">
+                <h3>Portfolio Tracker</h3>
+                <p>Keep every ASX holding in one dashboard. Follow performance, dividends, and live gains or losses, with smart alerts the moment something shifts.</p>
+                <Link href="/user/portfolio" className="home-tool-link">Discover the Portfolio Tracker →</Link>
+              </div>
+            </div>
+            <div className="home-tool-card">
+              <div className="home-tool-icon">📈</div>
+              <div className="home-tool-body">
+                <h3>Smart Watch List</h3>
+                <p>Create a watchlist tailored to you, with price alerts, analyst triggers, and news signals that keep you a step ahead of the market.</p>
+                <Link href="/user/watchlist" className="home-tool-link">Discover the Smart Watch List →</Link>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      <HomeFaq />
 
       <section className="home-video-promo">
         <div className="container">
@@ -505,6 +522,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {process.env.NEXT_PUBLIC_SHOW_WHATSAPP_CTA === 'true' && <WhatsAppCta />}
     </SiteLayout>
   );
 }

@@ -357,7 +357,7 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
           </button>
 
           <button type="button" className="auth-otp-switch" onClick={switchToOtp}>
-            Prefer OTP? <b>Login with a one-time code instead</b>
+            <b>Login with OTP Instead</b>
           </button>
         </form>
       ) : otpStep === 'email' ? (

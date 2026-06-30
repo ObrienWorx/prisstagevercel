@@ -213,10 +213,14 @@ export default async function ReportSlugPage({ params }: P) {
         <div className="container">
           <div className="d-flex align-items-center flex-wrap gap-2 mb-3">
             {report.category && (
-              <span className="badge rounded-pill text-bg-info">{report.category.name}</span>
+              <Link href={`/${report.category.slug}`} className="badge rounded-pill text-bg-info text-decoration-none">
+                {report.category.name}
+              </Link>
             )}
-            {report.upsellTicker && (
-              <span className="badge rounded-pill text-bg-success">📈 {report.upsellTicker}</span>
+            {(report.upsellTicker || report.ticker) && (
+              <span className="badge rounded-pill text-bg-success">
+                📈 {[report.upsellTicker, report.ticker].filter(Boolean).join(': ')}
+              </span>
             )}
           </div>
 

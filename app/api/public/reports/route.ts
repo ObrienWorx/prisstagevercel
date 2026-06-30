@@ -96,7 +96,9 @@ export async function GET(req: NextRequest) {
         Report.find(filter).select('title slug featuredImage createdAt publishedAt recommendation').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
         Report.countDocuments(filter),
       ]);
-      const showRibbons = productId ? await hasActiveProductAccess(req, productId) : false;
+      // Product listings gate ribbons behind that product's subscription; sector/
+      // category/general listings show them (matching the server-rendered first page).
+      const showRibbons = productId ? await hasActiveProductAccess(req, productId) : true;
       const items = docs
         .map(toReportListItem)
         .map((it) => (showRibbons ? it : { ...it, recommendation: '' }));

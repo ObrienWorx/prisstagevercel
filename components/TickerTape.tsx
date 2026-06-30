@@ -1,43 +1,58 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
+
+type Row = { ticker: string; name: string; price: number; change: number; changePct: number };
 
 export default function TickerTape() {
-  const tickerRef = useRef<HTMLDivElement>(null);
+  const [rows, setRows] = useState<Row[]>([]);
 
   useEffect(() => {
-    const el = tickerRef.current;
-    if (!el) return;
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js';
-    script.async = true;
-    script.text = JSON.stringify({
-      symbols: [
-        { proName: 'ASX:CBA', title: 'CBA' },
-        { proName: 'ASX:BHP', title: 'BHP' },
-        { proName: 'ASX:REA', title: 'REA' },
-        { proName: 'ASX:PNV', title: 'PNV' },
-        { proName: 'ASX:LKE', title: 'LKE' },
-        { proName: 'ASX:BC8', title: 'BC8' },
-        { proName: 'ASX:ANZ', title: 'ANZ' },
-        { proName: 'ASX:NAB', title: 'NAB' },
-        { proName: 'ASX:WBC', title: 'WBC' },
-        { proName: 'ASX:CSL', title: 'CSL' },
-      ],
-      showSymbolLogo: false,
-      isTransparent: true,
-      displayMode: 'adaptive',
-      colorTheme: 'light',
-      locale: 'en',
-    });
-    el.appendChild(script);
-    return () => { el.innerHTML = ''; };
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        // Live ASX movers from the Yahoo-backed market-scan endpoint (no static list).
+        const [gainers, losers] = await Promise.all([
+          fetch('/api/market-scan?tab=gainers').then(r => r.json()).catch(() => null),
+          fetch('/api/market-scan?tab=losers').then(r => r.json()).catch(() => null),
+        ]);
+        const merged: Row[] = [...(gainers?.data ?? []), ...(losers?.data ?? [])]
+          .filter((r: Row) => r && r.ticker && typeof r.price === 'number');
+        if (!cancelled) setRows(merged);
+      } catch {
+        /* leave the tape empty on failure */
+      }
+    };
+
+    load();
+    const id = setInterval(load, 5 * 60 * 1000); // refresh every 5 minutes
+    return () => { cancelled = true; clearInterval(id); };
   }, []);
+
+  if (rows.length === 0) return null;
+
+  // Duplicate the set so the marquee can loop seamlessly.
+  const items = [...rows, ...rows];
 
   return (
     <div className="header-ticker">
-      <div className="tradingview-widget-container w-100" ref={tickerRef} />
+      <div className="ticker-tape">
+        <div className="ticker-track">
+          {items.map((r, i) => {
+            const up = r.changePct >= 0;
+            return (
+              <span className="ticker-item" key={`${r.ticker}-${i}`}>
+                <span className="ticker-sym">{r.ticker}</span>
+                <span className="ticker-price">{r.price.toFixed(2)}</span>
+                <span className={up ? 'ticker-up' : 'ticker-down'}>
+                  {up ? '▲' : '▼'} {Math.abs(r.changePct).toFixed(2)}%
+                </span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

@@ -73,6 +73,52 @@ export async function sendOTPEmail(to: string, otp: string, purpose: 'email-veri
   });
 }
 
+// Internal recipients notified whenever a form is submitted on the site.
+// Override with LEAD_NOTIFY_EMAILS (comma-separated) in .env.
+const LEAD_NOTIFY_EMAILS = (process.env.LEAD_NOTIFY_EMAILS || 'Info@pristinegaze.com.au, Ujjwal.bhola@pristinegaze.com')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+export async function sendLeadNotification(lead: {
+  name: string; email: string; phone: string; postalCode?: string; source: string; sourceUrl?: string;
+}) {
+  if (LEAD_NOTIFY_EMAILS.length === 0) return;
+
+  const rows: [string, string][] = [
+    ['Name', lead.name || '—'],
+    ['Email', lead.email || '—'],
+    ['Phone', lead.phone || '—'],
+    ['Postal Code', lead.postalCode || '—'],
+    ['Source', lead.source || '—'],
+    ['Page', lead.sourceUrl || '—'],
+  ];
+
+  const rowsHtml = rows.map(([k, v]) => `
+    <tr>
+      <td style="padding:8px 12px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${escapeHtml(k)}</td>
+      <td style="padding:8px 12px;font-size:14px;color:#0f172a;border-bottom:1px solid #f1f5f9;font-weight:600;">${escapeHtml(v)}</td>
+    </tr>`).join('');
+
+  const html = `
+<!DOCTYPE html><html><body style="margin:0;padding:24px;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="560" cellpadding="0" cellspacing="0" align="center" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <tr><td style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:22px 28px;">
+      <div style="font-size:16px;font-weight:800;color:#fff;">New Form Submission</div>
+    </td></tr>
+    <tr><td style="padding:24px 28px;">
+      <table width="100%" cellpadding="0" cellspacing="0">${rowsHtml}</table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || 'PristineGaze <no-reply@pristinegaze.com.au>',
+    to: LEAD_NOTIFY_EMAILS,
+    replyTo: lead.email || undefined,
+    subject: `New form submission — ${lead.name || 'Unknown'} (${lead.source || 'general'})`,
+    html,
+  });
+}
+
 let cachedTemplate: string | null | undefined;
 function loadLeadTemplate(): string | null {
   if (cachedTemplate !== undefined) return cachedTemplate;

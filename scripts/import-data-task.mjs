@@ -129,25 +129,40 @@ async function main() {
   const now = Date.now();
   const unmatchedProducts = new Map();
   const unmatchedUsers = new Map();
-  let created = 0, skippedDup = 0, skippedNoProduct = 0, skippedNoUser = 0, skippedFlagged = 0, upCount = 0;
+  let created = 0, skippedDup = 0, skippedNoProduct = 0, skippedNoUser = 0, skippedFlagged = 0, skippedHasProduct = 0, upCount = 0;
 
   const subCache = new Map();
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const byName = (n) => Subscriber.find({ name: new RegExp(`^\\s*${esc(n)}\\s*$`, 'i') }).select('name email').lean();
-  async function findSub(name) {
+  const byEmail = (e) => Subscriber.find({ email: new RegExp(`^${esc(e.trim())}$`, 'i') }).select('name email').lean();
+  async function findSub(name, email) {
     const key = norm(name);
     if (subCache.has(key)) return subCache.get(key);
-    let matches = await byName(name);
-    let how = 'exact';
-    // "Name (Company / Trust / formal name)" — try the base name, then the parenthetical.
-    if (matches.length !== 1 && /\(.*\)/.test(name)) {
-      const base = name.replace(/\s*\(.*\)\s*$/, '').trim();
-      if (base && base !== name) { const m = await byName(base); if (m.length === 1) { matches = m; how = 'base'; } }
-      if (matches.length !== 1) {
-        const inside = (name.match(/\(([^)]*)\)/) || [])[1];
-        if (inside) { const m = await byName(inside.trim()); if (m.length === 1) { matches = m; how = 'inside'; } }
+    let matches = [], how = 'email';
+
+    // Try email first (primary).
+    if (email) {
+      const cleanEmail = email.split(/[/,\s]/)[0].trim();
+      if (cleanEmail && cleanEmail !== name) {
+        const m = await byEmail(cleanEmail);
+        if (m.length === 1) matches = m;
       }
     }
+
+    // Fall back to name matching if email didn't resolve.
+    if (matches.length !== 1) {
+      how = 'exact';
+      matches = await byName(name);
+      if (matches.length !== 1 && /\(.*\)/.test(name)) {
+        const base = name.replace(/\s*\(.*\)\s*$/, '').trim();
+        if (base && base !== name) { const m = await byName(base); if (m.length === 1) { matches = m; how = 'base'; } }
+        if (matches.length !== 1) {
+          const inside = (name.match(/\(([^)]*)\)/) || [])[1];
+          if (inside) { const m = await byName(inside.trim()); if (m.length === 1) { matches = m; how = 'inside'; } }
+        }
+      }
+    }
+
     const res = matches.length === 1 ? { ...matches[0], _how: how } : { error: matches.length === 0 ? 'NOT_FOUND' : 'DUPLICATE', count: matches.length };
     subCache.set(key, res); return res;
   }
@@ -158,7 +173,7 @@ async function main() {
       console.log(`  ! SKIP ${o.orderId || '(no id)'} ${o.name}: ${o.issues.join('; ')}`);
       skippedFlagged++; continue;
     }
-    const sub = await findSub(o.name);
+    const sub = await findSub(o.name, o.email || '');
     if (sub.error) { unmatchedUsers.set(o.name, sub.error); skippedNoUser++; continue; }
     if (sub._how && sub._how !== 'exact' && !subCache.get(`logged:${norm(o.name)}`)) {
       recovered.push(`  [${sub._how}] "${o.name}" -> "${sub.name}"`);
@@ -169,11 +184,23 @@ async function main() {
     const purchaseDate = parseDate(o.purchaseDate);
     const expiryDate = parseDate(o.expiryDate);
 
-    // resolve each line item's product (keep its own dates/months)
+    const notes = `${MARKER} ${o.orderId || ''} (${(o.items || []).map((x) => x.product).join(', ')})`.trim();
+
+    // Check for already-imported order first (idempotency).
+    if (!DRY) {
+      const dup = await Order.findOne({ subscriber: sub._id, notes }).lean();
+      if (dup) { skippedDup++; continue; }
+    }
+
+    // resolve each line item's product — skip items the subscriber already owns
     const items = [];
     for (const it of o.items || []) {
       const id = resolveProduct(it.product);
       if (!id) { unmatchedProducts.set(it.product, (unmatchedProducts.get(it.product) || 0) + 1); continue; }
+      if (!DRY) {
+        const alreadyHas = await UserProduct.findOne({ subscriber: sub._id, product: id }).lean();
+        if (alreadyHas) { console.log(`  ~ SKIP item "${it.product}" for ${sub.name} — already has product`); skippedHasProduct++; continue; }
+      }
       items.push({
         product: id,
         startDate: parseDate(it.start) || purchaseDate,
@@ -183,15 +210,6 @@ async function main() {
       });
     }
     if (items.length === 0 || !purchaseDate) { skippedNoProduct++; continue; }
-
-    items.forEach((it, i) => { it.pricePaid = i === 0 ? amount : 0; });
-    const primary = items[0].product;
-    const notes = `${MARKER} ${o.orderId || ''} (${(o.items || []).map((x) => x.product).join(', ')})`.trim();
-
-    if (!DRY) {
-      const dup = await Order.findOne({ subscriber: sub._id, notes }).lean();
-      if (dup) { skippedDup++; continue; }
-    }
 
     if (DRY) {
       console.log(`  ${o.orderId} | ${o.name} | ${o.purchaseDate}→${o.expiryDate} | $${amount} | ${items.length} item(s): ${o.items.map((x) => x.product).join(', ')}`);
@@ -219,7 +237,7 @@ async function main() {
     created++;
   }
 
-  console.log(`\nDone${DRY ? ' (DRY)' : ''}: ${created} orders, ${upCount} userproducts; skipped — dup ${skippedDup}, no-product/date ${skippedNoProduct}, no-user ${skippedNoUser}, flagged ${skippedFlagged}.`);
+  console.log(`\nDone${DRY ? ' (DRY)' : ''}: ${created} orders, ${upCount} userproducts; skipped — dup ${skippedDup}, no-product/date ${skippedNoProduct}, no-user ${skippedNoUser}, flagged ${skippedFlagged}, already-has-product ${skippedHasProduct}.`);
   if (recovered.length) {
     console.log(`\nUSERS MATCHED VIA FALLBACK (${recovered.length}) — verify these are the right people:`);
     recovered.forEach((r) => console.log(r));

@@ -132,7 +132,6 @@ export default function SubscriptionsPage() {
           <h4>My Subscriptions</h4>
           <p>{orderGroups.length} order{orderGroups.length !== 1 ? 's' : ''}</p>
         </div>
-        <Link href="/subscribe" className="btn btn-dark btn-sm d-inline-flex align-items-center gap-1">+ Browse Plans</Link>
       </div>
 
       <div className="filter-tabs">

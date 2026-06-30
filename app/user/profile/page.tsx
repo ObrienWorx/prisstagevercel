@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getRecaptchaToken } from '@/lib/recaptcha-client';
 
 interface Subscriber { _id: string; name: string; email: string; phone?: string; createdAt: string; }
 
@@ -17,6 +18,11 @@ export default function ProfilePage() {
   const [pwMsg, setPwMsg] = useState('');
   const [pwErr, setPwErr] = useState('');
   const [savingPw, setSavingPw] = useState(false);
+
+  const [pwMethod, setPwMethod] = useState<'password' | 'otp'>('password');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('subscriber_token');
@@ -53,23 +59,45 @@ export default function ProfilePage() {
     finally { setSavingProfile(false); }
   };
 
+  const sendOtp = async () => {
+    if (!subscriber?.email) return;
+    setPwErr(''); setPwMsg(''); setSendingOtp(true);
+    try {
+      const recaptchaToken = await getRecaptchaToken('send_otp');
+      const r = await fetch('/api/subscriber/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: subscriber.email, purpose: 'password-reset', recaptchaToken }),
+      });
+      const d = await r.json();
+      if (d.success) { setOtpSent(true); setPwMsg('We sent a 6-digit code to your email.'); }
+      else { setPwErr(d.error || 'Failed to send code'); }
+    } catch { setPwErr('Network error. Please try again.'); }
+    finally { setSendingOtp(false); }
+  };
+
   const savePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pwForm.currentPassword) { setPwErr('Enter your current password'); return; }
+    if (pwMethod === 'password' && !pwForm.currentPassword) { setPwErr('Enter your current password'); return; }
+    if (pwMethod === 'otp' && !otpCode.trim()) { setPwErr('Enter the code sent to your email'); return; }
     if (pwForm.newPassword.length < 6) { setPwErr('New password must be at least 6 characters'); return; }
     if (pwForm.newPassword !== pwForm.confirmPassword) { setPwErr('Passwords do not match'); return; }
     setPwErr(''); setPwMsg(''); setSavingPw(true);
     const token = localStorage.getItem('subscriber_token');
     try {
+      const body = pwMethod === 'otp'
+        ? { otpCode: otpCode.trim(), newPassword: pwForm.newPassword }
+        : { currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword };
       const r = await fetch('/api/subscriber/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword }),
+        body: JSON.stringify(body),
       });
       const d = await r.json();
       if (d.success) {
         setPwMsg('Password changed successfully!');
         setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setOtpCode(''); setOtpSent(false);
       } else { setPwErr(d.error || 'Failed to change password'); }
     } catch { setPwErr('Network error. Please try again.'); }
     finally { setSavingPw(false); }
@@ -145,10 +173,36 @@ export default function ProfilePage() {
             <form onSubmit={savePassword} className="panel-body">
               {pwMsg && <div className="alert-inline alert-inline-success">✓ {pwMsg}</div>}
               {pwErr && <div className="alert-inline alert-inline-danger">{pwErr}</div>}
-              <div className="mb-3">
-                <label className="form-label">Current Password</label>
-                <input type="password" className="form-control" value={pwForm.currentPassword} autoComplete="current-password" onChange={e => setPwForm({ ...pwForm, currentPassword: e.target.value })} placeholder="Enter current password" />
+
+              <div className="btn-group mb-3" role="group" aria-label="Verification method">
+                <button type="button" className={`btn btn-sm ${pwMethod === 'password' ? 'btn-dark' : 'btn-outline-secondary'}`}
+                  onClick={() => { setPwMethod('password'); setPwErr(''); setPwMsg(''); }}>
+                  Current Password
+                </button>
+                <button type="button" className={`btn btn-sm ${pwMethod === 'otp' ? 'btn-dark' : 'btn-outline-secondary'}`}
+                  onClick={() => { setPwMethod('otp'); setPwErr(''); setPwMsg(''); }}>
+                  Email OTP
+                </button>
               </div>
+
+              {pwMethod === 'password' ? (
+                <div className="mb-3">
+                  <label className="form-label">Current Password</label>
+                  <input type="password" className="form-control" value={pwForm.currentPassword} autoComplete="current-password" onChange={e => setPwForm({ ...pwForm, currentPassword: e.target.value })} placeholder="Enter current password" />
+                </div>
+              ) : (
+                <div className="mb-3">
+                  <label className="form-label">Verification Code</label>
+                  <div className="d-flex gap-2">
+                    <input type="text" inputMode="numeric" maxLength={6} className="form-control" value={otpCode}
+                      onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} placeholder="6-digit code" disabled={!otpSent} />
+                    <button type="button" className="btn btn-outline-dark text-nowrap" onClick={sendOtp} disabled={sendingOtp}>
+                      {sendingOtp ? 'Sending...' : otpSent ? 'Resend Code' : 'Send Code'}
+                    </button>
+                  </div>
+                  <div className="form-text">We&apos;ll email a one-time code to <strong>{subscriber?.email}</strong>.</div>
+                </div>
+              )}
               <div className="row g-3 mb-3">
                 <div className="col-sm-6">
                   <label className="form-label">New Password</label>

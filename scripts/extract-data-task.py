@@ -2,9 +2,9 @@
 # Read "data-task.xlsx" and emit grouped orders JSON for import-data-task.mjs.
 #
 # Sheet columns (1-based):
-#   1 SR.  2 Name  3 Months  4 Start Date  5 End Date  6 Order ID  7 Amount  8.. Reports Sold
+#   1 SR.  2 Name  3 Email  4 Phone  5 Months  6 Start Date  7 End Date  8 Order ID  9 Amount  10.. Reports Sold
 #
-# Name/SR are only on the first row of each user block -> forward-filled.
+# Name/SR/Email are only on the first row of each user block -> forward-filled.
 # Rows that share an Order ID = ONE order. The total Amount sits on the first row of
 # the group (continuation rows are 0). Each row contributes line items (its products +
 # its own start/end/months).
@@ -53,21 +53,22 @@ def main():
     import openpyxl
     ws = openpyxl.load_workbook(src, data_only=True).active
 
-    # 1) read raw rows, forward-filling name
+    # 1) read raw rows, forward-filling name + email
     raw = []
-    name = None
+    name, email = None, None
     for r in range(2, ws.max_row + 1):
         cell = lambda i: ws.cell(r, i).value
         if cell(2):
             name = str(cell(2)).strip()
-        oid = cell(6)
-        if oid is None and all(cell(i) is None for i in range(3, 8)):
+            email = str(cell(3)).strip() if cell(3) else ''
+        oid = cell(8)
+        if oid is None and all(cell(i) is None for i in range(5, 10)):
             continue  # fully blank row
-        prods = [str(cell(i)).strip() for i in range(8, ws.max_column + 1)
+        prods = [str(cell(i)).strip() for i in range(10, ws.max_column + 1)
                  if cell(i) not in (None, '') and str(cell(i)).strip()]
-        raw.append(dict(row=r, name=name, months=cell(3), start=cell(4),
-                        end=cell(5), oid=(str(oid).strip() if oid else None),
-                        amount=cell(7), products=prods))
+        raw.append(dict(row=r, name=name, email=(email or ''), months=cell(5), start=cell(6),
+                        end=cell(7), oid=(str(oid).strip() if oid else None),
+                        amount=cell(9), products=prods))
 
     if only:
         raw = [x for x in raw if (x['name'] or '').strip().lower() == only.strip().lower()]
@@ -86,6 +87,7 @@ def main():
     for oid in order_seq:
         rows = groups[oid]
         name = rows[0]['name']
+        email = rows[0].get('email', '')
         issues = []
         amount = 0.0
         for x in rows:
@@ -112,7 +114,8 @@ def main():
             for p in x['products']:
                 items.append(dict(product=p, start=sd, end=ed, months=months, srcRow=x['row']))
         orders.append(dict(
-            name=name, orderId=(oid if not oid.startswith('__noid') else None),
+            name=name, email=email,
+            orderId=(oid if not oid.startswith('__noid') else None),
             amount=round(amount, 2),
             purchaseDate=(min(starts) if starts else None),
             expiryDate=(max(ends) if ends else None),

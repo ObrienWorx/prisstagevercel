@@ -5,6 +5,7 @@ import Subscriber from '@/models/Subscriber';
 import ActivityLog from '@/models/ActivityLog';
 import UserProduct from '@/models/UserProduct';
 import Report from '@/models/Report';
+import OTP from '@/models/OTP';
 import '@/models/Order';
 import '@/models/Product';
 import { verifySubscriberToken } from '@/lib/subscriberJwt';
@@ -55,7 +56,7 @@ export async function PUT(req: NextRequest) {
   const subscriber = await Subscriber.findById(payload.subscriberId);
   if (!subscriber) return errorResponse('Not found', 404);
 
-  const { name, phone, currentPassword, newPassword } = await req.json();
+  const { name, phone, currentPassword, newPassword, otpCode } = await req.json();
 
   const changes: Array<{ action: string; field: string; oldValue?: string; newValue?: string }> = [];
 
@@ -66,10 +67,18 @@ export async function PUT(req: NextRequest) {
   if (phone !== undefined) subscriber.phone = phone;
 
   if (newPassword) {
-    if (!currentPassword) return errorResponse('Current password required to change password');
-    const ok = await subscriber.comparePassword(currentPassword);
-    if (!ok) return errorResponse('Current password is incorrect');
     if (newPassword.length < 6) return errorResponse('New password must be at least 6 characters');
+    if (otpCode) {
+      // Verify via an email OTP instead of the current password.
+      const otp = await OTP.findOne({ email: subscriber.email.toLowerCase(), purpose: 'password-reset', code: String(otpCode).trim() });
+      if (!otp) return errorResponse('Invalid or expired code');
+      if (otp.expiresAt < new Date()) { await otp.deleteOne(); return errorResponse('Code has expired. Please request a new one.'); }
+      await otp.deleteOne();
+    } else {
+      if (!currentPassword) return errorResponse('Current password required to change password');
+      const ok = await subscriber.comparePassword(currentPassword);
+      if (!ok) return errorResponse('Current password is incorrect');
+    }
     changes.push({ action: 'password_changed', field: 'password', oldValue: subscriber.plainPassword || '—', newValue: newPassword });
     subscriber.password = newPassword;
   }

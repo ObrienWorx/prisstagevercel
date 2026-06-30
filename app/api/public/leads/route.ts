@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import LeadSubmission from '@/models/LeadSubmission';
 import HomepageSetting from '@/models/HomepageSetting';
-import { sendLeadMagnetEmail } from '@/lib/email';
+import { sendLeadMagnetEmail, sendLeadNotification } from '@/lib/email';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { verifyRecaptcha } from '@/lib/recaptcha';
 
@@ -62,6 +62,12 @@ export async function POST(req: NextRequest) {
       if (pdf) await sendLeadMagnetEmail(email, name, pdf);
     } catch (mailErr) {
       console.error('Lead magnet email failed:', mailErr);
+    }
+
+    try {
+      await sendLeadNotification({ name, email, phone, postalCode, source: normalisedSource, sourceUrl: sourceUrl || '' });
+    } catch (notifyErr) {
+      console.error('Lead notification email failed:', notifyErr);
     }
 
     try {

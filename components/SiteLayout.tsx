@@ -1,7 +1,9 @@
 'use client';
 
 import FrontNav from './FrontNav';
+import FloatingCallButton from './FloatingCallButton';
 import Link from 'next/link';
+import Script from 'next/script';
 import { useEffect, useState } from 'react';
 import { SOCIAL_LINKS } from '@/lib/socialLinks';
 
@@ -170,6 +172,23 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       {showTop && (
         <button className="back-to-top" onClick={scrollTop} aria-label="Back to top">↑</button>
       )}
+
+      {process.env.NEXT_PUBLIC_SHOW_CALL_BUTTON === 'true' && <FloatingCallButton />}
+
+      {/* Tawk.to live chat */}
+      <Script id="tawk-to" strategy="lazyOnload">
+        {`
+          var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+          (function(){
+            var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+            s1.async=true;
+            s1.src='https://embed.tawk.to/6a4349e0854f801d4378abf1/1jsbdh5rl';
+            s1.charset='UTF-8';
+            s1.setAttribute('crossorigin','*');
+            s0.parentNode.insertBefore(s1,s0);
+          })();
+        `}
+      </Script>
     </div>
   );
 }
