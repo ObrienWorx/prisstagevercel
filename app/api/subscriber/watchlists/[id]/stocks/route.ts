@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!wl) return errorResponse('Watchlist not found', 404);
 
   const sym = symbol.trim().toUpperCase();
-  const already = wl.stocks.some((s) => s.symbol === sym);
+  const already = wl.stocks.some((s: { symbol: string }) => s.symbol === sym);
   if (already) return errorResponse(`${sym} is already in this watchlist`, 409);
 
   wl.stocks.push({ symbol: sym, companyName: companyName || sym } as never);
