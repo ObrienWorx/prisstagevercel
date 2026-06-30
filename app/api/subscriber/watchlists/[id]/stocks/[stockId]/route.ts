@@ -17,7 +17,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   await connectDB();
   const wl = await Watchlist.findOne({ _id: id, subscriberId });
   if (!wl) return errorResponse('Watchlist not found', 404);
-  wl.stocks = wl.stocks.filter((s) => String(s._id) !== stockId) as never;
+  wl.stocks = wl.stocks.filter((s: { _id: unknown }) => String(s._id) !== stockId) as never;
   await wl.save();
   return successResponse(wl);
 }
