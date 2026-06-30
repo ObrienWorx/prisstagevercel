@@ -198,7 +198,7 @@ export default async function HomePage() {
                 <div><span className="homepage-hero-check">✓</span> Trusted by 10K+ Investors</div>
               </div>
             </div>
-            <div className="col-lg-6">
+            <div className="col-lg-5">
               <div className="homepage-hero-media">
                 {heroSlides.length > 0 ? (
                   <HeroSlider slides={heroSlides} />
