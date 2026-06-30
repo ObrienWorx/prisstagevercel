@@ -43,6 +43,11 @@ pristinegaze-server.zip
 # claude code memory
 .claude/
 
+# claude / agent instruction files
+CLAUDE.md
+AGENTS.md
+README.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
