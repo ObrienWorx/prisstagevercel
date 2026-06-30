@@ -29,3 +29,12 @@ export function toDateInput(d?: string | Date | null) {
 export function todayInput() {
   return new Date().toLocaleDateString('en-CA', { timeZone: TZ });
 }
+
+// "YYYY-MM-DDTHH:mm" in the BROWSER's local timezone, for <input type="datetime-local">.
+// (Scheduling is entered in the admin's own local time; the browser converts to UTC on save.)
+export function toLocalDateTimeInput(d?: string | Date | null) {
+  if (!d) return '';
+  const dt = new Date(d);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}T${p(dt.getHours())}:${p(dt.getMinutes())}`;
+}

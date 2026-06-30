@@ -4,9 +4,15 @@ import { useCallback, useEffect, useState } from 'react';
 import ImageUpload from '@/components/ImageUpload';
 import PdfUpload from '@/components/PdfUpload';
 
+interface HeroSlide {
+  image: string;
+  title: string;
+  link: string;
+}
+
 interface HomepageSettings {
   _id?: string;
-  heroImage: string;
+  heroSlides: HeroSlide[];
   videoSectionTitle: string;
   videoSectionDescription: string;
   videoSectionButtonText: string;
@@ -17,7 +23,7 @@ interface HomepageSettings {
 }
 
 const defaultSettings: HomepageSettings = {
-  heroImage: '',
+  heroSlides: [],
   videoSectionTitle: 'Watch. Learn. Invest Smarter.',
   videoSectionDescription: 'Don’t miss out on the latest market updates and expert tips! Watch our videos for in-depth ASX stock analysis, daily trends, and strategies to grow your portfolio. Stay informed, stay ahead—click play and take the first step towards smarter investing today!',
   videoSectionButtonText: 'Show All Videos',
@@ -26,6 +32,24 @@ const defaultSettings: HomepageSettings = {
   tickerLeadPdf: '',
   blogLeadPdf: '',
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fromApi(d: any): HomepageSettings {
+  const slides: HeroSlide[] = Array.isArray(d?.heroSlides) && d.heroSlides.length
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? d.heroSlides.map((s: any) => ({ image: s?.image ?? '', title: s?.title ?? '', link: s?.link ?? '' }))
+    : (d?.heroImage ? [{ image: d.heroImage, title: '', link: '' }] : []);
+  return {
+    heroSlides: slides,
+    videoSectionTitle: d?.videoSectionTitle ?? defaultSettings.videoSectionTitle,
+    videoSectionDescription: d?.videoSectionDescription ?? defaultSettings.videoSectionDescription,
+    videoSectionButtonText: d?.videoSectionButtonText ?? defaultSettings.videoSectionButtonText,
+    videoSectionButtonHref: d?.videoSectionButtonHref ?? defaultSettings.videoSectionButtonHref,
+    videoSectionYoutubeUrl: d?.videoSectionYoutubeUrl ?? '',
+    tickerLeadPdf: d?.tickerLeadPdf ?? '',
+    blogLeadPdf: d?.blogLeadPdf ?? '',
+  };
+}
 
 export default function HomepageSettingsPage() {
   const [settings, setSettings] = useState<HomepageSettings>(defaultSettings);
@@ -43,16 +67,7 @@ export default function HomepageSettingsPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (data.success) setSettings({
-        heroImage: data.data?.heroImage ?? '',
-        videoSectionTitle: data.data?.videoSectionTitle ?? defaultSettings.videoSectionTitle,
-        videoSectionDescription: data.data?.videoSectionDescription ?? defaultSettings.videoSectionDescription,
-        videoSectionButtonText: data.data?.videoSectionButtonText ?? defaultSettings.videoSectionButtonText,
-        videoSectionButtonHref: data.data?.videoSectionButtonHref ?? defaultSettings.videoSectionButtonHref,
-        videoSectionYoutubeUrl: data.data?.videoSectionYoutubeUrl ?? '',
-        tickerLeadPdf: data.data?.tickerLeadPdf ?? '',
-        blogLeadPdf: data.data?.blogLeadPdf ?? '',
-      });
+      if (data.success) setSettings(fromApi(data.data));
       else setErr(data.error || 'Unable to load homepage settings');
     } catch {
       setErr('Unable to load homepage settings');
@@ -79,16 +94,7 @@ export default function HomepageSettingsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setSettings({
-          heroImage: data.data?.heroImage ?? '',
-          videoSectionTitle: data.data?.videoSectionTitle ?? defaultSettings.videoSectionTitle,
-          videoSectionDescription: data.data?.videoSectionDescription ?? defaultSettings.videoSectionDescription,
-          videoSectionButtonText: data.data?.videoSectionButtonText ?? defaultSettings.videoSectionButtonText,
-          videoSectionButtonHref: data.data?.videoSectionButtonHref ?? defaultSettings.videoSectionButtonHref,
-          videoSectionYoutubeUrl: data.data?.videoSectionYoutubeUrl ?? '',
-          tickerLeadPdf: data.data?.tickerLeadPdf ?? '',
-          blogLeadPdf: data.data?.blogLeadPdf ?? '',
-        });
+        setSettings(fromApi(data.data));
         setOk(data.message || 'Homepage settings saved');
         setTimeout(() => setOk(''), 3000);
       } else {
@@ -100,6 +106,21 @@ export default function HomepageSettingsPage() {
       setSaving(false);
     }
   };
+
+  const updateSlide = (i: number, patch: Partial<HeroSlide>) =>
+    setSettings(prev => ({ ...prev, heroSlides: prev.heroSlides.map((s, idx) => idx === i ? { ...s, ...patch } : s) }));
+  const addSlide = () =>
+    setSettings(prev => ({ ...prev, heroSlides: [...prev.heroSlides, { image: '', title: '', link: '' }] }));
+  const removeSlide = (i: number) =>
+    setSettings(prev => ({ ...prev, heroSlides: prev.heroSlides.filter((_, idx) => idx !== i) }));
+  const moveSlide = (i: number, dir: -1 | 1) =>
+    setSettings(prev => {
+      const next = [...prev.heroSlides];
+      const j = i + dir;
+      if (j < 0 || j >= next.length) return prev;
+      [next[i], next[j]] = [next[j], next[i]];
+      return { ...prev, heroSlides: next };
+    });
 
   return (
     <div>
@@ -122,30 +143,61 @@ export default function HomepageSettingsPage() {
           <div className="text-center p-5"><div className="spinner-border text-primary" /></div>
         ) : (
           <div className="card-body">
-            <div className="row g-4">
-              <div className="col-lg-6">
-                <div className="form-section-title mb-3">Hero Image</div>
-                <ImageUpload
-                  label="Homepage hero image"
-                  value={settings.heroImage}
-                  onChange={(url) => setSettings(prev => ({ ...prev, heroImage: url }))}
-                />
-                <div className="form-text mt-2">
-                  This image appears in the large outlined hero box on the homepage.
-                </div>
-              </div>
-
-              <div className="col-lg-6">
-                <div className="form-section-title mb-3">Preview</div>
-                <div className="homepage-setting-preview">
-                  {settings.heroImage ? (
-                    <img src={settings.heroImage} alt="Homepage hero preview" />
-                  ) : (
-                    <div className="homepage-setting-preview-empty">No hero image selected</div>
-                  )}
-                </div>
-              </div>
+            <div className="d-flex align-items-center justify-content-between mb-3">
+              <div className="form-section-title mb-0">Hero Slider</div>
+              <button type="button" className="btn btn-sm btn-outline-primary" onClick={addSlide}>+ Add Slide</button>
             </div>
+            <div className="form-text mb-3">
+              Slides rotate in the large hero box on the homepage. Each slide can have an optional title and a link (clicking the slide opens it).
+            </div>
+
+            {settings.heroSlides.length === 0 ? (
+              <div className="alert alert-light border text-center text-muted">
+                No slides yet. Click <strong>+ Add Slide</strong> to create one.
+              </div>
+            ) : (
+              <div className="row g-4">
+                {settings.heroSlides.map((slide, i) => (
+                  <div className="col-12" key={i}>
+                    <div className="border rounded-3 p-3">
+                      <div className="d-flex align-items-center justify-content-between mb-3">
+                        <span className="fw-semibold">Slide {i + 1}</span>
+                        <div className="d-flex gap-1">
+                          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => moveSlide(i, -1)} disabled={i === 0} title="Move up">↑</button>
+                          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => moveSlide(i, 1)} disabled={i === settings.heroSlides.length - 1} title="Move down">↓</button>
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeSlide(i)} title="Remove">✕</button>
+                        </div>
+                      </div>
+                      <div className="row g-3">
+                        <div className="col-lg-5">
+                          <ImageUpload
+                            label="Slide image"
+                            value={slide.image}
+                            onChange={(url) => updateSlide(i, { image: url })}
+                          />
+                        </div>
+                        <div className="col-lg-7">
+                          <label className="form-label">Title <span className="text-muted">(optional)</span></label>
+                          <input
+                            className="form-control mb-3"
+                            placeholder="e.g. Diwali Special Offer"
+                            value={slide.title}
+                            onChange={(e) => updateSlide(i, { title: e.target.value })}
+                          />
+                          <label className="form-label">Link <span className="text-muted">(optional)</span></label>
+                          <input
+                            className="form-control"
+                            placeholder="https://… or /subscribe"
+                            value={slide.link}
+                            onChange={(e) => updateSlide(i, { link: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="row g-4 mt-4">
               <div className="col-12"><hr /><div className="form-section-title mb-3">Video Promo Section</div></div>

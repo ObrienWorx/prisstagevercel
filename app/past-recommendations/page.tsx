@@ -4,6 +4,7 @@ import SiteLayout from '@/components/SiteLayout';
 import PastRecommendationsTabs from '@/components/PastRecommendationsTabs';
 import { cookies } from 'next/headers';
 import { verifySubscriberToken } from '@/lib/subscriberJwt';
+import { notFutureDated } from '@/lib/reportVisibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,6 +116,7 @@ export default async function PastRecommendationsPage() {
 
   const reports = await Report.find({
     publishStatus: 'published',
+    ...notFutureDated(),
     recommendation: { $in: ['BUY', 'SELL', 'SPECULATIVE BUY'] },
   })
     .populate('pastStockRecommendations', 'title slug ticker upsellTicker price recommendation createdAt')

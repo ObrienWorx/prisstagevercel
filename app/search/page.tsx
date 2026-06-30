@@ -6,6 +6,7 @@ import '@/models/Product';
 import SiteLayout from '@/components/SiteLayout';
 import ContentListing from '@/components/ContentListing';
 import { fmtDate } from '@/lib/dates';
+import { notFutureDated } from '@/lib/reportVisibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,7 @@ export default async function SearchPage({ searchParams }: P) {
   await connectDB();
 
   const [latestReports, allSectors, allReportCats] = await Promise.all([
-    Report.find({ publishStatus: 'published' })
+    Report.find({ publishStatus: 'published', ...notFutureDated() })
       .select('title slug featuredImage createdAt')
       .sort({ createdAt: -1 })
       .limit(5)
@@ -47,7 +48,7 @@ export default async function SearchPage({ searchParams }: P) {
     const orClauses: object[] = [{ title: regex }, { upsellTicker: regex }];
     if (sectorIds.length) orClauses.push({ sector: { $in: sectorIds } });
 
-    const filter: any = { publishStatus: 'published', $or: orClauses };
+    const filter: any = { publishStatus: 'published', ...notFutureDated(), $or: orClauses };
     totalCount = await Report.countDocuments(filter);
     results = await Report.find(filter)
       .select('title slug featuredImage createdAt publishedAt recommendation')

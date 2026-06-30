@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { slugify } from '@/lib/slugify';
-import { fmtDateShort, fmtDateTime, toDateInput, todayInput } from '@/lib/dates';
+import { fmtDateShort, fmtDateTime, toLocalDateTimeInput } from '@/lib/dates';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
 import Pagination from '@/components/Pagination';
@@ -301,13 +301,13 @@ export default function ReportsPage() {
       upsellTicker: item.upsellTicker, ticker: item.ticker || '', price: String(item.price ?? ''), recommendations: item.recommendations?.length ? item.recommendations : (item.recommendation ? [item.recommendation] : []),
       publishStatus: item.publishStatus,
       featured: item.featured ?? false,
-      publishedAt: toDateInput(item.publishedAt ?? item.createdAt),
+      publishedAt: toLocalDateTimeInput(item.publishedAt ?? item.createdAt),
       metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
     setErr(''); setShowModal(true);
   };
 
-  const openCreate = () => { setEditing(null); setForm({ ...empty, publishedAt: todayInput() }); setErr(''); setShowModal(true); };
+  const openCreate = () => { setEditing(null); setForm({ ...empty, publishedAt: toLocalDateTimeInput(new Date()) }); setErr(''); setShowModal(true); };
   const openEdit = async (item: Report) => {
     try {
       const d = await fetch(`/api/reports/${item._id}`, { headers: h }).then((r) => r.json());
@@ -334,6 +334,9 @@ export default function ReportsPage() {
         upsellTicker: form.upsellTicker.trim().toUpperCase(),
         ticker: form.ticker.trim().toUpperCase(),
         price: form.price !== '' ? Number(form.price) : 0,
+        // datetime-local is in the admin's local tz; convert to a UTC instant.
+        // A future time keeps the report hidden on the site until it passes.
+        publishedAt: form.publishedAt ? new Date(form.publishedAt).toISOString() : null,
       };
       const url = editing ? `/api/reports/${editing._id}` : '/api/reports';
       const r = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: h, body: JSON.stringify(payload) });
@@ -501,7 +504,12 @@ export default function ReportsPage() {
                         : <span className="text-muted small">—</span>}
                     </td>
                     <td style={{ color: 'var(--muted)', whiteSpace: 'nowrap', fontSize: 13 }}>
-                      {(item.publishedAt ?? item.createdAt)
+                      {item.publishStatus === 'published' && item.publishedAt && new Date(item.publishedAt) > new Date() ? (
+                        <>
+                          <span className="badge" style={{ background: '#f59e0b', fontSize: 11 }}>🕒 Scheduled</span>
+                          <div style={{ fontSize: 11, color: '#94a3b8' }}>{fmtDateTime(item.publishedAt)}</div>
+                        </>
+                      ) : (item.publishedAt ?? item.createdAt)
                         ? <>
                             {fmtDateShort(item.publishedAt ?? item.createdAt)}
                             {item.createdAt && (
@@ -544,10 +552,13 @@ export default function ReportsPage() {
                     </select>
                   </div>
                   <div className="col-md-4">
-                    <label className="form-label">Publish Date</label>
-                    <input type="date" className="form-control" value={form.publishedAt}
+                    <label className="form-label">Publish Date &amp; Time</label>
+                    <input type="datetime-local" className="form-control" value={form.publishedAt}
                       onChange={(e) => setForm(prev => ({ ...prev, publishedAt: e.target.value }))} />
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Date shown on the site (AEST/AEDT)</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                      A future time schedules it (hidden on site until then).
+                      {form.publishedAt && ` · Sydney: ${fmtDateTime(new Date(form.publishedAt))}`}
+                    </div>
                   </div>
                   <div className="col-md-4 d-flex align-items-end">
                     <div className="form-check">

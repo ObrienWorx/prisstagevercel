@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ContentListing from '@/components/ContentListing';
 import { toReportListItem, toBlogListItem, LISTING_PER_PAGE } from '@/lib/listItems';
+import { notFutureDated } from '@/lib/reportVisibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -222,7 +223,7 @@ export default async function CatchAllPage({ params }: P) {
 
   const reportCat = await ReportCategory.findOne({ slug: normalSlug, status: 'active' }).lean() as any;
   if (reportCat) {
-    const reportFilter: Record<string, unknown> = { category: reportCat._id, publishStatus: 'published' };
+    const reportFilter: Record<string, unknown> = { category: reportCat._id, publishStatus: 'published', ...notFutureDated() };
     const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
       Report.find(reportFilter)
         .populate('sector', 'name slug')
@@ -231,7 +232,7 @@ export default async function CatchAllPage({ params }: P) {
         .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,
       Report.countDocuments(reportFilter),
-      Report.find({ publishStatus: 'published' })
+      Report.find({ publishStatus: 'published', ...notFutureDated() })
         .select('title slug featuredImage createdAt')
         .sort({ createdAt: -1 })
         .limit(5)

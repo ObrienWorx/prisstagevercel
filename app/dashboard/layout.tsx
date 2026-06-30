@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import GlobalSearch from '@/components/GlobalSearch';
+import AdminClock from '@/components/AdminClock';
 
 interface User { name: string; email: string; role: string; permissions: string[]; }
 interface NavItem { label: string; href: string; icon: string; module: string | null; }
@@ -228,6 +229,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="page-title">{activeLabel}</span>
           </div>
           <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AdminClock />
             <GlobalSearch />
             <span className="badge bg-primary-subtle text-primary" style={{ borderRadius: 20, padding: '0.35em 0.8em', fontSize: 12, whiteSpace: 'nowrap' }}>
               {user.role === 'admin' ? '⭐ Admin' : '👤 Sub-Admin'}

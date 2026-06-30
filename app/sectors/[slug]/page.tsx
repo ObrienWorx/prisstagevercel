@@ -5,6 +5,7 @@ import ReportCategory from '@/models/ReportCategory';
 import SiteLayout from '@/components/SiteLayout';
 import ContentListing from '@/components/ContentListing';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
+import { notFutureDated } from '@/lib/reportVisibility';
 import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export default async function SectorPage({ params }: P) {
   const sector = await Sector.findOne({ slug }).lean() as any;
   if (!sector) notFound();
 
-  const reportFilter: Record<string, unknown> = { sector: sector._id, publishStatus: 'published' };
+  const reportFilter: Record<string, unknown> = { sector: sector._id, publishStatus: 'published', ...notFutureDated() };
   const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
     Report.find(reportFilter)
       .select('title slug featuredImage createdAt publishedAt recommendation')
@@ -34,7 +35,7 @@ export default async function SectorPage({ params }: P) {
       .limit(LISTING_PER_PAGE)
       .lean() as Promise<any[]>,
     Report.countDocuments(reportFilter),
-    Report.find({ publishStatus: 'published' })
+    Report.find({ publishStatus: 'published', ...notFutureDated() })
       .select('title slug featuredImage createdAt')
       .sort({ createdAt: -1 })
       .limit(5)

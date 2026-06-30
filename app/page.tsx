@@ -1,4 +1,5 @@
 import HomePicks from '@/components/HomePicks';
+import HeroSlider from '@/components/HeroSlider';
 import TickerTape from '@/components/TickerTape';
 import MarketScan from '@/components/MarketScan';
 import connectDB from '@/lib/mongoose';
@@ -12,6 +13,7 @@ import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
 import { getYouTubeId } from '@/lib/orderHelpers';
 import { fmtDateShort } from '@/lib/dates';
+import { notFutureDated } from '@/lib/reportVisibility';
 import type { Types } from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -49,6 +51,7 @@ interface HomeBlog {
 
 interface HomepagePublicSettings {
   heroImage?: string;
+  heroSlides?: { image: string; title: string; link: string }[];
   videoSectionTitle?: string;
   videoSectionDescription?: string;
   videoSectionButtonText?: string;
@@ -72,7 +75,7 @@ export default async function HomePage() {
     .lean() as HomeVideo[];
 
   const homepageSettings = await HomepageSetting.findOne({ key: 'homepage' })
-    .select('heroImage videoSectionTitle videoSectionDescription videoSectionButtonText videoSectionButtonHref videoSectionYoutubeUrl')
+    .select('heroImage heroSlides videoSectionTitle videoSectionDescription videoSectionButtonText videoSectionButtonHref videoSectionYoutubeUrl')
     .lean() as HomepagePublicSettings | null;
 
   const blogCategories = await BlogCategory.find({
@@ -108,6 +111,8 @@ export default async function HomePage() {
     ticker: string;
     upsellTicker: string;
     price: number;
+    createdAt?: Date;
+    publishedAt?: Date | null;
   };
   type HomeRecPopulated = {
     _id: MongoId;
@@ -120,11 +125,12 @@ export default async function HomePage() {
 
   const pastRecReports = await Report.find({
     publishStatus: 'published',
+    ...notFutureDated(),
     recommendation: 'SELL',
     pastStockRecommendations: { $exists: true, $ne: [] },
   })
     .select('title ticker upsellTicker price pastStockRecommendations')
-    .populate('pastStockRecommendations', 'title ticker upsellTicker price')
+    .populate('pastStockRecommendations', 'title ticker upsellTicker price createdAt publishedAt')
     .sort({ createdAt: -1 })
     .limit(10)
     .lean() as unknown as HomeRecPopulated[];
@@ -132,13 +138,13 @@ export default async function HomePage() {
   const homeRecs = pastRecReports
     .flatMap((sell) => (sell.pastStockRecommendations || []).map((buy) => {
       if (!buy || !buy.price) return null;
-      const exchange = buy.upsellTicker || sell.upsellTicker || '';
-      const ticker = buy.ticker || sell.ticker || '';
-      const label = exchange && ticker ? ` (${exchange}: ${ticker})` : ticker ? ` (${ticker})` : '';
       const gainLoss = buy.price > 0 ? ((sell.price - buy.price) / buy.price) * 100 : null;
-      return { code: `${buy.title}${label}`, avgBuy: buy.price, avgSell: sell.price, gainLoss };
+      const buyDate = buy.publishedAt ?? buy.createdAt ?? null;
+      return { code: `${buy.title}`, avgBuy: buy.price, avgSell: sell.price, gainLoss, buyDate };
     }))
-    .filter((r): r is { code: string; avgBuy: number; avgSell: number; gainLoss: number | null } => r !== null)
+    .filter((r): r is { code: string; avgBuy: number; avgSell: number; gainLoss: number | null; buyDate: Date | null } => r !== null)
+    // Most recent buy first.
+    .sort((a, b) => (b.buyDate ? new Date(b.buyDate).getTime() : 0) - (a.buyDate ? new Date(a.buyDate).getTime() : 0))
     .slice(0, 7);
 
   const fmtPrice = (p: HomeProduct) => {
@@ -156,6 +162,14 @@ export default async function HomePage() {
   const videoSectionButtonText = homepageSettings?.videoSectionButtonText || 'Show All Videos';
   const videoSectionButtonHref = homepageSettings?.videoSectionButtonHref || '/videos';
   const videoSectionYoutubeId = getYouTubeId(homepageSettings?.videoSectionYoutubeUrl || '');
+
+  // Prefer the multi-slide hero; fall back to the legacy single image.
+  const heroSlides = (homepageSettings?.heroSlides?.length
+    ? homepageSettings.heroSlides
+    : homepageSettings?.heroImage
+      ? [{ image: homepageSettings.heroImage, title: '', link: '' }]
+      : []
+  ).filter((s) => s.image);
 
   return (
     <SiteLayout>
@@ -183,8 +197,8 @@ export default async function HomePage() {
             </div>
             <div className="col-lg-6">
               <div className="homepage-hero-media">
-                {homepageSettings?.heroImage ? (
-                  <img src={homepageSettings.heroImage} alt="Investment insights" />
+                {heroSlides.length > 0 ? (
+                  <HeroSlider slides={heroSlides} />
                 ) : (
                   <div className="homepage-hero-media-empty" aria-label="Homepage hero image placeholder" />
                 )}

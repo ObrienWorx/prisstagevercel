@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import { verifySubscriberToken } from '@/lib/subscriberJwt';
 import { fmtDateShort } from '@/lib/dates';
+import { notFutureDated } from '@/lib/reportVisibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,7 +57,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
     }
   }
 
-  const filter: Record<string, unknown> = { publishStatus: 'published' };
+  const filter: Record<string, unknown> = { publishStatus: 'published', ...notFutureDated() };
   if (filterProduct) {
     filter.product = filterProduct._id;
   } else {

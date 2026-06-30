@@ -10,6 +10,7 @@ import SidebarLoginForm from '@/components/SidebarLoginForm';
 import ReportSidebar from '@/components/ReportSidebar';
 import ProductCardImage from '@/components/ProductCardImage';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
+import { notFutureDated } from '@/lib/reportVisibility';
 import { fmtDate } from '@/lib/dates';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: P) {
   await connectDB();
   const product = await Product.findOne({ slug, isActive: true }).lean() as any;
   if (product) return { title: `${product.name} – PristineGaze Research` };
-  const r = await Report.findOne({ slug, publishStatus: 'published' }).lean() as any;
+  const r = await Report.findOne({ slug, publishStatus: 'published', ...notFutureDated() }).lean() as any;
   if (!r) return { title: 'Report Not Found – PristineGaze' };
   return { title: `${r.title} – PristineGaze`, description: r.metaDescription || r.title };
 }
@@ -105,7 +106,7 @@ export default async function ReportSlugPage({ params }: P) {
       );
     }
 
-    const reportFilter: Record<string, unknown> = { product: product._id, publishStatus: 'published' };
+    const reportFilter: Record<string, unknown> = { product: product._id, publishStatus: 'published', ...notFutureDated() };
     const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
       Report.find(reportFilter)
         .select('title slug featuredImage createdAt publishedAt recommendation')
@@ -113,7 +114,7 @@ export default async function ReportSlugPage({ params }: P) {
         .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,
       Report.countDocuments(reportFilter),
-      Report.find({ publishStatus: 'published' })
+      Report.find({ publishStatus: 'published', ...notFutureDated() })
         .select('title slug featuredImage createdAt')
         .sort({ createdAt: -1 })
         .limit(5)
@@ -166,7 +167,7 @@ export default async function ReportSlugPage({ params }: P) {
     );
   }
 
-  const report = await Report.findOne({ slug, publishStatus: 'published' })
+  const report = await Report.findOne({ slug, publishStatus: 'published', ...notFutureDated() })
     .populate('sector', 'name slug')
     .populate('product', 'name slug regularPrice salePrice saleOverPrice saleEndDate shortDescription features featuredImage saleBanner saleOverBanner riskRating durationValue durationType plans')
     .populate('category', 'name slug')
@@ -200,7 +201,7 @@ export default async function ReportSlugPage({ params }: P) {
   const [allSectors, allReportCats, latestReports] = await Promise.all([
     Sector.find({}).select('name slug icon').sort({ name: 1 }).lean() as Promise<any[]>,
     ReportCategory.find({ status: 'active' }).select('name slug icon').sort({ name: 1 }).lean() as Promise<any[]>,
-    Report.find({ publishStatus: 'published' }).select('title slug featuredImage createdAt').sort({ createdAt: -1 }).limit(5).lean() as Promise<any[]>,
+    Report.find({ publishStatus: 'published', ...notFutureDated() }).select('title slug featuredImage createdAt').sort({ createdAt: -1 }).limit(5).lean() as Promise<any[]>,
   ]);
   const sidebarSectors = allSectors.map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}`, icon: s.icon }));
   const sidebarCategories = allReportCats.map((c: any) => ({ name: c.name, slug: c.slug, href: `/${c.slug}`, icon: c.icon }));

@@ -25,7 +25,17 @@ export async function PUT(req: NextRequest) {
   try {
     await connectDB();
     const body = await req.json();
-    const heroImage = typeof body.heroImage === 'string' ? body.heroImage.trim() : '';
+    const heroSlides = Array.isArray(body.heroSlides)
+      ? body.heroSlides
+          .map((s: { image?: unknown; title?: unknown; link?: unknown }) => ({
+            image: typeof s?.image === 'string' ? s.image.trim() : '',
+            title: typeof s?.title === 'string' ? s.title.trim() : '',
+            link: typeof s?.link === 'string' ? s.link.trim() : '',
+          }))
+          .filter((s: { image: string }) => s.image)
+      : [];
+    // Keep the legacy single field in sync with the first slide.
+    const heroImage = heroSlides[0]?.image || (typeof body.heroImage === 'string' ? body.heroImage.trim() : '');
     const videoSectionTitle = typeof body.videoSectionTitle === 'string' ? body.videoSectionTitle.trim() : '';
     const videoSectionDescription = typeof body.videoSectionDescription === 'string' ? body.videoSectionDescription.trim() : '';
     const videoSectionButtonText = typeof body.videoSectionButtonText === 'string' ? body.videoSectionButtonText.trim() : '';
@@ -39,6 +49,7 @@ export async function PUT(req: NextRequest) {
       {
         key: 'homepage',
         heroImage,
+        heroSlides,
         videoSectionTitle,
         videoSectionDescription,
         videoSectionButtonText,

@@ -49,7 +49,8 @@ const ReportSchema = new Schema<IReport>(
     recommendation: { type: String, enum: ['', 'BUY', 'HOLD', 'SELL', 'SPECULATIVE BUY', 'REFRAIN', 'Security Under Review'], default: '' },
     publishStatus: { type: String, enum: ['draft', 'published'], default: 'draft' },
     featured: { type: Boolean, default: false },
-    // Manually-settable publish date shown on the site. Falls back to createdAt when null.
+    // Publish date/time shown on the site (and the go-live gate: a published
+    // report stays hidden until this time passes). Falls back to createdAt when null.
     publishedAt: { type: Date, default: null },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },

@@ -1,8 +1,15 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface IHeroSlide {
+  image: string;
+  title: string;
+  link: string;
+}
+
 export interface IHomepageSetting extends Document {
   key: string;
   heroImage: string;
+  heroSlides: IHeroSlide[];
   videoSectionTitle: string;
   videoSectionDescription: string;
   videoSectionButtonText: string;
@@ -14,10 +21,21 @@ export interface IHomepageSetting extends Document {
   updatedAt: Date;
 }
 
+const HeroSlideSchema = new Schema<IHeroSlide>(
+  {
+    image: { type: String, default: '' },
+    title: { type: String, default: '' },
+    link: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 const HomepageSettingSchema = new Schema<IHomepageSetting>(
   {
     key: { type: String, required: true, unique: true, default: 'homepage' },
+    // Legacy single hero image — kept in sync with heroSlides[0] for back-compat.
     heroImage: { type: String, default: '' },
+    heroSlides: { type: [HeroSlideSchema], default: [] },
     videoSectionTitle: { type: String, default: 'Watch. Learn. Invest Smarter.' },
     videoSectionDescription: {
       type: String,

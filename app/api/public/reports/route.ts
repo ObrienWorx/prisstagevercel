@@ -6,6 +6,7 @@ import '@/models/Product';
 import '@/models/ReportCategory';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
+import { notFutureDated } from '@/lib/reportVisibility';
 import { verifySubscriberToken } from '@/lib/subscriberJwt';
 import UserProduct from '@/models/UserProduct';
 
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
       const orClauses: object[] = [{ title: regex }, { upsellTicker: regex }];
       if (sectorIds.length) orClauses.push({ sector: { $in: sectorIds } });
 
-      const reports = await Report.find({ publishStatus: 'published', $or: orClauses })
+      const reports = await Report.find({ publishStatus: 'published', ...notFutureDated(), $or: orClauses })
         .populate('sector', 'name slug')
         .populate('product', 'name slug')
         .populate('category', 'name slug')
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest) {
     const paged = searchParams.has('page');
     const emptyResult = paged ? { items: [], total: 0, page: 1, pages: 0 } : [];
 
-    const filter: Record<string, unknown> = { publishStatus: 'published' };
+    const filter: Record<string, unknown> = { publishStatus: 'published', ...notFutureDated() };
 
     if (sectorSlug) {
       const sector = await Sector.findOne({ slug: sectorSlug });
