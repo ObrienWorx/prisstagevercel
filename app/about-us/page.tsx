@@ -22,7 +22,7 @@ export default function AboutUsPage() {
                   Our stock picks are driven by Value, Growth, and Hybrid Investment Strategies, with a strong emphasis on the Value Investing Principle advocated by the renowned American Economist Benjamin Graham, focusing on ensuring a sufficient &apos;Margin of Safety&apos; for Investors.
                 </p>
                 <div className="about-intro-actions">
-                  <Link href="/subscribe" className="about-button about-button-strong">Start your free Trial</Link>
+                  <Link href="/subscribe/7-day-free-trial" className="about-button about-button-strong">Start your free Trial</Link>
                   <Link href="/reports" className="about-button">Get Sample Report</Link>
                 </div>
                 <div className="about-proof">
