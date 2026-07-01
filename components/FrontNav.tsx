@@ -145,6 +145,7 @@ export default function FrontNav() {
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search By Stock or Ticker..."
                   aria-label="Search"
                   className="header-search-input"
                 />

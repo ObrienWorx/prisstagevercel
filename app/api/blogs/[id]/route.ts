@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   await connectDB();
   const { id } = await params;
   const body = await req.json();
-  const { title, slug, content, featuredImage, tags, authorName, category, categories, publishStatus, publishedAt, metaTitle, metaDescription, metaImage } = body;
+  const { title, slug, content, featuredImage, quizQuestions, tags, authorName, category, categories, publishStatus, publishedAt, metaTitle, metaDescription, metaImage } = body;
 
   const blog = await Blog.findById(id);
   if (!blog) return errorResponse('Blog not found', 404);
@@ -44,6 +44,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
   if (content !== undefined) blog.content = content;
   if (featuredImage !== undefined) blog.featuredImage = featuredImage;
+  if (quizQuestions !== undefined) blog.quizQuestions = quizQuestions;
   if (tags !== undefined) blog.tags = normalizeBlogTags(tags);
   if (authorName !== undefined) blog.authorName = authorName;
   if (categories !== undefined || category !== undefined) {

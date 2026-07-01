@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import BlogSidebarPromo from '@/components/BlogSidebarPromo';
 import LeadCapturePopup from '@/components/LeadCapturePopup';
 import { fmtDate } from '@/lib/dates';
+import BlogQuiz from '@/components/BlogQuiz';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,10 @@ export default async function BlogDetailPage({ params }: P) {
                 style={{ fontSize: 16, lineHeight: 1.85, color: '#1e293b' }}
                 dangerouslySetInnerHTML={{ __html: blog.content }}
               />
+
+              {Array.isArray(blog.quizQuestions) && blog.quizQuestions.length > 0 && (
+                <BlogQuiz questions={blog.quizQuestions} />
+              )}
             </div>
 
             <div className="col-lg-4 d-none d-lg-block">

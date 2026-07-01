@@ -105,7 +105,7 @@ export default function GlobalSearch() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => { if (results.length) setOpen(true); }}
-          placeholder="Search reports..."
+          placeholder="Search By Stock or Ticker..."
           style={{
             width: '100%',
             paddingLeft: 32,

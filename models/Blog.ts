@@ -5,6 +5,7 @@ export interface IBlog extends Document {
   slug: string;
   content: string;
   featuredImage: string;
+  quizQuestions: { q: string; opts: string[]; correct: number; explanation: string }[];
   tags: string[];
   authorName: string;
   category: Types.ObjectId | null;
@@ -18,12 +19,18 @@ export interface IBlog extends Document {
   updatedAt: Date;
 }
 
+const QuizQuestionSchema = new Schema(
+  { q: { type: String, default: '' }, opts: { type: [String], default: [] }, correct: { type: Number, default: 0 }, explanation: { type: String, default: '' } },
+  { _id: false }
+);
+
 const BlogSchema = new Schema<IBlog>(
   {
     title: { type: String, required: [true, 'Title is required'], trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     content: { type: String, default: '' },
     featuredImage: { type: String, default: '' },
+    quizQuestions: { type: [QuizQuestionSchema], default: [] },
     tags: [{ type: String, trim: true }],
     authorName: { type: String, default: '', trim: true },
     category: { type: Schema.Types.ObjectId, ref: 'BlogCategory', default: null },
@@ -42,6 +49,9 @@ if (mongoose.models.Blog) {
   const cachedBlogSchema = mongoose.models.Blog.schema;
   if (!cachedBlogSchema.path('publishedAt')) {
     cachedBlogSchema.add({ publishedAt: { type: Date, default: null } });
+  }
+  if (!cachedBlogSchema.path('quizQuestions')) {
+    cachedBlogSchema.add({ quizQuestions: { type: [QuizQuestionSchema], default: [] } });
   }
 }
 
