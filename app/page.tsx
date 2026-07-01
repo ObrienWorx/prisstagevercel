@@ -12,6 +12,8 @@ import HomepageSetting from '@/models/HomepageSetting';
 import Blog from '@/models/Blog';
 import BlogCategory from '@/models/BlogCategory';
 import Report from '@/models/Report';
+import ReportCategory from '@/models/ReportCategory';
+import HomeReportCatsSlider from '@/components/HomeReportCatsSlider';
 import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
 import { getYouTubeId } from '@/lib/orderHelpers';
@@ -47,6 +49,7 @@ interface HomeBlog {
   title: string;
   slug: string;
   featuredImage?: string;
+  metaDescription?: string;
   createdAt?: Date;
   publishedAt?: Date | null;
   categorySlug: string;
@@ -82,7 +85,7 @@ export default async function HomePage() {
     .lean() as HomepagePublicSettings | null;
 
   const blogCategories = await BlogCategory.find({
-    slug: { $in: ['trending-stock-market-news', 'editorials', 'sector-stories'] },
+    slug: { $in: ['trending-stock-market-news', 'editorials', 'sector-stories', 'retirement'] },
     status: 'active',
   }).select('_id slug').lean() as { _id: Types.ObjectId; slug: string }[];
 
@@ -95,17 +98,22 @@ export default async function HomePage() {
       publishStatus: 'published',
       $or: [{ category: categoryId }, { categories: categoryId }],
     })
-      .select('title slug featuredImage createdAt publishedAt')
+      .select('title slug featuredImage metaDescription createdAt publishedAt')
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean() as Omit<HomeBlog, 'categorySlug'>[];
     return posts.map(post => ({ ...post, categorySlug: slug }));
   }
 
-  const [trendingPosts, dailyAnalysisPosts, sectorStoriesPosts] = await Promise.all([
+  const [trendingPosts, dailyAnalysisPosts, sectorStoriesPosts, retirementPosts, reportCategories] = await Promise.all([
     getBlogsForCategory('trending-stock-market-news', 5),
     getBlogsForCategory('editorials', 8),
     getBlogsForCategory('sector-stories', 6),
+    getBlogsForCategory('retirement', 4),
+    ReportCategory.find({ status: 'active' })
+      .select('name slug icon metaImage')
+      .sort({ createdAt: 1 })
+      .lean() as Promise<{ _id: unknown; name: string; slug: string; icon: string; metaImage: string }[]>,
   ]);
 
   type HomeRecBuy = {
@@ -166,7 +174,6 @@ export default async function HomePage() {
   const videoSectionButtonHref = homepageSettings?.videoSectionButtonHref || '/videos';
   const videoSectionYoutubeId = getYouTubeId(homepageSettings?.videoSectionYoutubeUrl || '');
 
-  // Prefer the multi-slide hero; fall back to the legacy single image.
   const heroSlides = (homepageSettings?.heroSlides?.length
     ? homepageSettings.heroSlides
     : homepageSettings?.heroImage
@@ -425,7 +432,7 @@ export default async function HomePage() {
 
       <section className="home-sector-stories">
         <div className="container">
-          <div className="row g-4 align-items-stretch">
+          <div className="row g-4 align-items-start">
             <div className="col-lg-8">
               <div className="home-section-head home-section-head-large">
                 <h2>Sector Stories</h2>
@@ -452,23 +459,59 @@ export default async function HomePage() {
               )}
             </div>
 
-            <div className="col-lg-4 d-flex flex-column">
-              <div className="home-section-head home-newsletter-heading">
-                <h2>What Our Members Say</h2>
+            <div className="col-lg-4">
+              <div className="home-section-head home-section-head-large">
+                <h2>Retirement</h2>
+                <Link href="/retirement" className="home-view-link">View All ↗</Link>
               </div>
               <div className="home-title-rule" />
-              <ReviewCarousel />
+              {retirementPosts.length > 0 ? (
+                <div className="home-retirement-list">
+                  {retirementPosts.map(post => (
+                    <Link key={post._id.toString()} href={`/${post.categorySlug}/${post.slug}`} className="home-retirement-item">
+                      {post.featuredImage && (
+                        <div className="home-retirement-thumb">
+                          <img src={post.featuredImage} alt={post.title} />
+                        </div>
+                      )}
+                      <div className="home-retirement-body">
+                        <h3>{post.title}</h3>
+                        {post.createdAt && (
+                          <div className="home-retirement-date">{fmtDateShort(post.publishedAt ?? post.createdAt)}</div>
+                        )}
+                        {post.metaDescription && (
+                          <p className="home-retirement-excerpt">{post.metaDescription}</p>
+                        )}
+                        <span className="home-retirement-more">Read more »</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="home-empty-panel">No retirement posts published yet.</div>
+              )}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="home-reviews">
+        <div className="container">
+          <div className="home-reviews-head">
+            <h2>Trusted by Investors. Proven by Results.</h2>
+            <p>Nothing builds confidence like the experiences of fellow investors. We&rsquo;re grateful for the trust our subscribers have placed in Pristine Gaze, and we&rsquo;re proud to share some of the feedback they&rsquo;ve shared with us over the years.</p>
+          </div>
+          <ReviewCarousel />
         </div>
       </section>
 
       <section className="home-tools">
         <div className="container">
           <div className="home-tools-head">
-            <span className="home-tools-eyebrow">— Investor Tools</span>
-            <h2>Tools That Give You an Extra Edge</h2>
-            <p>Practical tools to keep tabs on your holdings, spot opportunities early, and act with confidence — and they come with every plan.</p>
+            <span className="home-tools-eyebrow">----Research That Investors Recommend----</span>
+            <h2>Powerful Tools for Smarter Investing</h2>
+            <p>Monitor your portfolio, uncover opportunities, and stay ahead of the market with investor
+tools built to support every decision.</p>
           </div>
           <div className="home-tools-grid">
             <div className="home-tool-card">
@@ -490,8 +533,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      <HomeFaq />
 
       <section className="home-video-promo">
         <div className="container">
@@ -523,6 +564,15 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {reportCategories.length > 0 && (
+        <section className="home-report-cats">
+          <div className="container">
+            <HomeReportCatsSlider cats={reportCategories.map(c => ({ ...c, _id: String(c._id) }))} />
+          </div>
+        </section>
+      )}
+
+      <HomeFaq />
       {process.env.NEXT_PUBLIC_SHOW_WHATSAPP_CTA === 'true' && <WhatsAppCta />}
     </SiteLayout>
   );

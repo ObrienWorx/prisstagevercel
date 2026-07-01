@@ -74,7 +74,7 @@ export default function PastRecommendationsTabs({
   const [activeTab, setActiveTab] = useState<TabKey>('past');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<SortState | null>(null);
+  const [sort, setSort] = useState<SortState>({ key: 'buyingDate', dir: 'desc' });
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const sourceRows = activeTab === 'past' ? pastRows : currentRows;
@@ -127,7 +127,7 @@ export default function PastRecommendationsTabs({
     setActiveTab(tab);
     setSearch('');
     setPage(1);
-    setSort(null);
+    setSort({ key: 'buyingDate', dir: 'desc' });
   };
 
   const SortHeader = ({ label, sortKey }: { label: string; sortKey: string }) => (

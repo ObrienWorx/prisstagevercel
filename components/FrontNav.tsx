@@ -9,6 +9,7 @@ interface Sector { _id: string; name: string; slug: string; reportCount: number;
 interface Product { _id: string; name: string; slug: string; featuredImage?: string; durationValue?: number; durationType?: string; }
 interface SubProduct { product: { _id: string } | null; expiryDate: string; isActive: boolean; }
 interface BlogType { _id: string; label: string; count: number; navHighlight?: boolean; }
+interface ReportCat { _id: string; name: string; slug: string; count: number; }
 
 export default function FrontNav() {
   const pathname = usePathname();
@@ -17,14 +18,18 @@ export default function FrontNav() {
   const [products, setProducts] = useState<Product[]>([]);
   const [unlockedProductIds, setUnlockedProductIds] = useState<string[]>([]);
   const [blogTypes, setBlogTypes] = useState<BlogType[]>([]);
+  const [reportCats, setReportCats] = useState<ReportCat[]>([]);
   const [sectorOpen, setSectorOpen] = useState(false);
   const [productOpen, setProductOpen] = useState(false);
+  const [marketCapOpen, setMarketCapOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileProductOpen, setMobileProductOpen] = useState(false);
   const [mobileSectorOpen, setMobileSectorOpen] = useState(false);
+  const [mobileMarketCapOpen, setMobileMarketCapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const sectorRef = useRef<HTMLDivElement>(null);
   const productRef = useRef<HTMLDivElement>(null);
+  const marketCapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('subscriber_token');
@@ -56,12 +61,17 @@ export default function FrontNav() {
       .then(r => r.json())
       .then(d => { if (d.success) setBlogTypes(d.data); })
       .catch(() => { });
+    fetch('/api/public/report-categories')
+      .then(r => r.json())
+      .then(d => { if (d.success) setReportCats(d.data); })
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (sectorRef.current && !sectorRef.current.contains(e.target as Node)) setSectorOpen(false);
       if (productRef.current && !productRef.current.contains(e.target as Node)) setProductOpen(false);
+      if (marketCapRef.current && !marketCapRef.current.contains(e.target as Node)) setMarketCapOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -238,6 +248,31 @@ export default function FrontNav() {
                   </div>
                 )}
               </div>
+              <div ref={marketCapRef} className="position-relative">
+                <button
+                  className={`hn-link hn-drop ${isActive('/category') ? 'active' : ''}`}
+                  onClick={() => { setMarketCapOpen(o => !o); setSectorOpen(false); setProductOpen(false); }}
+                >
+                  Market Cap +
+                </button>
+                {marketCapOpen && (
+                  <div className="hn-dropdown hn-dropdown-wide">
+                    {reportCats.length === 0 ? (
+                      <div className="hn-dd-item hn-dd-disabled">No categories yet</div>
+                    ) : reportCats.map(cat => (
+                      <Link
+                        key={cat._id}
+                        href={`/category/${cat.slug}`}
+                        className={`hn-dd-item ${isActive(`/category/${cat.slug}`) ? 'active' : ''}`}
+                        onClick={() => setMarketCapOpen(false)}
+                      >
+                        {cat.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <Link href="/videos" className={`hn-link ${isActive('/videos') ? 'active' : ''}`}>Videos</Link>
 
               {blogTypes.map(bt => (
@@ -317,6 +352,30 @@ export default function FrontNav() {
                 ) : sectors.map(s => (
                   <Link key={s._id} href={`/sectors/${s.slug}`} className={`mobile-nav-link mobile-nav-sub ${isActive(`/sectors/${s.slug}`) ? 'active' : ''}`} onClick={() => setMobileOpen(false)}>
                     {s.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mobile-nav-group">
+            <button
+              className={`mobile-nav-link mobile-nav-toggle ${mobileMarketCapOpen ? 'open' : ''}`}
+              onClick={() => setMobileMarketCapOpen(o => !o)}
+              aria-expanded={mobileMarketCapOpen}
+            >
+              Market Cap
+              <svg className="mobile-nav-caret" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {mobileMarketCapOpen && (
+              <div className="mobile-nav-submenu">
+                {reportCats.length === 0 ? (
+                  <span className="mobile-nav-link mobile-nav-sub">No categories yet</span>
+                ) : reportCats.map(cat => (
+                  <Link key={cat._id} href={`/category/${cat.slug}`} className="mobile-nav-link mobile-nav-sub" onClick={() => setMobileOpen(false)}>
+                    {cat.name}
                   </Link>
                 ))}
               </div>

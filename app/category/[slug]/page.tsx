@@ -1,7 +1,7 @@
 import connectDB from '@/lib/mongoose';
+import ReportCategory from '@/models/ReportCategory';
 import Sector from '@/models/Sector';
 import Report from '@/models/Report';
-import ReportCategory from '@/models/ReportCategory';
 import SiteLayout from '@/components/SiteLayout';
 import ContentListing from '@/components/ContentListing';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
@@ -15,19 +15,27 @@ type P = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: P) {
   const { slug } = await params;
   await connectDB();
-  const sector = await Sector.findOne({ slug }).lean() as any;
-  if (!sector) return { title: 'Sector Not Found – PristineGaze' };
-  return { title: `${sector.name} Research – PristineGaze` };
+  const cat = await ReportCategory.findOne({ slug, status: 'active' }).lean() as any;
+  if (!cat) return { title: 'Category Not Found – PristineGaze' };
+  return {
+    title: `${cat.name} Reports – PristineGaze`,
+    description: cat.metaDescription || `Browse ${cat.name} research reports on PristineGaze.`,
+  };
 }
 
-export default async function SectorPage({ params }: P) {
+export default async function ReportCategoryPage({ params }: P) {
   const { slug } = await params;
   await connectDB();
 
-  const sector = await Sector.findOne({ slug }).lean() as any;
-  if (!sector) notFound();
+  const cat = await ReportCategory.findOne({ slug, status: 'active' }).lean() as any;
+  if (!cat) notFound();
 
-  const reportFilter: Record<string, unknown> = { sector: sector._id, publishStatus: 'published', ...notFutureDated() };
+  const reportFilter: Record<string, unknown> = {
+    category: cat._id,
+    publishStatus: 'published',
+    ...notFutureDated(),
+  };
+
   const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
     Report.find(reportFilter)
       .select('title slug featuredImage createdAt publishedAt recommendation')
@@ -36,7 +44,7 @@ export default async function SectorPage({ params }: P) {
       .lean() as Promise<any[]>,
     Report.countDocuments(reportFilter),
     Report.find({ publishStatus: 'published', ...notFutureDated() })
-      .select('title slug featuredImage createdAt')
+      .select('title slug featuredImage createdAt publishedAt')
       .sort({ createdAt: -1 })
       .limit(5)
       .lean() as Promise<any[]>,
@@ -57,14 +65,14 @@ export default async function SectorPage({ params }: P) {
   return (
     <SiteLayout>
       <ContentListing
-        title={sector.name}
+        title={cat.name}
         items={items}
         latestItems={latestItems}
         sidebarType="report"
         latestLabel="Latest Reports"
         sectors={(allSectors as any[]).map((s: any) => ({ name: s.name, slug: s.slug, href: `/sectors/${s.slug}`, icon: s.icon }))}
         categories={(allReportCats as any[]).map((c: any) => ({ name: c.name, slug: c.slug, href: `/category/${c.slug}`, icon: c.icon }))}
-        loadMore={{ endpoint: '/api/public/reports', query: { sector: sector.slug }, total, perPage: LISTING_PER_PAGE }}
+        loadMore={{ endpoint: '/api/public/reports', query: { category: slug }, total, perPage: LISTING_PER_PAGE }}
       />
     </SiteLayout>
   );
