@@ -18,13 +18,8 @@ interface Blog {
   metaTitle: string; metaDescription: string; metaImage: string;
 }
 
-type QuizQ = { q: string; opts: [string, string, string, string]; correct: number; explanation: string };
-
-const emptyQ = (): QuizQ => ({ q: '', opts: ['', '', '', ''], correct: 0, explanation: '' });
-
 const empty = {
   title: '', slug: '', content: '', featuredImage: '',
-  quizQuestions: [] as QuizQ[],
   tags: '', authorName: '',
   categories: [] as string[], publishStatus: 'draft' as 'draft' | 'published',
   publishedAt: '',
@@ -106,12 +101,6 @@ export default function BlogsPage() {
     setEditing(full);
     setForm({
       title: full.title, slug: full.slug, content: full.content || '', featuredImage: full.featuredImage,
-      quizQuestions: (full as any).quizQuestions?.length
-        ? (full as any).quizQuestions.map((q: any) => ({
-            q: q.q || '', opts: [q.opts?.[0]||'', q.opts?.[1]||'', q.opts?.[2]||'', q.opts?.[3]||''] as [string,string,string,string],
-            correct: q.correct ?? 0, explanation: q.explanation || '',
-          }))
-        : [],
       tags: full.tags?.join(', ') || '', authorName: full.authorName || '',
       categories: full.categories?.map(category => category._id) || (full.category?._id ? [full.category._id] : []),
       publishStatus: full.publishStatus,
@@ -539,51 +528,6 @@ export default function BlogsPage() {
                     <ImageUpload label="Meta Image" value={form.metaImage} onChange={(url) => setForm({ ...form, metaImage: url })} />
                   </div>
 
-                  {/* ── Quiz Builder ─────────────────────────────── */}
-                  <div className="col-12"><hr className="my-1" /><div className="form-section-title">Quiz — Test Your Knowledge</div></div>
-                  <div className="col-12">
-                    <div className="form-text mb-2">Optional. Add multiple-choice questions shown after the article.</div>
-                    {form.quizQuestions.map((qItem, qi) => (
-                      <div key={qi} className="quiz-builder-question">
-                        <div className="quiz-builder-qhead">
-                          <span className="quiz-builder-qnum">Q{qi + 1}</span>
-                          <button type="button" className="btn btn-sm btn-outline-danger ms-auto"
-                            onClick={() => setForm(f => ({ ...f, quizQuestions: f.quizQuestions.filter((_, i) => i !== qi) }))}>
-                            Remove
-                          </button>
-                        </div>
-                        <input className="form-control mb-2" placeholder="Question text…" value={qItem.q}
-                          onChange={e => setForm(f => { const qs = [...f.quizQuestions]; qs[qi] = { ...qs[qi], q: e.target.value }; return { ...f, quizQuestions: qs }; })} />
-                        <div className="row g-2 mb-2">
-                          {(['A','B','C','D'] as const).map((lbl, oi) => (
-                            <div className="col-md-6" key={lbl}>
-                              <div className="input-group">
-                                <span className="input-group-text">{lbl}</span>
-                                <input className="form-control" placeholder={`Option ${lbl}`} value={qItem.opts[oi]}
-                                  onChange={e => setForm(f => {
-                                    const qs = [...f.quizQuestions];
-                                    const opts = [...qs[qi].opts] as [string,string,string,string];
-                                    opts[oi] = e.target.value;
-                                    qs[qi] = { ...qs[qi], opts };
-                                    return { ...f, quizQuestions: qs };
-                                  })} />
-                                <div className="input-group-text" title="Mark as correct">
-                                  <input type="radio" name={`correct-${qi}`} checked={qItem.correct === oi}
-                                    onChange={() => setForm(f => { const qs = [...f.quizQuestions]; qs[qi] = { ...qs[qi], correct: oi }; return { ...f, quizQuestions: qs }; })} />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <input className="form-control" placeholder="Explanation (shown after answer)…" value={qItem.explanation}
-                          onChange={e => setForm(f => { const qs = [...f.quizQuestions]; qs[qi] = { ...qs[qi], explanation: e.target.value }; return { ...f, quizQuestions: qs }; })} />
-                      </div>
-                    ))}
-                    <button type="button" className="btn btn-outline-secondary btn-sm mt-2"
-                      onClick={() => setForm(f => ({ ...f, quizQuestions: [...f.quizQuestions, emptyQ()] }))}>
-                      + Add Question
-                    </button>
-                  </div>
                 </div>
               </div>
               <div className="modal-footer">
