@@ -8,6 +8,7 @@ import SiteLayout from '@/components/SiteLayout';
 import ContentListing from '@/components/ContentListing';
 import SidebarLoginForm from '@/components/SidebarLoginForm';
 import ReportSidebar from '@/components/ReportSidebar';
+import SaleSidebarWidget from '@/components/SaleSidebarWidget';
 import ProductCardImage from '@/components/ProductCardImage';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
 import { notFutureDated } from '@/lib/reportVisibility';
@@ -387,6 +388,7 @@ export default async function ReportSlugPage({ params }: P) {
                   </>
                 )}
 
+                <SaleSidebarWidget />
                 <ReportSidebar
                   latestItems={sidebarLatest}
                   latestLabel="Latest Reports"

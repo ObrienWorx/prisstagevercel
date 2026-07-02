@@ -36,6 +36,7 @@ type ProductDoc = {
   saleBanner?: string;
   saleOverBanner?: string;
   riskRating?: string;
+  memberSale?: boolean;
 };
 
 const SALE_OFFER_SUFFIX = '-limited-sale-offer';
@@ -236,7 +237,7 @@ export default async function ProductDetailPage({ params }: P) {
             </div>
 
             <div id="subscribe-now" className="col-lg-5 d-none d-lg-block subscribe-anchor">
-              <PurchaseCard slug={p.slug} plans={plans} saleEndDate={saleEndDate} saleOffer={isSaleOffer} />
+              <PurchaseCard slug={p.slug} plans={plans} saleEndDate={saleEndDate} saleOffer={isSaleOffer} memberSale={p.memberSale} />
 
               <div className="mt-4" >
                 {p.riskRating && (

@@ -32,6 +32,7 @@ export interface IProduct extends Document {
   showOnFrontend: boolean;
   isMostPopular: boolean;
   popularBadgeText: string;
+  memberSale: boolean;
   bundledProducts: mongoose.Types.ObjectId[];
   sortOrder: number;
   metaTitle: string;
@@ -77,6 +78,7 @@ const ProductSchema = new Schema<IProduct>(
     showOnFrontend: { type: Boolean, default: true },
     isMostPopular: { type: Boolean, default: false },
     popularBadgeText: { type: String, default: '' },
+    memberSale: { type: Boolean, default: false },
     bundledProducts: { type: [{ type: Schema.Types.ObjectId, ref: 'Product' }], default: [] },
     sortOrder: { type: Number, default: 0, index: true },
     metaTitle: { type: String, default: '' },

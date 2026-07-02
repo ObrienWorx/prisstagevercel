@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import LeadCaptureForm from './LeadCaptureForm';
 import ReportSidebar from './ReportSidebar';
+import SaleSidebarWidget from './SaleSidebarWidget';
 
 interface LoadMore {
   endpoint: string;
@@ -287,6 +288,7 @@ function BlogCategoryListing({ title, items, categories, emptyMessage, footer, l
             <div className="blog-list-aside">
               <BlogReportPromo onClaim={() => setShowModal(true)} />
               <BlogCategorySidebar categories={categories} />
+              <SaleSidebarWidget />
             </div>
           </div>
         </div>
@@ -367,6 +369,7 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
             </div>
 
             <div className="col-lg-4">
+              <SaleSidebarWidget />
               <ReportSidebar latestItems={latestItems} latestLabel={latestLabel} sectors={sectors} categories={categories} />
             </div>
           </div>

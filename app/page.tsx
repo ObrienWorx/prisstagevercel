@@ -156,7 +156,7 @@ export default async function HomePage() {
     .filter((r): r is { code: string; avgBuy: number; avgSell: number; gainLoss: number | null; buyDate: Date | null } => r !== null)
     // Most recent buy first.
     .sort((a, b) => (b.buyDate ? new Date(b.buyDate).getTime() : 0) - (a.buyDate ? new Date(a.buyDate).getTime() : 0))
-    .slice(0, 7);
+    .slice(0, 8);
 
   const fmtPrice = (p: HomeProduct) => {
     const price = p.salePrice ?? p.regularPrice ?? 0;

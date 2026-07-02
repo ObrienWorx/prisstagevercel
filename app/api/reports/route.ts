@@ -18,12 +18,9 @@ export async function GET(req: NextRequest) {
 
     const q = sp.get('q')?.trim();
     if (q) {
-      const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      const matchingSectors = await Sector.find({ name: regex }, '_id');
-      const sectorIds = matchingSectors.map((s) => s._id);
-      const orClauses: object[] = [{ title: regex }, { upsellTicker: regex }, { ticker: regex }];
-      if (sectorIds.length) orClauses.push({ sector: { $in: sectorIds } });
-      const reports = await Report.find({ $or: orClauses })
+      const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+      const reports = await Report.find({ $or: [{ title: regex }, { upsellTicker: regex }, { ticker: regex }] })
         .populate('sector', 'name')
         .select('title slug upsellTicker ticker sector recommendation publishStatus')
         .sort({ createdAt: -1 })

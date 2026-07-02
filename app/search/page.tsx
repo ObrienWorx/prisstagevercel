@@ -42,13 +42,9 @@ export default async function SearchPage({ searchParams }: P) {
   let totalCount = 0;
 
   if (query) {
-    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    const matchingSectors = await Sector.find({ name: regex }, '_id');
-    const sectorIds = matchingSectors.map((s: any) => s._id);
-    const orClauses: object[] = [{ title: regex }, { upsellTicker: regex }];
-    if (sectorIds.length) orClauses.push({ sector: { $in: sectorIds } });
-
-    const filter: any = { publishStatus: 'published', ...notFutureDated(), $or: orClauses };
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    const filter: any = { publishStatus: 'published', ...notFutureDated(), $or: [{ title: regex }, { upsellTicker: regex }, { ticker: regex }] };
     totalCount = await Report.countDocuments(filter);
     results = await Report.find(filter)
       .select('title slug featuredImage createdAt publishedAt recommendation')

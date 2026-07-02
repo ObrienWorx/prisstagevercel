@@ -22,6 +22,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Blog Categories', href: '/dashboard/blog-categories', icon: '📁', module: 'blog-categories' },
       { label: 'Blogs', href: '/dashboard/blogs', icon: '✍️', module: 'blogs' },
+      { label: 'Learn & Earn', href: '/dashboard/learn-and-earn', icon: '🎓', module: 'blogs' },
     ],
   },
   {

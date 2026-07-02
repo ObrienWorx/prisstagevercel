@@ -16,7 +16,6 @@ export default function HeroSlider({ slides }: { slides: HeroSlide[] }) {
   }, [n]);
 
   if (n === 0) return null;
-  const go = (idx: number) => setI(((idx % n) + n) % n);
 
   return (
     <div className="hero-slider">
@@ -36,23 +35,6 @@ export default function HeroSlider({ slides }: { slides: HeroSlide[] }) {
         );
       })}
 
-      {n > 1 && (
-        <>
-          <button className="hero-arrow prev" onClick={() => go(i - 1)} aria-label="Previous slide" type="button">‹</button>
-          <button className="hero-arrow next" onClick={() => go(i + 1)} aria-label="Next slide" type="button">›</button>
-          <div className="hero-dots">
-            {slides.map((_, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className={`hero-dot${idx === i ? ' active' : ''}`}
-                onClick={() => go(idx)}
-                aria-label={`Go to slide ${idx + 1}`}
-              />
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }

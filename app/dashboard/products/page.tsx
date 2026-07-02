@@ -30,6 +30,7 @@ interface Product {
   status: 'draft' | 'published'; isActive: boolean;
   showOnFrontend?: boolean;
   isMostPopular?: boolean;
+  memberSale?: boolean;
   popularBadgeText?: string;
   bundledProducts?: string[];
   metaTitle: string; metaDescription: string; metaImage: string;
@@ -56,6 +57,7 @@ const empty = {
   status: 'published' as 'draft' | 'published', isActive: true,
   showOnFrontend: true,
   isMostPopular: false,
+  memberSale: false,
   popularBadgeText: '',
   bundledProducts: [] as string[],
   metaTitle: '', metaDescription: '', metaImage: '',
@@ -136,6 +138,7 @@ export default function ProductsPage() {
       status: item.status ?? 'published', isActive: item.isActive ?? true,
       showOnFrontend: item.showOnFrontend ?? true,
       isMostPopular: item.isMostPopular ?? false,
+      memberSale: item.memberSale ?? false,
       popularBadgeText: item.popularBadgeText ?? '',
       bundledProducts: (item.bundledProducts ?? []).map(String),
       metaTitle: item.metaTitle ?? '', metaDescription: item.metaDescription ?? '', metaImage: item.metaImage ?? '',
@@ -586,6 +589,16 @@ export default function ProductsPage() {
                       <input type="checkbox" className="form-check-input" id="isMostPopular" checked={form.isMostPopular}
                         onChange={(e) => setForm({ ...form, isMostPopular: e.target.checked })} />
                       <label className="form-check-label" htmlFor="isMostPopular">Mark as &quot;Most Popular</label>
+                    </div>
+                  </div>
+
+                  <div className="col-md-4 d-flex align-items-end">
+                    <div className="form-check form-switch mb-2">
+                      <input type="checkbox" className="form-check-input" id="memberSale" checked={form.memberSale}
+                        onChange={(e) => setForm({ ...form, memberSale: e.target.checked })} />
+                      <label className="form-check-label" htmlFor="memberSale">
+                        Member Sale
+                      </label>
                     </div>
                   </div>
                   <div className="col-md-8">
