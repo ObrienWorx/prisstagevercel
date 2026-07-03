@@ -78,18 +78,11 @@ export default function PastRecommendationsTabs({
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const sourceRows = activeTab === 'past' ? pastRows : currentRows;
-  const searchableRows = !isLoggedIn && activeTab === 'past' ? pastRows.slice(0, PER_PAGE) : sourceRows;
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return searchableRows;
-    return searchableRows.filter((row) => Object.values(row).some((value) => String(value).toLowerCase().includes(q)));
-  }, [searchableRows, search]);
 
-  const sortedRows = useMemo(() => {
-    if (!sort) return filteredRows;
+  const sortedSourceRows = useMemo(() => {
     const type = COLUMN_TYPES[sort.key] ?? 'string';
     const dir = sort.dir === 'asc' ? 1 : -1;
-    return [...filteredRows].sort((a, b) => {
+    return [...sourceRows].sort((a, b) => {
       const av = (a as Record<string, unknown>)[sort.key];
       const bv = (b as Record<string, unknown>)[sort.key];
       const aMissing = av === null || av === undefined || av === '';
@@ -103,7 +96,16 @@ export default function PastRecommendationsTabs({
       else cmp = String(av).localeCompare(String(bv));
       return cmp * dir;
     });
-  }, [filteredRows, sort]);
+  }, [sourceRows, sort]);
+
+  const filteredRows = useMemo(() => {
+    const visibleRows = !isLoggedIn && activeTab === 'past' ? sortedSourceRows.slice(0, PER_PAGE) : sortedSourceRows;
+    const q = search.trim().toLowerCase();
+    if (!q) return visibleRows;
+    return visibleRows.filter((row) => Object.values(row).some((value) => String(value).toLowerCase().includes(q)));
+  }, [sortedSourceRows, isLoggedIn, activeTab, search]);
+
+  const sortedRows = filteredRows;
 
   const toggleSort = (key: string) => {
     setSort((prev) => (prev?.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
@@ -176,10 +178,6 @@ export default function PastRecommendationsTabs({
           </p>
           <p>
             For each stock, the table displays the initial BUY price, the SELL price where applicable, and the resulting performance. Brokerage fees, taxes, and other transaction costs are excluded.
-          </p>
-          <p>
-            <strong>Table Update Frequency</strong><br />
-            Last Updated on <strong>{currentPriceLabel}</strong>. This table is updated <strong>once per month</strong>, and recent changes or corporate actions may not be immediately reflected.
           </p>
         </div>
       ) : (
