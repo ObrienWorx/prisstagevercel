@@ -6396,7 +6396,7 @@ body {
   display: flex;
   gap: 1.5rem;
   width: max-content;
-  animation: rc3-scroll 50s linear infinite;
+  animation: rc3-scroll 120s linear infinite;
 }
 
 .rc3-marquee-wrap:hover .rc3-marquee-track {
@@ -6501,7 +6501,7 @@ body {
   text-align: center;
   font-size: clamp(1rem, 1.5vw, 1.3rem);
   font-weight: 800;
-  color: #0d1b35;
+  color: #fff;
   letter-spacing: 0.01em;
   text-shadow: 0 1px 3px rgba(255, 255, 255, 0.4);
   padding: 0 1rem;
