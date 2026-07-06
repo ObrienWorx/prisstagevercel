@@ -377,7 +377,7 @@ export default function ReportsPage() {
             type="button"
             onClick={() => {
               setCategoryFilter(''); setSectorFilter(''); setProductFilter('');
-              setIndexFilter(''); setTickerFilter(''); setRecommendationFilter('');
+              setRecommendationFilter('');
               setDateFrom(''); setDateTo('');
             }}
           >Clear filters</button>
