@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const WP_BASE = 'https://pristinegaze.com.au';
+const WP_BASE = 'https://devstage.pristinegaze.com.au';
 const DAILY_NEWSLETTER_TERM = 203;
 const PRODUCT_NAME = 'Daily Digest';
 
@@ -145,6 +145,45 @@ function findHeadings(html) {
   return out;
 }
 
+// Old Gutenberg format (pre-2026): <h4 class="wp-block-heading">Company Name</h4>
+//                                   <p>ASX: <mark>TICKER</mark></p>
+// The h4 heading is the company/block start; the ticker lives in the next <p>.
+function gutenbergH4Companies(html) {
+  const re = /<h4[^>]*wp-block-heading[^>]*>([\s\S]*?)<\/h4>/gi;
+  const out = [];
+  let m;
+  while ((m = re.exec(html))) {
+    const text = stripTags(m[1]).trim();
+    // Skip h4s that are INDEX:TICKER lines (new format) or empty
+    if (!text || /^[A-Za-z][A-Za-z .]*?:\s*[A-Za-z0-9.]+$/.test(text)) continue;
+    out.push({ start: m.index, end: re.lastIndex, company: text });
+  }
+  return out;
+}
+
+// Strip stray company-name text accidentally appended after "...(As of ...)."
+// in the WP source — e.g. "...at the closing price of "$7.35" (As of 02 October 2025).Ramsay Health Care Limited".
+function cleanStrayText(html) {
+  return html.replace(
+    /(\([Aa]s of[^)]+\)\.?)[A-Za-z][A-Za-z\s]{2,}(?=\s*<\/(?:strong|b|em)>)/g,
+    '$1'
+  );
+}
+
+// Parse the "As of <date>" string from parseRecLine into a UTC Date.
+// Handles "02 October 2025", "2 Oct 2025", etc. without timezone shift.
+const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+function parseAsOf(asOf = '') {
+  if (!asOf) return null;
+  const m = asOf.trim().match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if (m) {
+    const month = MONTHS.findIndex(n => m[2].toLowerCase().startsWith(n.slice(0, 3)));
+    if (month !== -1) return new Date(Date.UTC(+m[3], month, +m[1]));
+  }
+  const d = new Date(asOf);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // Legacy plain-paragraph format: company name in a bold <p>, then a separate
 // "<p>ASX: TICKER</p>" line (no Gutenberg <mark>, no Elementor heading class).
 // Each stock block starts at the bold company <p> that immediately precedes its
@@ -213,6 +252,7 @@ function buildReports(post) {
 
   const gTickers = gutenbergTickers(html);
   const eHeads = findHeadings(html);
+  const h4Companies = gutenbergH4Companies(html.slice(0, cut));
   const pHeads = plainHeadings(html.slice(0, cut));
 
   // ---- MULTI (Gutenberg): split per stock ----
@@ -226,13 +266,15 @@ function buildReports(post) {
       const blockEnd = nextComp ? nextComp.start : cut;
       const slice = html.slice(blockStart, blockEnd);
       const rec = parseRecLine(slice) || {};
+      const publishedAt = parseAsOf(rec.asOf) || postDate;
       return {
         title: `${postTitle} (${t.index}:${t.ticker})`,
         baseSlug: `${postSlug || 'daily-digest'}-${t.ticker.toLowerCase()}`,
         content: `${richContent(slice)}\n${TERMS}`,
         featuredImage: firstImage(slice),
         index: t.index, ticker: t.ticker, price: rec.price ?? 0,
-        recommendation: rec.reco || '', recommendations: rec.reco ? [rec.reco] : [], createdAt: postDate,
+        recommendation: rec.reco || '', recommendations: rec.reco ? [rec.reco] : [],
+        createdAt: publishedAt, publishedAt,
       };
     });
   }
@@ -243,6 +285,7 @@ function buildReports(post) {
       const sliceEnd = i + 1 < eHeads.length ? eHeads[i + 1].start : cut;
       const slice = html.slice(h.end, sliceEnd);
       const rec = parseRecLine(slice) || {};
+      const publishedAt = parseAsOf(rec.asOf) || postDate;
       const cleanHead = `<h4 class="wp-block-heading"><strong>${h.index}: <mark>${h.ticker}</mark></strong></h4>`;
       return {
         title: `${postTitle} (${h.index}:${h.ticker})`,
@@ -250,7 +293,32 @@ function buildReports(post) {
         content: `${cleanHead}\n${richContent(slice)}\n${TERMS}`,
         featuredImage: firstImage(slice),
         index: h.index, ticker: h.ticker, price: rec.price ?? 0,
-        recommendation: rec.reco || '', recommendations: rec.reco ? [rec.reco] : [], createdAt: postDate,
+        recommendation: rec.reco || '', recommendations: rec.reco ? [rec.reco] : [],
+        createdAt: publishedAt, publishedAt,
+      };
+    });
+  }
+
+  // ---- MULTI (old Gutenberg: h4 = company heading, p = ticker) ----
+  if (h4Companies.length >= 2) {
+    return h4Companies.map((h, i) => {
+      const blockEnd = i + 1 < h4Companies.length ? h4Companies[i + 1].start : cut;
+      const rawSlice = html.slice(h.start, blockEnd);
+      const slice = cleanStrayText(rawSlice);
+      // Find ticker in <p>INDEX: <mark>TICKER</mark></p> within this block
+      const tm = slice.match(/<p[^>]*>(?:<[^>]*>)*\s*([A-Za-z][A-Za-z .]*?):\s*<mark[^>]*>\s*([A-Za-z0-9.]+)\s*<\/mark>/i);
+      const index = tm ? tm[1].trim().toUpperCase() : 'ASX';
+      const ticker = tm ? tm[2].toUpperCase() : slugify(h.company);
+      const rec = parseRecLine(slice) || {};
+      const publishedAt = parseAsOf(rec.asOf) || postDate;
+      return {
+        title: `${postTitle} (${index}:${ticker})`,
+        baseSlug: `${postSlug || 'daily-digest'}-${ticker.toLowerCase()}`,
+        content: `${richContent(slice)}\n${TERMS}`,
+        featuredImage: firstImage(slice),
+        index, ticker, price: rec.price ?? 0,
+        recommendation: rec.reco || '', recommendations: rec.reco ? [rec.reco] : [],
+        createdAt: publishedAt, publishedAt,
       };
     });
   }
@@ -261,13 +329,15 @@ function buildReports(post) {
       const sliceEnd = i + 1 < pHeads.length ? pHeads[i + 1].blockStart : cut;
       const slice = html.slice(h.blockStart, sliceEnd);
       const rec = parseRecLine(slice) || {};
+      const publishedAt = parseAsOf(rec.asOf) || postDate;
       return {
         title: `${postTitle} (${h.index}:${h.ticker})`,
         baseSlug: `${postSlug || 'daily-digest'}-${h.ticker.toLowerCase()}`,
         content: `${richContent(slice)}\n${TERMS}`,
         featuredImage: firstImage(slice),
         index: h.index, ticker: h.ticker, price: rec.price ?? 0,
-        recommendation: rec.reco || '', recommendations: rec.reco ? [rec.reco] : [], createdAt: postDate,
+        recommendation: rec.reco || '', recommendations: rec.reco ? [rec.reco] : [],
+        createdAt: publishedAt, publishedAt,
       };
     });
   }
@@ -324,19 +394,22 @@ async function main() {
     }
 
     for (const r of reports) {
-      if (await Report.exists({ slug: r.baseSlug })) { skipped++; continue; }
-      const slug = await uniqueSlug(r.baseSlug);
+      const exists = await Report.exists({ slug: r.baseSlug });
+      if (exists && !DRY) { skipped++; continue; }
+      if (exists && DRY) { skipped++; }
+      const slug = exists ? r.baseSlug : await uniqueSlug(r.baseSlug);
       if (DRY) {
-        console.log(`  [${p.id}] ${reports[0]?.single ? 'SINGLE' : 'SPLIT'} | ${r.index || '—'}:${r.ticker || '—'} | title="${r.title}" | slug=${slug}`);
-      } else {
+        console.log(`  [${p.id}] ${exists ? 'EXISTS' : 'NEW'} | ${reports[0]?.single ? 'SINGLE' : 'SPLIT'} | ${r.index || '—'}:${r.ticker || '—'} | ${r.recommendation || '—'} | $${r.price} | publishedAt=${r.publishedAt?.toISOString().slice(0,10) || '—'} | title="${r.title}" | slug=${slug}`);
+      } else if (!exists) {
         await Report.create({
           title: r.title, slug, content: r.content, featuredImage: r.featuredImage,
           product: productId, upsellTicker: r.index, ticker: r.ticker,
           price: r.price, recommendation: r.recommendation, recommendations: r.recommendations,
           publishStatus: 'published', createdAt: r.createdAt || undefined,
+          publishedAt: r.publishedAt || undefined,
         });
       }
-      created++;
+      if (!exists) created++;
     }
   };
 

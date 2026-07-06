@@ -241,7 +241,7 @@ export default async function ReportSlugPage({ params }: P) {
       <div className="site-section">
         <div className="container">
           <div className="row">
-            <div className="col-lg-8">
+            <div className="col-lg-9">
 
               {hasAccess ? (
                 <div className="tiptap-prose" dangerouslySetInnerHTML={{ __html: report.content }} />
@@ -297,7 +297,7 @@ export default async function ReportSlugPage({ params }: P) {
               )}
             </div>
 
-            <div className="col-lg-4 d-none d-lg-block">
+            <div className="col-lg-3 d-none d-lg-block">
               <div className="position-sticky" style={{ top: 80 }}>
                 {!hasAccess && (
                   <>

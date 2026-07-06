@@ -28,9 +28,22 @@ export async function GET(req: NextRequest) {
       return successResponse(reports);
     }
 
-    if (sp.get('titles')) {
-      const titles = await Report.find({}, 'title upsellTicker ticker').sort({ createdAt: -1 }).lean();
-      return successResponse(titles);
+    if (sp.get('distinct')) {
+      const [indexes, tickers] = await Promise.all([
+        Report.distinct('upsellTicker', { upsellTicker: { $nin: ['', null] } }),
+        Report.distinct('ticker', { ticker: { $nin: ['', null] } }),
+      ]);
+      return successResponse({ indexes: (indexes as string[]).sort(), tickers: (tickers as string[]).sort() });
+    }
+
+    if (sp.get('match')) {
+      const mIndex = sp.get('index')?.trim().toUpperCase();
+      const mTicker = sp.get('ticker')?.trim().toUpperCase();
+      if (!mIndex || !mTicker) return successResponse([]);
+      const matches = await Report.find({ upsellTicker: mIndex, ticker: mTicker })
+        .select('title slug ticker upsellTicker recommendation createdAt')
+        .sort({ createdAt: -1 }).limit(200).lean();
+      return successResponse(matches);
     }
 
     const page = Math.max(1, parseInt(sp.get('page') ?? '1', 10));

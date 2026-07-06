@@ -59,6 +59,14 @@ const ReportSchema = new Schema<IReport>(
   { timestamps: true }
 );
 
+ReportSchema.index({ createdAt: -1 });
+ReportSchema.index({ product: 1, createdAt: -1 });
+ReportSchema.index({ publishStatus: 1, createdAt: -1 });
+ReportSchema.index({ sector: 1, createdAt: -1 });
+ReportSchema.index({ category: 1, createdAt: -1 });
+ReportSchema.index({ ticker: 1, upsellTicker: 1, createdAt: -1 });
+ReportSchema.index({ product: 1, publishStatus: 1, createdAt: -1 });
+
 if (mongoose.models.Report) {
   const cachedReportSchema = mongoose.models.Report.schema;
   const missingPaths: Record<string, unknown> = {};
