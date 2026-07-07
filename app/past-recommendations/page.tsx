@@ -42,6 +42,7 @@ function formatDate(value: string | Date) {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'Australia/Sydney',
   });
 }
 
