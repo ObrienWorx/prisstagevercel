@@ -102,7 +102,12 @@ export default function PastRecommendationsTabs({
     const visibleRows = !isLoggedIn && activeTab === 'past' ? sortedSourceRows.slice(0, PER_PAGE) : sortedSourceRows;
     const q = search.trim().toLowerCase();
     if (!q) return visibleRows;
-    return visibleRows.filter((row) => Object.values(row).some((value) => String(value).toLowerCase().includes(q)));
+    const SEARCH_FIELDS = activeTab === 'past'
+      ? ['ticker', 'index', 'buyingDate', 'sellingDate']
+      : ['ticker', 'index', 'buyingDate'];
+    return visibleRows.filter((row) =>
+      SEARCH_FIELDS.some((key) => String((row as Record<string, unknown>)[key] ?? '').toLowerCase().includes(q))
+    );
   }, [sortedSourceRows, isLoggedIn, activeTab, search]);
 
   const sortedRows = filteredRows;

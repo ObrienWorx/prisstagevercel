@@ -254,7 +254,7 @@ export default async function HomePage() {
 
             <div className="col-lg-4">
               <div className="home-section-head">
-                <h2>Current Opportunities from our experts</h2>
+                <h2>Top Opportunities from our Experts</h2>
               </div>
               <div className="home-title-rule" />
               <HomePicks />
