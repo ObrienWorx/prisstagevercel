@@ -21,6 +21,7 @@ export interface IReport extends Document {
   publishStatus: 'draft' | 'published';
   featured: boolean;
   publishedAt: Date | null;
+  pdfUrl: string;
   metaTitle: string;
   metaDescription: string;
   metaImage: string;
@@ -52,6 +53,7 @@ const ReportSchema = new Schema<IReport>(
     // Publish date/time shown on the site (and the go-live gate: a published
     // report stays hidden until this time passes). Falls back to createdAt when null.
     publishedAt: { type: Date, default: null },
+    pdfUrl: { type: String, default: '' },
     metaTitle: { type: String, default: '' },
     metaDescription: { type: String, default: '' },
     metaImage: { type: String, default: '' },
@@ -107,6 +109,10 @@ if (mongoose.models.Report) {
 
   if (!cachedReportSchema.path('publishedAt')) {
     missingPaths.publishedAt = { type: Date, default: null };
+  }
+
+  if (!cachedReportSchema.path('pdfUrl')) {
+    missingPaths.pdfUrl = { type: String, default: '' };
   }
 
   if (Object.keys(missingPaths).length) {

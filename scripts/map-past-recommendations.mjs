@@ -56,6 +56,7 @@ async function main() {
 
   let mapped = 0, linkedBuys = 0, skippedNoBuy = 0;
   const rows = [];
+  const skippedRows = [];
   for (const [k, arr] of groups) {
     // Walk the group oldest -> newest, accumulating open buys; each sell closes them all.
     const sorted = [...arr].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -63,12 +64,19 @@ async function main() {
     for (const r of sorted) {
       if (isBuy(r)) { openBuys.push(r); continue; }
       if (!isSell(r)) continue;
-      if (openBuys.length === 0) { skippedNoBuy++; continue; }
+      if (openBuys.length === 0) { skippedNoBuy++; skippedRows.push(`  ${k.padEnd(12)} SELL $${r.price}  slug: ${r.slug}`); continue; }
       const buyIds = openBuys.map((b) => b._id);
       const avgBuy = openBuys.reduce((s, b) => s + (b.price || 0), 0) / openBuys.length;
       const gain = avgBuy > 0 ? ((r.price - avgBuy) / avgBuy) * 100 : null;
       rows.push(`  ${k.padEnd(12)} SELL $${r.price} <- ${openBuys.length} buy(s) avg $${avgBuy.toFixed(3)}  ${gain != null ? (gain >= 0 ? '+' : '') + gain.toFixed(1) + '%' : 'n/a'}`);
-      if (!DRY) await Report.updateOne({ _id: r._id }, { $set: { pastStockRecommendations: buyIds, pastStockRecommendation: buyIds[0] } });
+      if (!DRY) {
+        const existing = await Report.findById(r._id).select('pastStockRecommendations').lean();
+        const existingIds = (existing?.pastStockRecommendations || []).map(String).sort().join(',');
+        const newIds = buyIds.map(String).sort().join(',');
+        if (existingIds !== newIds) {
+          await Report.updateOne({ _id: r._id }, { $set: { pastStockRecommendations: buyIds, pastStockRecommendation: buyIds[0] } });
+        }
+      }
       mapped++;
       linkedBuys += buyIds.length;
       openBuys = []; // position closed
@@ -77,6 +85,10 @@ async function main() {
 
   rows.sort().forEach((r) => console.log(r));
   console.log(`\n${DRY ? 'Would map' : 'Mapped'} ${mapped} sell report(s) covering ${linkedBuys} buy link(s). Skipped — no open buy for ${skippedNoBuy} sell(s).`);
+  if (skippedRows.length) {
+    console.log('\nSkipped SELL reports (no matching open BUY):');
+    skippedRows.forEach((r) => console.log(r));
+  }
   await mongoose.disconnect();
 }
 

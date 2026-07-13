@@ -244,7 +244,11 @@ export default async function ReportSlugPage({ params }: P) {
             <div className="col-lg-9">
 
               {hasAccess ? (
+                report.pdfUrl ? (
+                  <iframe src={report.pdfUrl} width="100%" height="1000px" style={{ border: 0 }} />
+                ) : (
                 <div className="tiptap-prose" dangerouslySetInnerHTML={{ __html: report.content }} />
+                ))
               ) : (
                 <div>
                   {excerpt && (

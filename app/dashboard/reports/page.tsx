@@ -22,6 +22,7 @@ interface Report {
   publishStatus: 'draft' | 'published';
   featured: boolean;
   publishedAt?: string | null;
+  pdfUrl: string;
   metaTitle: string; metaDescription: string; metaImage: string;
   createdAt: string;
 }
@@ -44,6 +45,7 @@ const empty = {
   publishStatus: 'draft' as 'draft' | 'published',
   featured: false,
   publishedAt: '',
+  pdfUrl: '',
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
@@ -227,6 +229,7 @@ export default function ReportsPage() {
       publishStatus: item.publishStatus,
       featured: item.featured ?? false,
       publishedAt: toLocalDateTimeInput(item.publishedAt ?? item.createdAt),
+      pdfUrl: item.pdfUrl || '',
       metaTitle: item.metaTitle, metaDescription: item.metaDescription, metaImage: item.metaImage,
     });
     setErr(''); setShowModal(true);
@@ -567,6 +570,11 @@ export default function ReportsPage() {
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  <div className="col-12">
+                    <label className="form-label">PDF URL <span className="text-muted" style={{ fontSize: 12, fontWeight: 400 }}>(if set, PDF is shown instead of content)</span></label>
+                    <input className="form-control" placeholder="https://..." value={form.pdfUrl} onChange={(e) => setForm(prev => ({ ...prev, pdfUrl: e.target.value }))} />
                   </div>
 
                   <div className="col-12">
