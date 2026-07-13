@@ -12,7 +12,7 @@ const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false
 const PER_PAGE = 20;
 
 interface Ref { _id: string; name: string; }
-interface ReportRef { _id: string; title: string; slug?: string; upsellTicker?: string; ticker?: string; }
+interface ReportRef { _id: string; title: string; slug?: string; upsellTicker?: string; ticker?: string; publishedAt?: string | null; createdAt?: string; }
 interface Report {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
   category: Ref | null; sector: Ref | null; product: Ref | null;
@@ -127,7 +127,7 @@ function ReportMultiSelect({ options, value, onChange, empty = 'No reports avail
                 onClick={() => toggle(o._id)}
               >
                 <input type="checkbox" className="form-check-input m-0" checked={value.includes(o._id)} readOnly />
-                <span>{o.title}</span>
+                <span>{o.title}{(o.publishedAt || o.createdAt) && <span style={{ color: 'var(--muted)', fontSize: 11, marginLeft: 4 }}>({fmtDateShort(o.publishedAt ?? o.createdAt)})</span>}</span>
               </button>
             ))}
           </div>

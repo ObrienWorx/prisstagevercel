@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       const mTicker = sp.get('ticker')?.trim().toUpperCase();
       if (!mIndex || !mTicker) return successResponse([]);
       const matches = await Report.find({ upsellTicker: mIndex, ticker: mTicker })
-        .select('title slug ticker upsellTicker recommendation createdAt')
+        .select('title slug ticker upsellTicker recommendation publishedAt createdAt')
         .sort({ createdAt: -1 }).limit(200).lean();
       return successResponse(matches);
     }
