@@ -7,6 +7,8 @@ import ContentListing from '@/components/ContentListing';
 import { toReportListItem, LISTING_PER_PAGE } from '@/lib/listItems';
 import { notFutureDated } from '@/lib/reportVisibility';
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { verifySubscriberToken } from '@/lib/subscriberJwt';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +29,10 @@ export default async function SectorPage({ params }: P) {
   const sector = await Sector.findOne({ slug }).lean() as any;
   if (!sector) notFound();
 
+  const cookieStore = await cookies();
+  const token = cookieStore.get('subscriber_token')?.value;
+  const isLoggedIn = token ? verifySubscriberToken(token) !== null : false;
+
   const reportFilter: Record<string, unknown> = { sector: sector._id, publishStatus: 'published', ...notFutureDated() };
   const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
     Report.find(reportFilter)
@@ -44,7 +50,10 @@ export default async function SectorPage({ params }: P) {
     ReportCategory.find({ status: 'active' }).select('name slug icon').sort({ name: 1 }).lean(),
   ]);
 
-  const items = reports.map(toReportListItem);
+  const items = reports.map((r: any) => {
+    const item = toReportListItem(r);
+    return isLoggedIn ? item : { ...item, recommendation: '' };
+  });
 
   const latestItems = latestReports.map((r: any) => ({
     _id: r._id.toString(),

@@ -97,8 +97,14 @@ export async function GET(req: NextRequest) {
         Report.countDocuments(filter),
       ]);
       // Product listings gate ribbons behind that product's subscription; sector/
-      // category/general listings show them (matching the server-rendered first page).
-      const showRibbons = productId ? await hasActiveProductAccess(req, productId) : true;
+      // category listings gate them behind subscriber login (matching the server-rendered first page).
+      let showRibbons: boolean;
+      if (productId) {
+        showRibbons = await hasActiveProductAccess(req, productId);
+      } else {
+        const subToken = req.cookies.get('subscriber_token')?.value;
+        showRibbons = subToken ? verifySubscriberToken(subToken) !== null : false;
+      }
       const items = docs
         .map(toReportListItem)
         .map((it) => (showRibbons ? it : { ...it, recommendation: '' }));
