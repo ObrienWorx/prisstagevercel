@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import SubscriberLoginForm from './SubscriberLoginForm';
 
 type PastRow = {
@@ -20,6 +20,7 @@ type CurrentRow = {
   ticker: string;
   index: string;
   buyingDate: string;
+  buyReportSlug: string;
   buyingPrice: number;
   currentPrice: number;
   currency: string;
@@ -28,23 +29,13 @@ type CurrentRow = {
 
 type TabKey = 'past' | 'current';
 type SortDir = 'asc' | 'desc';
-type SortState = { key: string; dir: SortDir };
 
 const PER_PAGE = 10;
 
-const COLUMN_TYPES: Record<string, 'string' | 'number' | 'date'> = {
-  ticker: 'string',
-  index: 'string',
-  buyingDate: 'date',
-  sellingDate: 'date',
-  buyingPrice: 'number',
-  sellingPrice: 'number',
-  currentPrice: 'number',
-  profitLoss: 'number',
-};
-
 function formatPrice(value: number) {
-  return Number.isFinite(value) ? value.toLocaleString('en-AU', { maximumFractionDigits: 3 }) : '-';
+  return Number.isFinite(value) && value > 0
+    ? value.toLocaleString('en-AU', { maximumFractionDigits: 3 })
+    : '-';
 }
 
 function formatPercent(value: number | null) {
@@ -60,71 +51,63 @@ function pageNumbers(current: number, total: number) {
     .sort((a, b) => a - b);
 }
 
-export default function PastRecommendationsTabs({
-  pastRows,
-  currentRows,
-  currentPriceLabel,
-  isLoggedIn,
-}: {
-  pastRows: PastRow[];
-  currentRows: CurrentRow[];
-  currentPriceLabel: string;
-  isLoggedIn: boolean;
-}) {
+export default function PastRecommendationsTabs({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [activeTab, setActiveTab] = useState<TabKey>('past');
-  const [search, setSearch] = useState('');
+  const [rows, setRows] = useState<(PastRow | CurrentRow)[]>([]);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<SortState>({ key: 'buyingDate', dir: 'desc' });
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sortKey, setSortKey] = useState('buyingDate');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [loading, setLoading] = useState(false);
+  const [currentPriceLabel, setCurrentPriceLabel] = useState('latest update');
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const sourceRows = activeTab === 'past' ? pastRows : currentRows;
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const start = total === 0 ? 0 : (page - 1) * PER_PAGE + 1;
+  const end = Math.min(page * PER_PAGE, total);
 
-  const sortedSourceRows = useMemo(() => {
-    const type = COLUMN_TYPES[sort.key] ?? 'string';
-    const dir = sort.dir === 'asc' ? 1 : -1;
-    return [...sourceRows].sort((a, b) => {
-      const av = (a as Record<string, unknown>)[sort.key];
-      const bv = (b as Record<string, unknown>)[sort.key];
-      const aMissing = av === null || av === undefined || av === '';
-      const bMissing = bv === null || bv === undefined || bv === '';
-      if (aMissing && bMissing) return 0;
-      if (aMissing) return 1;
-      if (bMissing) return -1;
-      let cmp: number;
-      if (type === 'number') cmp = Number(av) - Number(bv);
-      else if (type === 'date') cmp = new Date(av as string).getTime() - new Date(bv as string).getTime();
-      else cmp = String(av).localeCompare(String(bv));
-      return cmp * dir;
-    });
-  }, [sourceRows, sort]);
+  const fetchData = useCallback(
+    async (tab: TabKey, pg: number, s: string, sk: string, sd: string) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({ tab, page: String(pg), search: s, sort: sk, dir: sd });
+        const res = await fetch(`/api/past-recommendations?${params}`);
+        const data = await res.json();
+        setRows(data.rows ?? []);
+        setTotal(data.total ?? 0);
+        if (data.currentPriceLabel) setCurrentPriceLabel(data.currentPriceLabel);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
-  const filteredRows = useMemo(() => {
-    const visibleRows = !isLoggedIn && activeTab === 'past' ? sortedSourceRows.slice(0, PER_PAGE) : sortedSourceRows;
-    const q = search.trim().toLowerCase();
-    if (!q) return visibleRows;
-    const SEARCH_FIELDS = activeTab === 'past'
-      ? ['ticker', 'index', 'buyingDate', 'sellingDate']
-      : ['ticker', 'index', 'buyingDate'];
-    return visibleRows.filter((row) =>
-      SEARCH_FIELDS.some((key) => String((row as Record<string, unknown>)[key] ?? '').toLowerCase().includes(q))
-    );
-  }, [sortedSourceRows, isLoggedIn, activeTab, search]);
+  useEffect(() => {
+    fetchData(activeTab, page, debouncedSearch, sortKey, sortDir);
+  }, [activeTab, page, debouncedSearch, sortKey, sortDir, fetchData]);
 
-  const sortedRows = filteredRows;
-
-  const toggleSort = (key: string) => {
-    setSort((prev) => (prev?.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
-    setPage(1);
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(val);
+      setPage(1);
+    }, 400);
   };
 
-  const totalPages = !isLoggedIn && activeTab === 'past' && !search.trim()
-    ? Math.max(1, Math.ceil(sourceRows.length / PER_PAGE))
-    : Math.max(1, Math.ceil(filteredRows.length / PER_PAGE));
-  const currentPage = Math.min(page, totalPages);
-  const pagedRows = sortedRows.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
-  const start = filteredRows.length === 0 ? 0 : (currentPage - 1) * PER_PAGE + 1;
-  const totalEntries = !isLoggedIn && activeTab === 'past' && !search.trim() ? sourceRows.length : filteredRows.length;
-  const end = Math.min(currentPage * PER_PAGE, totalEntries);
+  const toggleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+    setPage(1);
+  };
 
   const changeTab = (tab: TabKey) => {
     if (tab === 'current' && !isLoggedIn) {
@@ -133,29 +116,33 @@ export default function PastRecommendationsTabs({
     }
     setActiveTab(tab);
     setSearch('');
+    setDebouncedSearch('');
     setPage(1);
-    setSort({ key: 'buyingDate', dir: 'desc' });
+    setSortKey('buyingDate');
+    setSortDir('desc');
   };
 
-  const SortHeader = ({ label, sortKey }: { label: string; sortKey: string }) => (
-    <th
-      className="pg-rec-sortable"
-      style={{ cursor: 'pointer', userSelect: 'none' }}
-      onClick={() => toggleSort(sortKey)}
-      aria-sort={sort?.key === sortKey ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-    >
-      {label}
-      <span className="pg-rec-sort-ind">{sort?.key === sortKey ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}</span>
-    </th>
-  );
-
-  const changePage = (nextPage: number) => {
-    if (!isLoggedIn && activeTab === 'past' && nextPage > 1) {
+  const changePage = (next: number) => {
+    if (!isLoggedIn && activeTab === 'past' && next > 1) {
       setShowLoginModal(true);
       return;
     }
-    setPage(nextPage);
+    setPage(next);
   };
+
+  const SortHeader = ({ label, sk }: { label: string; sk: string }) => (
+    <th
+      className="pg-rec-sortable"
+      style={{ cursor: 'pointer', userSelect: 'none' }}
+      onClick={() => toggleSort(sk)}
+      aria-sort={sortKey === sk ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      {label}
+      <span className="pg-rec-sort-ind">
+        {sortKey === sk ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}
+      </span>
+    </th>
+  );
 
   return (
     <section className="pg-rec-section">
@@ -206,33 +193,36 @@ export default function PastRecommendationsTabs({
           id="recommendation-search"
           className="form-control"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          placeholder="Search table..."
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder="Search by ticker or index..."
         />
       </div>
 
-      <div className="pg-rec-table-wrap">
+      <div className="pg-rec-table-wrap" style={{ position: 'relative' }}>
+        {loading && (
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+            <span>Loading…</span>
+          </div>
+        )}
+
         {activeTab === 'past' ? (
           <table className="pg-rec-table">
             <thead>
               <tr>
-                <SortHeader label="TICKER" sortKey="ticker" />
-                <SortHeader label="INDEX" sortKey="index" />
-                <SortHeader label="Buying Date" sortKey="buyingDate" />
+                <SortHeader label="TICKER" sk="ticker" />
+                <SortHeader label="INDEX" sk="index" />
+                <SortHeader label="Buying Date" sk="buyingDate" />
                 <th>Buy Report</th>
-                <SortHeader label="Selling Date" sortKey="sellingDate" />
+                <SortHeader label="Selling Date" sk="sellingDate" />
                 <th>Sell Report</th>
-                <SortHeader label="Buying Price" sortKey="buyingPrice" />
-                <SortHeader label="Selling Price" sortKey="sellingPrice" />
-                <SortHeader label="P/L%" sortKey="profitLoss" />
+                <SortHeader label="Buying Price" sk="buyingPrice" />
+                <SortHeader label="Selling Price" sk="sellingPrice" />
+                <SortHeader label="P/L%" sk="profitLoss" />
               </tr>
             </thead>
             <tbody>
-              {(pagedRows as PastRow[]).map((row, index) => (
-                <tr key={`${row.buyReportSlug}-${row.sellReportSlug}-${index}`}>
+              {(rows as PastRow[]).map((row, i) => (
+                <tr key={`${row.buyReportSlug}-${row.sellReportSlug}-${i}`}>
                   <td>{row.ticker}</td>
                   <td>{row.index}</td>
                   <td>{row.buyingDate}</td>
@@ -241,7 +231,9 @@ export default function PastRecommendationsTabs({
                   <td><Link href={`/reports/${row.sellReportSlug}`}>View Report</Link></td>
                   <td>{formatPrice(row.buyingPrice)}</td>
                   <td>{formatPrice(row.sellingPrice)}</td>
-                  <td className={row.profitLoss !== null && row.profitLoss < 0 ? 'loss' : 'gain'}>{formatPercent(row.profitLoss)}</td>
+                  <td className={row.profitLoss !== null && row.profitLoss < 0 ? 'loss' : 'gain'}>
+                    {formatPercent(row.profitLoss)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -250,45 +242,59 @@ export default function PastRecommendationsTabs({
           <table className="pg-rec-table">
             <thead>
               <tr>
-                <SortHeader label="TICKER" sortKey="ticker" />
-                <SortHeader label="INDEX" sortKey="index" />
-                <SortHeader label="Buying Date" sortKey="buyingDate" />
-                <SortHeader label="Buying Price" sortKey="buyingPrice" />
-                <SortHeader label={`Current Price (${currentPriceLabel})`} sortKey="currentPrice" />
-                <SortHeader label="P/L%" sortKey="profitLoss" />
+                <SortHeader label="TICKER" sk="ticker" />
+                <SortHeader label="INDEX" sk="index" />
+                <SortHeader label="Buying Date" sk="buyingDate" />
+                <th>Buy Report</th>
+                <SortHeader label="Buying Price" sk="buyingPrice" />
+                <th>{`Current Price (${currentPriceLabel})`}</th>
+                <th>P/L%</th>
               </tr>
             </thead>
             <tbody>
-              {(pagedRows as CurrentRow[]).map((row, index) => (
-                <tr key={`${row.ticker}-${row.buyingDate}-${index}`}>
+              {(rows as CurrentRow[]).map((row, i) => (
+                <tr key={`${row.ticker}-${row.buyingDate}-${i}`}>
                   <td>{row.ticker}</td>
                   <td>{row.index}</td>
                   <td>{row.buyingDate}</td>
+                  <td><Link href={`/reports/${row.buyReportSlug}`}>View Report</Link></td>
                   <td>{formatPrice(row.buyingPrice)}</td>
                   <td>{formatPrice(row.currentPrice)} {row.currency}</td>
-                  <td className={row.profitLoss !== null && row.profitLoss < 0 ? 'loss' : 'gain'}>{formatPercent(row.profitLoss)}</td>
+                  <td className={row.profitLoss !== null && row.profitLoss < 0 ? 'loss' : 'gain'}>
+                    {formatPercent(row.profitLoss)}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
 
-        {filteredRows.length === 0 && (
+        {!loading && rows.length === 0 && (
           <div className="pg-rec-empty">No recommendations found.</div>
         )}
       </div>
 
       <div className="pg-rec-footer">
-        <div>Showing {start} to {end} of {totalEntries} entries</div>
+        <div>Showing {start} to {end} of {total} entries</div>
         <div className="pg-rec-pagination">
-          <button type="button" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)}>Previous</button>
-          {pageNumbers(currentPage, totalPages).map((p, i, arr) => (
+          <button type="button" disabled={page === 1} onClick={() => changePage(page - 1)}>
+            Previous
+          </button>
+          {pageNumbers(page, totalPages).map((p, i, arr) => (
             <span key={p} className="pg-rec-page-group">
-              {i > 0 && p - arr[i - 1] > 1 && <span className="pg-rec-ellipsis">...</span>}
-              <button type="button" className={p === currentPage ? 'active' : ''} onClick={() => changePage(p)}>{p}</button>
+              {i > 0 && p - arr[i - 1] > 1 && <span className="pg-rec-ellipsis">…</span>}
+              <button
+                type="button"
+                className={p === page ? 'active' : ''}
+                onClick={() => changePage(p)}
+              >
+                {p}
+              </button>
             </span>
           ))}
-          <button type="button" disabled={isLoggedIn && currentPage === totalPages} onClick={() => changePage(currentPage + 1)}>Next</button>
+          <button type="button" disabled={page === totalPages} onClick={() => changePage(page + 1)}>
+            Next
+          </button>
         </div>
       </div>
 
@@ -319,7 +325,12 @@ export default function PastRecommendationsTabs({
       {showLoginModal && (
         <div className="modal d-block pg-rec-login-modal" role="dialog" aria-modal="true">
           <div className="pg-rec-login-dialog">
-            <button type="button" className="btn-close pg-rec-login-close" onClick={() => setShowLoginModal(false)} aria-label="Close" />
+            <button
+              type="button"
+              className="btn-close pg-rec-login-close"
+              onClick={() => setShowLoginModal(false)}
+              aria-label="Close"
+            />
             <SubscriberLoginForm redirectPath="/past-recommendations" />
           </div>
         </div>
