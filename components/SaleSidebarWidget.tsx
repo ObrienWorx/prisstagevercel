@@ -85,15 +85,15 @@ function SaleCard({ product }: { product: SaleProduct }) {
   );
 }
 
-export default function SaleSidebarWidget() {
+export default function SaleSidebarWidget({ memberOnly = false }: { memberOnly?: boolean }) {
   const [products, setProducts] = useState<SaleProduct[]>([]);
 
   useEffect(() => {
-    fetch('/api/public/sale-products')
+    fetch(`/api/public/sale-products?memberOnly=${memberOnly}`)
       .then(r => r.json())
       .then(d => { if (d.success) setProducts(d.data); })
       .catch(() => {});
-  }, []);
+  }, [memberOnly]);
 
   if (!products.length) return null;
 

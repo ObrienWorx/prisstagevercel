@@ -369,7 +369,7 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
             </div>
 
             <div className="col-lg-4">
-              <SaleSidebarWidget />
+              <SaleSidebarWidget memberOnly={true} />
               <ReportSidebar latestItems={latestItems} latestLabel={latestLabel} sectors={sectors} categories={categories} />
             </div>
           </div>

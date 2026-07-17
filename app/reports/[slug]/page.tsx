@@ -392,7 +392,7 @@ export default async function ReportSlugPage({ params }: P) {
                   </>
                 )}
 
-                <SaleSidebarWidget />
+                <SaleSidebarWidget memberOnly={true} />
                 <ReportSidebar
                   latestItems={sidebarLatest}
                   latestLabel="Latest Reports"

@@ -26,6 +26,7 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [saleExpired, setSaleExpired] = useState(false);
   const [showMemberGate, setShowMemberGate] = useState(false);
+  const [showNewMemberGate, setShowNewMemberGate] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('subscriber_token');
@@ -53,14 +54,19 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
   const saleOfferQuery = saleOffer ? '&saleOffer=1' : '';
   const authPlanSlug = saleOffer ? `${slug}-limited-sale-offer` : slug;
 
-  /* Member-sale guard: true when the product is member-only AND user is either
-     not logged in or logged in but has no active subscription */
+  /* Member-sale guard: product is members-only AND user has no membership */
   const isMemberGated = memberSale && (!loggedIn || !hasMembership);
+
+  /* New-member-only guard: sale is NOT member-only AND user already has a membership */
+  const isNewMemberGated = saleOffer && !memberSale && loggedIn === true && hasMembership;
 
   const handleGatedClick = (e: React.MouseEvent) => {
     if (isMemberGated) {
       e.preventDefault();
       setShowMemberGate(true);
+    } else if (isNewMemberGated) {
+      e.preventDefault();
+      setShowNewMemberGate(true);
     }
   };
 
@@ -129,6 +135,50 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
         )}
 
       </div>
+
+      {/* New-members-only sale popup — shown to existing subscribers */}
+      {showNewMemberGate && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={() => setShowNewMemberGate(false)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 18, padding: '2.5rem 2rem', maxWidth: 480, width: '100%', textAlign: 'center', position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowNewMemberGate(false)}
+              style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#888', lineHeight: 1 }}
+              aria-label="Close"
+            >×</button>
+
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🎁</div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+              Exclusive Offer for New Members
+            </h3>
+            <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: 1.7, marginBottom: '0.5rem' }}>
+              This special offer is available exclusively to customers who are not yet members of Pristine Gaze. To access this offer, you&apos;ll first need to become a member.
+            </p>
+            <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: 1.7, marginBottom: '1.75rem' }}>
+              Click the button below to join Pristine Gaze and unlock this exclusive offer along with access to our latest expert research reports.
+            </p>
+            <Link
+              href="/subscribe"
+              className="btn btn-primary btn-lg px-5"
+              style={{ borderRadius: 8, fontWeight: 700 }}
+            >
+              Join Pristine Gaze
+            </Link>
+            <div style={{ marginTop: '1rem' }}>
+              <button type="button" onClick={() => setShowNewMemberGate(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Member-only sale popup */}
       {showMemberGate && (
