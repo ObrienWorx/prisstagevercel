@@ -43,6 +43,7 @@ const LearnAndEarnSchema = new Schema<ILearnAndEarn>(
     featuredImage: { type: String, default: '' },
     publishStatus: { type: String, enum: ['draft', 'published'], default: 'draft' },
     chapters: { type: [ChapterSchema], default: [] },
+    sortOrder: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

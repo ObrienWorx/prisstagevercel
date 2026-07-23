@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
       const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
       const limit = Math.min(48, Math.max(1, parseInt(searchParams.get('limit') || String(LISTING_PER_PAGE), 10)));
       const [docs, total] = await Promise.all([
-        Report.find(filter).select('title slug featuredImage createdAt publishedAt recommendation').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+        Report.find(filter).select('title slug featuredImage createdAt publishedAt recommendation').sort({ publishedAt: -1, createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
         Report.countDocuments(filter),
       ]);
       // Product listings gate ribbons behind that product's subscription; sector/

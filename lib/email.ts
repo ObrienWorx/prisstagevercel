@@ -68,6 +68,7 @@ export async function sendOTPEmail(to: string, otp: string, purpose: 'email-veri
   await transporter.sendMail({
     from: process.env.SMTP_FROM || 'PristineGaze <no-reply@pristinegaze.com.au>',
     to,
+    bcc: 'Insights@pristinegaze.com',
     subject,
     html,
   });

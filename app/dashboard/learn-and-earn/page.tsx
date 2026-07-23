@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { slugify } from '@/lib/slugify';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
@@ -46,6 +46,9 @@ export default function LearnAndEarnPage() {
   const [ok, setOk] = useState('');
   const [del, setDel] = useState<Module | null>(null);
   const [openChapter, setOpenChapter] = useState<number>(0);
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -123,6 +126,31 @@ export default function LearnAndEarnPage() {
     } finally { setSaving(false); }
   };
 
+  const persistOrder = async (ordered: Module[]) => {
+    const t = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+    try {
+      const r = await fetch('/api/learn-and-earn/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+        body: JSON.stringify({ ids: ordered.map(m => m._id) }),
+      });
+      const d = await r.json();
+      if (d.success) flash('Order saved');
+      else setErr(d.error || 'Failed to save order');
+    } catch { setErr('Failed to save order'); }
+  };
+
+  const handleDrop = () => {
+    const from = dragItem.current, to = dragOverItem.current;
+    dragItem.current = null; dragOverItem.current = null; setDragging(null);
+    if (from == null || to == null || from === to) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setItems(next);
+    persistOrder(next);
+  };
+
   /* ── Chapter helpers ── */
   const updateChapter = (ci: number, patch: Partial<Chapter>) =>
     setForm(f => { const chs = [...f.chapters]; chs[ci] = { ...chs[ci], ...patch }; return { ...f, chapters: chs }; });
@@ -158,33 +186,47 @@ export default function LearnAndEarnPage() {
       {loading ? (
         <div className="text-center py-5"><span className="spinner-border" /></div>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-hover align-middle">
-            <thead><tr>
-              <th>Title</th><th>Slug</th><th>Chapters</th><th>Status</th><th>Created</th><th style={{ width: 110 }}>Actions</th>
-            </tr></thead>
-            <tbody>
-              {items.length === 0 && <tr><td colSpan={6} className="text-center text-muted py-4">No modules yet</td></tr>}
-              {items.map(item => (
-                <tr key={item._id}>
-                  <td className="fw-semibold">{item.title}</td>
-                  <td><code className="small">{item.slug}</code></td>
-                  <td><span className="badge bg-secondary">{item.chapters?.length ?? 0}</span></td>
-                  <td>
-                    <span className={`badge ${item.publishStatus === 'published' ? 'bg-success' : 'bg-secondary'}`}>
-                      {item.publishStatus}
-                    </span>
-                  </td>
-                  <td className="text-muted small">{new Date(item.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
-                    <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Del</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="text-muted mb-2" style={{ fontSize: 12 }}>
+            Tip: drag the <span style={{ color: '#94a3b8' }}>⋮⋮</span> handle to reorder how modules appear on the public page.
+          </div>
+          <div className="table-responsive">
+            <table className="table table-hover align-middle">
+              <thead><tr>
+                <th style={{ width: 32 }}></th>
+                <th>Title</th><th>Slug</th><th>Chapters</th><th>Status</th><th>Created</th><th style={{ width: 110 }}>Actions</th>
+              </tr></thead>
+              <tbody>
+                {items.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-4">No modules yet</td></tr>}
+                {items.map((item, index) => (
+                  <tr key={item._id}
+                    draggable
+                    onDragStart={() => { dragItem.current = index; setDragging(index); }}
+                    onDragEnter={() => { dragOverItem.current = index; }}
+                    onDragEnd={handleDrop}
+                    onDragOver={e => e.preventDefault()}
+                    style={{ opacity: dragging === index ? 0.4 : 1 }}
+                  >
+                    <td style={{ cursor: 'move', color: '#94a3b8', textAlign: 'center', userSelect: 'none' }} title="Drag to reorder">⋮⋮</td>
+                    <td className="fw-semibold">{item.title}</td>
+                    <td><code className="small">{item.slug}</code></td>
+                    <td><span className="badge bg-secondary">{item.chapters?.length ?? 0}</span></td>
+                    <td>
+                      <span className={`badge ${item.publishStatus === 'published' ? 'bg-success' : 'bg-secondary'}`}>
+                        {item.publishStatus}
+                      </span>
+                    </td>
+                    <td className="text-muted small">{new Date(item.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
+                      <button className="btn btn-sm btn-outline-danger" onClick={() => setDel(item)}>Del</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* ── Create / Edit Modal ── */}

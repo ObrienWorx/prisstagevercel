@@ -37,7 +37,7 @@ export default async function SectorPage({ params }: P) {
   const [reports, total, latestReports, allSectors, allReportCats] = await Promise.all([
     Report.find(reportFilter)
       .select('title slug featuredImage createdAt publishedAt recommendation')
-      .sort({ createdAt: -1 })
+      .sort({ publishedAt: -1, createdAt: -1 })
       .limit(LISTING_PER_PAGE)
       .lean() as Promise<any[]>,
     Report.countDocuments(reportFilter),

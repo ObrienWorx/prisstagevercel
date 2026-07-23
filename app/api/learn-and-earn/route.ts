@@ -10,8 +10,8 @@ export async function GET(req: NextRequest) {
   if (error) return error;
   await connectDB();
   const items = await LearnAndEarn.find({})
-    .select('title slug description publishStatus chapters createdAt')
-    .sort({ createdAt: -1 })
+    .select('title slug description publishStatus chapters createdAt sortOrder')
+    .sort({ sortOrder: 1, createdAt: -1 })
     .lean();
   return successResponse(items);
 }

@@ -15,8 +15,8 @@ const ICONS = ['📈', '📊', '🛡️', '💡', '🏦', '📉', '🔍', '💰'
 export default async function LearnAndEarnPage() {
   await connectDB();
   const modules = await LearnAndEarn.find({ publishStatus: 'published' })
-    .select('title slug description chapters')
-    .sort({ createdAt: -1 })
+    .select('title slug description chapters featuredImage sortOrder')
+    .sort({ sortOrder: 1, createdAt: -1 })
     .lean() as any[];
 
   return (
