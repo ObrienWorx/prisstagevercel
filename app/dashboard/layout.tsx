@@ -41,6 +41,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Expert Picks', href: '/dashboard/picks', icon: '🎯', module: null },
       { label: 'Videos', href: '/dashboard/videos', icon: '🎥', module: 'videos' },
       { label: 'Static Pages', href: '/dashboard/static-pages', icon: '📄', module: null },
+      { label: 'Sitemap', href: '/dashboard/sitemap', icon: '🗺️', module: null },
     ],
   },
   {

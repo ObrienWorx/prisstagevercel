@@ -249,7 +249,7 @@ export default function FrontNav() {
                   </div>
                 )}
               </div>
-              <div ref={marketCapRef} className="position-relative">
+              {/* <div ref={marketCapRef} className="position-relative">
                 <button
                   className={`hn-link hn-drop ${isActive('/category') ? 'active' : ''}`}
                   onClick={() => { setMarketCapOpen(o => !o); setSectorOpen(false); setProductOpen(false); }}
@@ -272,8 +272,9 @@ export default function FrontNav() {
                     ))}
                   </div>
                 )}
-              </div>
+              </div> */}
 
+              <Link href="/learn-and-earn" className={`hn-link ${isActive('/learn-and-earn') ? 'active' : ''}`}>Learn And Earn</Link>
               <Link href="/videos" className={`hn-link ${isActive('/videos') ? 'active' : ''}`}>Videos</Link>
 
               {blogTypes.map(bt => (
