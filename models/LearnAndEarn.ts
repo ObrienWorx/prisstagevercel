@@ -15,6 +15,7 @@ export interface ILearnAndEarn extends Document {
   featuredImage: string;
   publishStatus: 'draft' | 'published';
   chapters: IChapter[];
+  sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
 }
