@@ -6079,7 +6079,7 @@ body {
 
 /* WhatsApp CTA banner (homepage, above footer) */
 .wa-cta {
-  background: linear-gradient(135deg, #0f172a 0%, #131a3a 100%);
+  background: radial-gradient(circle, #004f8a 0, #005291 0%, #001a33 47%);
   border-radius: 24px;
   padding: 1.75rem 2.25rem;
   display: flex;
@@ -6113,29 +6113,24 @@ body {
 .wa-cta-sub {
   color: #94a3b8;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.75rem;
 }
 .wa-cta-right {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-.wa-cta-consent {
-  display: flex;
-  gap: 0.5rem;
-  max-width: 360px;
-  color: #cbd5e1;
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-.wa-cta-consent input {
-  margin-top: 3px;
+  gap: 1.25rem;
   flex-shrink: 0;
 }
-.wa-cta-consent a {
-  color: #e2e8f0;
-  text-decoration: underline;
+.wa-cta-qr {
+  border-radius: 8px;
+  object-fit: cover;
+}
+.wa-cta-or {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .wa-cta-btn {
   background: #fff;
@@ -6149,10 +6144,6 @@ body {
   flex-shrink: 0;
 }
 .wa-cta-btn:hover { opacity: 0.9; }
-.wa-cta-btn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 /* Investor Tools section */
 .home-tools {
