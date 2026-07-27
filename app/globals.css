@@ -720,9 +720,10 @@ body {
   font-weight: 600;
   transition: border-color 0.15s, background 0.15s;
 }
-.le-chapter-pill:hover:not(.locked) { border-color: #0049AC; color: #0049AC; }
+.le-chapter-pill:hover:not(.locked) { border-color: #0049AC; color: #fff; }
 .le-chapter-pill.active { background: #0049AC; border-color: #0049AC; color: #fff; }
-.le-chapter-pill.locked { opacity: 0.5; cursor: not-allowed; }
+.le-chapter-pill.locked { opacity: 0.55; cursor: pointer; }
+button.le-chapter-pill { font-family: inherit; }
 .le-ch-num {
   width: 20px; height: 20px; border-radius: 50%;
   background: rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;
@@ -742,7 +743,6 @@ body {
   border-radius: 16px;
   border: 1.5px dashed #d4c9b8;
 }
-.le-gate-icon { font-size: 3rem; margin-bottom: 1rem; }
 .le-gate-title { font-size: 1.5rem; font-weight: 800; color: #1a1a1a; margin-bottom: 0.75rem; }
 .le-gate-desc { color: #555; font-size: 0.95rem; max-width: 420px; margin: 0 auto 1.5rem; line-height: 1.6; }
 
@@ -760,6 +760,9 @@ body {
   background: #fff;
   text-decoration: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
 }
 .le-nav-card:hover { border-color: #0049AC; box-shadow: 0 4px 16px rgba(0,73,172,0.1); }
 .le-nav-prev { align-items: flex-start; }
@@ -3013,7 +3016,7 @@ body {
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px);
   border-radius: 24px;
-  padding: 3rem;
+  padding: 1rem;
   width: 100%;
   max-width: 460px;
   box-shadow:
@@ -3026,7 +3029,7 @@ body {
 
 .auth-logo {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .auth-logo-icon {

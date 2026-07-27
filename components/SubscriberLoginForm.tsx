@@ -9,9 +9,10 @@ type Props = {
   plan?: string | null;
   resetSuccess?: boolean;
   redirectPath?: string;
+  onSwitchToRegister?: () => void;
 };
 
-export default function SubscriberLoginForm({ plan = null, resetSuccess = false, redirectPath }: Props) {
+export default function SubscriberLoginForm({ plan = null, resetSuccess = false, redirectPath, onSwitchToRegister }: Props) {
   const router = useRouter();
 
   const [form, setForm] = useState({ email: '', password: '' });
@@ -436,9 +437,15 @@ export default function SubscriberLoginForm({ plan = null, resetSuccess = false,
 
       <div className="auth-link-row">
         Don&apos;t have an account?{' '}
-        <Link href={`/auth/register${plan ? `?plan=${plan}` : ''}`} className="auth-text-link">
-          Create account
-        </Link>
+        {onSwitchToRegister ? (
+          <button type="button" className="auth-text-link" style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }} onClick={onSwitchToRegister}>
+            Create account
+          </button>
+        ) : (
+          <Link href={`/auth/register${plan ? `?plan=${plan}` : ''}`} className="auth-text-link">
+            Create account
+          </Link>
+        )}
       </div>
     </div>
   );

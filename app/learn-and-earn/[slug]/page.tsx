@@ -6,7 +6,7 @@ import SiteLayout from '@/components/SiteLayout';
 import Link from 'next/link';
 import { verifySubscriberToken } from '@/lib/subscriberJwt';
 import { verifyToken } from '@/lib/jwt';
-import BlogQuiz from '@/components/BlogQuiz';
+import LeModuleView from '@/components/LeModuleView';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,10 +39,6 @@ export default async function LearnChapterPage({ params, searchParams }: P) {
   );
   const chapter = mod.chapters[chIndex];
 
-  const prevChapter = chIndex > 0 ? mod.chapters[chIndex - 1] : null;
-  const nextChapter = chIndex < mod.chapters.length - 1 ? mod.chapters[chIndex + 1] : null;
-
-  /* ── Auth check: subscriber OR admin both count as logged in ── */
   const cookieStore = await cookies();
   const subscriberToken = cookieStore.get('subscriber_token')?.value;
   const adminToken = cookieStore.get('token')?.value;
@@ -51,7 +47,11 @@ export default async function LearnChapterPage({ params, searchParams }: P) {
     (adminToken && verifyToken(adminToken))
   );
 
-  const isLocked = chIndex > 0 && !isLoggedIn;
+  const chapters = mod.chapters.map((c: any) => ({
+    title: c.title,
+    content: c.content ?? '',
+    quizQuestions: c.quizQuestions ?? [],
+  }));
 
   return (
     <SiteLayout>
@@ -78,81 +78,13 @@ export default async function LearnChapterPage({ params, searchParams }: P) {
       <div className="site-section" style={{ background: '#fff' }}>
         <div className="container">
           <div className="row justify-content-center">
-            <div className="col-lg-8">
-
-              {/* Chapter pills */}
-              <div className="le-chapter-list mb-4">
-                {mod.chapters.map((c: any, i: number) => {
-                  const locked = i > 0 && !isLoggedIn;
-                  if (locked) {
-                    return (
-                      <span key={i} className="le-chapter-pill locked">
-                        <span className="le-ch-num">{i + 1}</span>
-                        <span className="le-ch-name">{c.title}</span>
-                        <span className="le-ch-lock">🔒</span>
-                      </span>
-                    );
-                  }
-                  return (
-                    <Link
-                      key={i}
-                      href={`/learn-and-earn/${slug}?ch=${i + 1}`}
-                      className={`le-chapter-pill${i === chIndex ? ' active' : ''}`}
-                    >
-                      <span className="le-ch-num">{i + 1}</span>
-                      <span className="le-ch-name">{c.title}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-
-              {/* Content */}
-              {isLocked ? (
-                <div className="le-gate">
-                  <div className="le-gate-icon">🔒</div>
-                  <h3 className="le-gate-title">Members Only</h3>
-                  <p className="le-gate-desc">
-                    You&apos;ve completed the free chapter. Log in to continue learning and access all {mod.chapters.length} chapters.
-                  </p>
-                  <Link href="/member-account" className="btn btn-primary btn-lg px-5">Log in to Continue</Link>
-                  <div className="mt-3">
-                    <Link href="/subscribe" style={{ color: '#0049AC', fontSize: 14 }}>Don&apos;t have a subscription? Subscribe →</Link>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="tiptap-prose le-content" dangerouslySetInnerHTML={{ __html: chapter.content }} />
-                  {Array.isArray(chapter.quizQuestions) && chapter.quizQuestions.length > 0 && (
-                    <BlogQuiz questions={chapter.quizQuestions} />
-                  )}
-                </>
-              )}
-
-              {/* Prev / Next nav */}
-              <div className="le-chapter-nav mt-5">
-                {prevChapter ? (
-                  <Link href={`/learn-and-earn/${slug}?ch=${chIndex}`} className="le-nav-card le-nav-prev">
-                    <span className="le-nav-label">← Previous</span>
-                    <span className="le-nav-title">{prevChapter.title}</span>
-                  </Link>
-                ) : <div />}
-
-                {nextChapter && (
-                  isLoggedIn ? (
-                    <Link href={`/learn-and-earn/${slug}?ch=${chIndex + 2}`} className="le-nav-card le-nav-next">
-                      <span className="le-nav-label">Next Chapter →</span>
-                      <span className="le-nav-title">{nextChapter.title}</span>
-                    </Link>
-                  ) : (
-                    <Link href="/member-account" className="le-nav-card le-nav-next le-nav-locked">
-                      <span className="le-nav-label">🔒 Next Chapter</span>
-                      <span className="le-nav-title">{nextChapter.title}</span>
-                      <span className="le-nav-gate-hint">Login to unlock</span>
-                    </Link>
-                  )
-                )}
-              </div>
-
+            <div className="col-lg-12">
+              <LeModuleView
+                chapters={chapters}
+                currentIndex={chIndex}
+                slug={slug}
+                isLoggedIn={isLoggedIn}
+              />
             </div>
           </div>
         </div>
