@@ -6147,6 +6147,13 @@ button.le-chapter-pill { font-family: inherit; }
   flex-shrink: 0;
 }
 .wa-cta-btn:hover { opacity: 0.9; }
+@media (max-width: 767px) {
+  .wa-cta { padding: 1.25rem; gap: 1rem; }
+  .wa-cta-left { flex: 1 1 100%; }
+  .wa-cta-right { width: 100%; justify-content: center; }
+  .wa-cta-qr, .wa-cta-or { display: none; }
+  .wa-cta-btn { width: 100%; text-align: center; }
+}
 
 /* Investor Tools section */
 .home-tools {
