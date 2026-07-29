@@ -2,9 +2,12 @@ import connectDB from '@/lib/mongoose';
 import Report from '@/models/Report';
 import Sector from '@/models/Sector';
 import ReportCategory from '@/models/ReportCategory';
+import UserProduct from '@/models/UserProduct';
 import '@/models/Product';
 import SiteLayout from '@/components/SiteLayout';
 import ContentListing from '@/components/ContentListing';
+import { cookies } from 'next/headers';
+import { verifySubscriberToken } from '@/lib/subscriberJwt';
 import { fmtDate } from '@/lib/dates';
 import { notFutureDated } from '@/lib/reportVisibility';
 
@@ -28,6 +31,22 @@ export default async function SearchPage({ searchParams }: P) {
 
   await connectDB();
 
+  // Auth check
+  let unlockedProductIds: string[] = [];
+  const cookieStore = await cookies();
+  const token = cookieStore.get('subscriber_token')?.value;
+  if (token) {
+    const payload = verifySubscriberToken(token);
+    if (payload) {
+      const activeProducts = await UserProduct.find({
+        subscriber: payload.subscriberId,
+        isActive: true,
+        expiryDate: { $gt: new Date() },
+      }).select('product').lean();
+      unlockedProductIds = activeProducts.map((up: any) => String(up.product));
+    }
+  }
+
   const [latestReports, allSectors, allReportCats] = await Promise.all([
     Report.find({ publishStatus: 'published', ...notFutureDated() })
       .select('title slug featuredImage createdAt')
@@ -47,7 +66,9 @@ export default async function SearchPage({ searchParams }: P) {
     const filter: any = { publishStatus: 'published', ...notFutureDated(), $or: [{ title: regex }, { upsellTicker: regex }, { ticker: regex }] };
     totalCount = await Report.countDocuments(filter);
     results = await Report.find(filter)
-      .select('title slug featuredImage createdAt publishedAt recommendation')
+      .select('title slug featuredImage createdAt publishedAt recommendation sector ticker product featured content')
+      .populate('sector', 'name')
+      .populate('product', 'name slug')
       .sort({ createdAt: -1 })
       .skip((page - 1) * PER_PAGE)
       .limit(PER_PAGE)
@@ -56,16 +77,24 @@ export default async function SearchPage({ searchParams }: P) {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PER_PAGE));
 
-  const items = results.map((r: any) => ({
-    _id: r._id.toString(),
-    title: r.title,
-    slug: r.slug,
-    featuredImage: r.featuredImage,
-    date: fmtDate(r.publishedAt ?? r.createdAt),
-    href: `/reports/${r.slug}`,
-    cta: 'Read Report »',
-    recommendation: r.recommendation || '',
-  }));
+  const items = results.map((r: any) => {
+    const reportProductId = r.product ? String(r.product._id) : null;
+    const isUnlocked = r.featured || !reportProductId || unlockedProductIds.includes(reportProductId);
+    const excerpt = r.content ? r.content.replace(/<[^>]+>/g, '').slice(0, 140) + '…' : '';
+    return {
+      _id: r._id.toString(),
+      title: r.title,
+      slug: r.slug,
+      featuredImage: r.featuredImage,
+      date: fmtDate(r.publishedAt ?? r.createdAt),
+      href: `/reports/${r.slug}`,
+      cta: 'Read Report →',
+      recommendation: isUnlocked ? (r.recommendation || '') : '',
+      sector: isUnlocked ? ((r.sector as any)?.name || '') : '',
+      ticker: isUnlocked ? (r.ticker || '') : '',
+      excerpt,
+    };
+  });
 
   const latestItems = latestReports.map((r: any) => ({
     _id: r._id.toString(),

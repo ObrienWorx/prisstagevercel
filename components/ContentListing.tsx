@@ -25,6 +25,8 @@ interface Item {
   href: string;
   cta?: string;
   recommendation?: string;
+  sector?: string;
+  ticker?: string;
 }
 
 interface LatestItem {
@@ -130,13 +132,9 @@ function useLoadMore(initial: Item[], loadMore?: LoadMore) {
   return { displayItems, button };
 }
 
-const RECOM_COLORS: Record<string, string> = {
-  'BUY': '#16a34a',
-  'HOLD': '#d97706',
-  'SELL': '#dc2626',
-  'SPECULATIVE BUY': '#0049AC',
-  'REFRAIN': '#64748b',
-  'Security Under Review': '#9333ea',
+const REC_BADGE: Record<string, string> = {
+  BUY: 'text-bg-success', HOLD: 'text-bg-warning', SELL: 'text-bg-danger',
+  'SPECULATIVE BUY': 'text-bg-primary', REFRAIN: 'text-bg-secondary',
 };
 
 function formatBlogTags(tags?: string[] | string) {
@@ -152,26 +150,36 @@ function formatBlogTags(tags?: string[] | string) {
 }
 
 function ItemCard({ item }: { item: Item }) {
-  const ribbonColor = item.recommendation ? RECOM_COLORS[item.recommendation] : null;
   return (
-    <div className="cl-card">
-      <Link href={item.href} className="cl-card-inner">
-        <div className="cl-card-img-wrap">
-          {item.featuredImage
-            ? <img src={item.featuredImage} alt={item.title} className="cl-card-img" />
-            : <div className="cl-card-img cl-card-placeholder" />}
-          {ribbonColor && (
-            <div className="cl-ribbon" style={{ background: ribbonColor }}>
-              {item.recommendation}
-            </div>
-          )}
+    <div className="card h-100 shadow-sm">
+      <div className="ratio ratio-16x9 bg-light position-relative">
+        {item.featuredImage ? (
+          <img src={item.featuredImage} alt={item.title} className="w-100 h-100 object-fit-cover" />
+        ) : (
+          <div className="d-flex align-items-center justify-content-center text-muted fs-1">📄</div>
+        )}
+        {item.recommendation && (
+          <span className={`badge position-absolute top-0 start-0 m-2 ${REC_BADGE[item.recommendation] || 'text-bg-secondary'}`}>
+            {item.recommendation}
+          </span>
+        )}
+      </div>
+      <div className="card-body d-flex flex-column">
+        {(item.sector || item.ticker) && (
+          <div className="d-flex flex-wrap gap-1 mb-2">
+            {item.sector && <span className="badge bg-primary-subtle text-primary-emphasis fw-semibold">{item.sector}</span>}
+            {item.ticker && <span className="badge bg-success-subtle text-success-emphasis fw-bold font-monospace">{item.ticker}</span>}
+          </div>
+        )}
+        <h3 className="h6 fw-bold mb-2">{item.title}</h3>
+        {item.excerpt && <p className="small text-muted flex-grow-1">{item.excerpt}</p>}
+        <div className="d-flex align-items-center justify-content-between mt-auto">
+          <span className="small text-muted">{item.date}</span>
+          <Link href={item.href} className="btn btn-primary btn-sm fw-bold">
+            {item.cta || 'Read More →'}
+          </Link>
         </div>
-        <div className="cl-card-body">
-          <h3 className="cl-card-title">{item.title}</h3>
-          {item.date && <div className="cl-card-date">{item.date}</div>}
-          <span className="cl-card-cta">{item.cta || 'Read More »'}</span>
-        </div>
-      </Link>
+      </div>
     </div>
   );
 }
@@ -357,9 +365,9 @@ export default function ContentListing({ title, items, latestItems, latestLabel,
                   <p style={{ color: '#64748b', fontSize: 15 }}>{emptyMessage || 'No content published yet. Check back soon.'}</p>
                 </div>
               ) : (
-                <div className="cl-grid">
+                <div className="row row-cols-1 row-cols-sm-2 g-4">
                   {displayItems.map(item => (
-                    <div key={item._id} className="cl-grid-col">
+                    <div key={item._id} className="col">
                       <ItemCard item={item} />
                     </div>
                   ))}
