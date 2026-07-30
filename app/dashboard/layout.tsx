@@ -62,6 +62,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Admin Users', href: '/dashboard/users', icon: '⭐', module: 'users' },
       { label: 'Subscribers', href: '/dashboard/subscribers', icon: '👤', module: 'subscribers' },
+      { label: 'About To Expire', href: '/dashboard/subscribers/expiring', icon: '⏳', module: 'subscribers' },
     ],
   },
 ];
