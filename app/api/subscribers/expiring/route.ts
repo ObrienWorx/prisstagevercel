@@ -40,18 +40,6 @@ export async function GET(req: NextRequest) {
     },
     { $unwind: '$subscriberArr' },
     {
-      $addFields: {
-        subscriber: {
-          _id:      '$subscriberArr._id',
-          name:     '$subscriberArr.name',
-          email:    '$subscriberArr.email',
-          phone:    '$subscriberArr.phone',
-          isActive: '$subscriberArr.isActive',
-        },
-      },
-    },
-    { $unset: 'subscriberArr' },
-    {
       $lookup: {
         from: 'products',
         localField: 'product',
@@ -60,12 +48,6 @@ export async function GET(req: NextRequest) {
       },
     },
     { $unwind: { path: '$productArr', preserveNullAndEmptyArrays: true } },
-    {
-      $addFields: {
-        product: { _id: '$productArr._id', name: '$productArr.name' },
-      },
-    },
-    { $unset: 'productArr' },
   ];
 
   if (search) {
@@ -73,17 +55,44 @@ export async function GET(req: NextRequest) {
     pipeline.push({
       $match: {
         $or: [
-          { 'subscriber.name':  { $regex: rx, $options: 'i' } },
-          { 'subscriber.email': { $regex: rx, $options: 'i' } },
-          { 'subscriber.phone': { $regex: rx, $options: 'i' } },
+          { 'subscriberArr.name':  { $regex: rx, $options: 'i' } },
+          { 'subscriberArr.email': { $regex: rx, $options: 'i' } },
+          { 'subscriberArr.phone': { $regex: rx, $options: 'i' } },
         ],
       },
     });
   }
 
-  // expired records descending (most recent first), soon ascending (soonest first)
+  // Group by subscriber — collect all matching products per user
+  pipeline.push({
+    $group: {
+      _id: '$subscriberArr._id',
+      subscriber: {
+        $first: {
+          _id:      '$subscriberArr._id',
+          name:     '$subscriberArr.name',
+          email:    '$subscriberArr.email',
+          phone:    '$subscriberArr.phone',
+          isActive: '$subscriberArr.isActive',
+        },
+      },
+      products: {
+        $push: {
+          _id:        '$_id',
+          name:       '$productArr.name',
+          expiryDate: '$expiryDate',
+          startDate:  '$startDate',
+          isActive:   '$isActive',
+        },
+      },
+      // earliest urgent date used for sorting
+      minExpiryDate: { $min: '$expiryDate' },
+    },
+  });
+
+  // expired: most recently expired first; soon/all: soonest expiry first
   const sortDir = filter === 'expired' ? -1 : 1;
-  pipeline.push({ $sort: { expiryDate: sortDir } });
+  pipeline.push({ $sort: { minExpiryDate: sortDir } });
 
   const countResult = await UserProduct.aggregate([...pipeline, { $count: 'total' }]);
   const total = countResult[0]?.total ?? 0;
