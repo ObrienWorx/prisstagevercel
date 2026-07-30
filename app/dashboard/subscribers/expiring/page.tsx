@@ -146,7 +146,7 @@ export default function AboutToExpirePage() {
                         <td className="text-muted" style={{ fontSize: 12 }}>
                           {isOpen ? '▾' : '▸'}
                         </td>
-                        <td className="fw-semibold">{row.subscriber.name}</td>
+                        <td className="fw-semibold p-0">{row.subscriber.name}</td>
                         <td className="text-muted">{row.subscriber.email}</td>
                         <td className="text-muted">{row.subscriber.phone || '—'}</td>
                         <td>
