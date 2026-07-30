@@ -5,6 +5,7 @@ import '@/models/Subscriber';
 import '@/models/Product';
 import { requireAdmin } from '@/middleware/authMiddleware';
 import { paginatedResponse, escapeRegex } from '@/lib/apiResponse';
+import type { PipelineStage } from 'mongoose';
 
 const PER_PAGE = 20;
 
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
   else if (filter === 'expired') dateMatch = { expiryDate: { $lte: now } };
   else                           dateMatch = { expiryDate: { $lte: oneMonthLater } };
 
-  const pipeline: object[] = [
+  const pipeline: PipelineStage[] = [
     { $match: dateMatch },
     {
       $lookup: {
