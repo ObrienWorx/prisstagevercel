@@ -172,7 +172,6 @@ function ItemCard({ item }: { item: Item }) {
           </div>
         )}
         <h3 className="h6 fw-bold mb-2">{item.title}</h3>
-        {item.excerpt && <p className="small text-muted flex-grow-1">{item.excerpt}</p>}
         <div className="d-flex align-items-center justify-content-between mt-auto">
           <span className="small text-muted">{item.date}</span>
           <Link href={item.href} className="btn btn-primary btn-sm fw-bold">
