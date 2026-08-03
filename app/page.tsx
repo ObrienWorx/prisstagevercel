@@ -159,7 +159,7 @@ export default async function HomePage() {
     .slice(0, 8);
 
   const fmtPrice = (p: HomeProduct) => {
-    const price = p.salePrice ?? p.regularPrice ?? 0;
+    const price = p.regularPrice ?? 0;
     return `$${price.toFixed(2)}`;
   };
 
@@ -353,7 +353,7 @@ export default async function HomePage() {
                         </div>
                         <div className="home-plan-mini-foot">
                           <span>#{i === 0 ? 'ASX' : i === 1 ? 'Tech' : i === 2 ? 'Macro' : 'Market'}</span>
-                          <strong>{p.salePrice != null || p.regularPrice ? fmtPrice(p) : 'Open'}</strong>
+                          <strong>{p.regularPrice ? fmtPrice(p) : 'Open'}</strong>
                         </div>
                       </div>
                     </Link>
