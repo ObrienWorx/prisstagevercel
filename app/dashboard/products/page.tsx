@@ -63,9 +63,19 @@ const empty = {
   metaTitle: '', metaDescription: '', metaImage: '',
 };
 
+// Show stored UTC date as Sydney local time in the datetime-local input
 function toDateInput(d: string | null | undefined) {
   if (!d) return '';
-  return new Date(d).toISOString().slice(0, 16);
+  return new Date(d).toLocaleString('sv-SE', { timeZone: 'Australia/Sydney' }).replace(' ', 'T').slice(0, 16);
+}
+
+// Convert a Sydney datetime-local string (e.g. "2024-12-31T23:59") back to UTC ISO
+function sydneyInputToISO(localStr: string): string | null {
+  if (!localStr) return null;
+  const naiveUTC = new Date(localStr + ':00.000Z');
+  const sydneyRepr = naiveUTC.toLocaleString('sv-SE', { timeZone: 'Australia/Sydney' }).replace(' ', 'T').slice(0, 16);
+  const offsetMs = naiveUTC.getTime() - new Date(sydneyRepr + ':00.000Z').getTime();
+  return new Date(naiveUTC.getTime() + offsetMs).toISOString();
 }
 
 function plansFromItem(item: Product): Plan[] {
@@ -182,8 +192,8 @@ export default function ProductsPage() {
           durationValue: Number(pl.durationValue),
           durationType: pl.durationType,
         })),
-        saleStartDate: form.saleStartDate || null,
-        saleEndDate: form.saleEndDate || null,
+        saleStartDate: sydneyInputToISO(form.saleStartDate),
+        saleEndDate: sydneyInputToISO(form.saleEndDate),
         saleOverPrice: form.saleOverPrice !== '' ? Number(form.saleOverPrice) : null,
         riskRating: form.riskRating || null,
       };
@@ -643,13 +653,13 @@ export default function ProductsPage() {
                           <label className="form-label">Sale Start Date &amp; Time</label>
                           <input type="datetime-local" className="form-control" value={form.saleStartDate}
                             onChange={(e) => setForm({ ...form, saleStartDate: e.target.value })} />
-                          <div className="form-text">Sale activates from this date &amp; time</div>
+                          <div className="form-text">Sydney time (AEST/AEDT)</div>
                         </div>
                         <div className="col-md-6">
                           <label className="form-label">Sale End Date &amp; Time</label>
                           <input type="datetime-local" className="form-control" value={form.saleEndDate}
                             onChange={(e) => setForm({ ...form, saleEndDate: e.target.value })} />
-                          <div className="form-text">Sale expires after this date &amp; time</div>
+                          <div className="form-text">Sydney time (AEST/AEDT)</div>
                         </div>
                       </div>
                       <div className="col-md-12 mt-3">
