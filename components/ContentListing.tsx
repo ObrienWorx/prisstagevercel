@@ -293,9 +293,9 @@ function BlogCategoryListing({ title, items, categories, emptyMessage, footer, l
               {footer}
             </div>
             <div className="blog-list-aside">
+              <SaleSidebarWidget />
               <BlogReportPromo onClaim={() => setShowModal(true)} />
               <BlogCategorySidebar categories={categories} />
-              <SaleSidebarWidget />
             </div>
           </div>
         </div>
