@@ -1817,6 +1817,19 @@ button.le-chapter-pill { font-family: inherit; }
   color: #fff;
 }
 
+.btn-subscribe.pc-btn-main {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #0f172a;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+}
+
+.btn-subscribe.pc-btn-main:hover {
+  background: linear-gradient(135deg, #d97706, #ea6c0a);
+  color: #0f172a;
+  box-shadow: 0 8px 22px rgba(249, 115, 22, 0.45);
+  transform: translateY(-1px);
+}
+
 /* Subscribe detail page */
 .sale-expired-section {
   background: #fff;

@@ -135,7 +135,7 @@ export default function PurchaseCard({ slug, plans, saleEndDate, saleOffer = fal
               className="btn-subscribe pc-btn-main"
               onClick={handleGatedClick}
             >
-              Subscribe Now — Pay with PayPal →
+              Proceed to Checkout →
             </Link>
             <div className="pc-divider">— or —</div>
             <Link href={`/member-account?plan=${authPlanSlug}`} className="btn-subscribe outlined pc-btn-outline">
