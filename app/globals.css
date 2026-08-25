@@ -1817,10 +1817,30 @@ button.le-chapter-pill { font-family: inherit; }
   color: #fff;
 }
 
+@keyframes pc-btn-shine {
+  0%   { left: -100%; }
+  50%  { left: 100%; }
+  100% { left: 100%; }
+}
+
 .btn-subscribe.pc-btn-main {
   background: linear-gradient(135deg, #f59e0b, #f97316);
   color: #0f172a;
   box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-subscribe.pc-btn-main::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+  animation: pc-btn-shine 2.4s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .btn-subscribe.pc-btn-main:hover {
