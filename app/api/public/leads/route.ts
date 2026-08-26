@@ -14,7 +14,11 @@ async function resolveLeadMagnet(source: string) {
 }
 
 const CRM_HOOK_URL = 'https://pristinealliance.pristinegaze.com.au/api/hook-testing';
+
+const NON_BLOG_SOURCES = new Set(['general', 'contact-us', 'unlock-ticker', 'Ticker']);
+
 async function pushToCrm(lead: { name: string; email: string; phone: string; postalCode: string; source: string; sourceUrl: string }) {
+  const isBlogSource = !NON_BLOG_SOURCES.has(lead.source);
   await fetch(CRM_HOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -26,6 +30,7 @@ async function pushToCrm(lead: { name: string; email: string; phone: string; pos
       source: lead.source,
       current_url: lead.sourceUrl,
       user: 0,
+      ...(isBlogSource && { list_id: 31 }),
     }),
   });
 }
