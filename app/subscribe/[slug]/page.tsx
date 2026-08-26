@@ -210,6 +210,10 @@ export default async function ProductDetailPage({ params }: P) {
                 </div>
               )}
 
+              <a href="#subscribe-now" className="btn-subscribe pc-btn-main d-lg-none mb-4" style={{ display: 'block' }}>
+                Buy Now →
+              </a>
+
               {p.fullDescription && (
                 <div>
                   <h3 className="subscribe-content-title">About This Plan</h3>
@@ -234,9 +238,13 @@ export default async function ProductDetailPage({ params }: P) {
                   </div>
                 </div>
               )}
+
+              <a href="#subscribe-now" className="btn-subscribe pc-btn-main d-lg-none mt-3" style={{ display: 'block' }}>
+                Buy Now →
+              </a>
             </div>
 
-            <div id="subscribe-now" className="col-lg-5 d-none d-lg-block subscribe-anchor">
+            <div id="subscribe-now" className="col-lg-5 subscribe-anchor">
               <PurchaseCard slug={p.slug} plans={plans} saleEndDate={saleEndDate} saleOffer={isSaleOffer} memberSale={p.memberSale} />
 
               <div className="mt-4" >
