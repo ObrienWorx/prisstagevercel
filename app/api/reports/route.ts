@@ -40,7 +40,12 @@ export async function GET(req: NextRequest) {
       const mIndex = sp.get('index')?.trim().toUpperCase();
       const mTicker = sp.get('ticker')?.trim().toUpperCase();
       if (!mIndex || !mTicker) return successResponse([]);
-      const matches = await Report.find({ upsellTicker: mIndex, ticker: mTicker })
+      const buyTypes = ['BUY', 'SPECULATIVE BUY'];
+      const matches = await Report.find({
+        upsellTicker: mIndex,
+        ticker: mTicker,
+        $or: [{ recommendation: { $in: buyTypes } }, { recommendations: { $elemMatch: { $in: buyTypes } } }],
+      })
         .select('title slug ticker upsellTicker recommendation publishedAt createdAt')
         .sort({ createdAt: -1 }).limit(200).lean();
       return successResponse(matches);
