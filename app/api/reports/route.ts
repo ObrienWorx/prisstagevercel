@@ -41,11 +41,15 @@ export async function GET(req: NextRequest) {
       const mTicker = sp.get('ticker')?.trim().toUpperCase();
       if (!mIndex || !mTicker) return successResponse([]);
       const buyTypes = ['BUY', 'SPECULATIVE BUY'];
-      const matches = await Report.find({
+      const before = sp.get('before')?.trim();
+      const beforeDate = before ? new Date(before) : null;
+      const matchFilter: Record<string, unknown> = {
         upsellTicker: mIndex,
         ticker: mTicker,
         $or: [{ recommendation: { $in: buyTypes } }, { recommendations: { $elemMatch: { $in: buyTypes } } }],
-      })
+      };
+      if (beforeDate && !isNaN(beforeDate.getTime())) matchFilter.publishedAt = { $lte: beforeDate };
+      const matches = await Report.find(matchFilter)
         .select('title slug ticker upsellTicker recommendation publishedAt createdAt')
         .sort({ createdAt: -1 }).limit(200).lean();
       return successResponse(matches);

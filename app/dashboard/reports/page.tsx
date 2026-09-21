@@ -199,9 +199,10 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (!form.upsellTicker || !form.ticker) { setMatchReports([]); return; }
-    void fetch(`/api/reports?match=1&index=${encodeURIComponent(form.upsellTicker)}&ticker=${encodeURIComponent(form.ticker)}`, { headers: h })
+    const beforeParam = form.publishedAt ? `&before=${encodeURIComponent(new Date(form.publishedAt).toISOString())}` : '';
+    void fetch(`/api/reports?match=1&index=${encodeURIComponent(form.upsellTicker)}&ticker=${encodeURIComponent(form.ticker)}${beforeParam}`, { headers: h })
       .then(r => r.json()).then(d => { if (d.success) setMatchReports(d.data); });
-  }, [form.upsellTicker, form.ticker, h]);
+  }, [form.upsellTicker, form.ticker, form.publishedAt, h]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => { void load(1, search, categoryFilter, sectorFilter, productFilter, recommendationFilter, dateFrom, dateTo); }, 0);
