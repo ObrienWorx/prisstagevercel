@@ -63,13 +63,14 @@ export async function GET(req: NextRequest) {
       recommendation: 'SELL',
       pastStockRecommendations: { $exists: true, $ne: [] },
     })
-      .populate('pastStockRecommendations', 'slug ticker upsellTicker price createdAt')
-      .sort({ createdAt: -1 })
+      .populate('pastStockRecommendations', 'slug ticker upsellTicker price publishedAt createdAt')
+      .sort({ publishedAt: -1 })
       .lean() as unknown as Array<{
         slug: string;
         price: number;
+        publishedAt?: Date;
         createdAt: Date;
-        pastStockRecommendations: Array<{ slug: string; ticker: string; upsellTicker: string; price: number; createdAt: Date }>;
+        pastStockRecommendations: Array<{ slug: string; ticker: string; upsellTicker: string; price: number; publishedAt?: Date; createdAt: Date }>;
       }>;
 
     type PastRow = {
@@ -90,11 +91,11 @@ export async function GET(req: NextRequest) {
       (sell.pastStockRecommendations || []).map((buy) => ({
         ticker: buy.ticker || buy.upsellTicker || '-',
         index: buy.upsellTicker || '-',
-        buyingDate: formatDate(buy.createdAt),
-        buyingDateRaw: new Date(buy.createdAt).getTime(),
+        buyingDate: formatDate(buy.publishedAt ?? buy.createdAt),
+        buyingDateRaw: new Date(buy.publishedAt ?? buy.createdAt).getTime(),
         buyReportSlug: buy.slug,
-        sellingDate: formatDate(sell.createdAt),
-        sellingDateRaw: new Date(sell.createdAt).getTime(),
+        sellingDate: formatDate(sell.publishedAt ?? sell.createdAt),
+        sellingDateRaw: new Date(sell.publishedAt ?? sell.createdAt).getTime(),
         sellReportSlug: sell.slug,
         buyingPrice: Number(buy.price || 0),
         sellingPrice: Number(sell.price || 0),
@@ -166,7 +167,7 @@ export async function GET(req: NextRequest) {
   }
 
   const dbSortMap: Record<string, Record<string, 1 | -1>> = {
-    buyingDate:  { createdAt: sortDir === 'asc' ? 1 : -1 },
+    buyingDate:  { publishedAt: sortDir === 'asc' ? 1 : -1 },
     buyingPrice: { price: sortDir === 'asc' ? 1 : -1 },
     ticker:      { ticker: sortDir === 'asc' ? 1 : -1 },
     index:       { upsellTicker: sortDir === 'asc' ? 1 : -1 },
@@ -175,11 +176,11 @@ export async function GET(req: NextRequest) {
 
   const [total, reports] = await Promise.all([
     Report.countDocuments(dbQuery),
-    Report.find(dbQuery, { slug: 1, ticker: 1, upsellTicker: 1, price: 1, currentPrice: 1, currentPriceCurrency: 1, createdAt: 1 })
+    Report.find(dbQuery, { slug: 1, ticker: 1, upsellTicker: 1, price: 1, currentPrice: 1, currentPriceCurrency: 1, publishedAt: 1, createdAt: 1 })
       .sort(dbSort)
       .skip((page - 1) * PER_PAGE)
       .limit(PER_PAGE)
-      .lean() as unknown as Promise<Array<{ slug: string; ticker: string; upsellTicker: string; price: number; currentPrice: number; currentPriceCurrency: string; createdAt: Date }>>,
+      .lean() as unknown as Promise<Array<{ slug: string; ticker: string; upsellTicker: string; price: number; currentPrice: number; currentPriceCurrency: string; publishedAt?: Date; createdAt: Date }>>,
   ]);
 
   const liveQuotes = await Promise.all(
@@ -192,7 +193,7 @@ export async function GET(req: NextRequest) {
     return {
       ticker: r.ticker || r.upsellTicker || '-',
       index: r.upsellTicker || '-',
-      buyingDate: formatDate(r.createdAt),
+      buyingDate: formatDate(r.publishedAt ?? r.createdAt),
       buyReportSlug: r.slug,
       buyingPrice: Number(r.price || 0),
       currentPrice: Number(currentPrice || 0),
