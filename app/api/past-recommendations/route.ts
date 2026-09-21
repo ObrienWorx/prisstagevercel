@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
   const tab = sp.get('tab') || 'past';
   const page = Math.max(1, Number(sp.get('page') || 1));
   const search = sp.get('search')?.trim() || '';
-  const sortKey = sp.get('sort') || 'buyingDate';
+  const sortKey = sp.get('sort') || 'sellingDate';
   const sortDir = (sp.get('dir') || 'desc') as 'asc' | 'desc';
 
   await connectDB();

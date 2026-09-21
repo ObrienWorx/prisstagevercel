@@ -58,7 +58,7 @@ export default function PastRecommendationsTabs({ isLoggedIn }: { isLoggedIn: bo
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sortKey, setSortKey] = useState('buyingDate');
+  const [sortKey, setSortKey] = useState('sellingDate');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [loading, setLoading] = useState(false);
   const [currentPriceLabel, setCurrentPriceLabel] = useState('latest update');
@@ -118,7 +118,7 @@ export default function PastRecommendationsTabs({ isLoggedIn }: { isLoggedIn: bo
     setSearch('');
     setDebouncedSearch('');
     setPage(1);
-    setSortKey('buyingDate');
+    setSortKey('sellingDate');
     setSortDir('desc');
   };
 
