@@ -5,6 +5,7 @@ import HomepageSetting from '@/models/HomepageSetting';
 import { sendLeadMagnetEmail, sendLeadNotification } from '@/lib/email';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { verifyRecaptcha } from '@/lib/recaptcha';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimiter';
 
 async function resolveLeadMagnet(source: string) {
   const hp = await HomepageSetting.findOne({ key: 'homepage' }).select('tickerLeadPdf blogLeadPdf').lean() as
@@ -31,6 +32,8 @@ async function pushToCrm(lead: { name: string; email: string; phone: string; pos
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 5, windowMs: 60 * 60 * 1000, key: 'leads' });
+  if (!rl.ok) return rateLimitResponse(rl.retryAfter);
   try {
     await connectDB();
     const { name, email, phone, postalCode, source, consent, sourceUrl, recaptchaToken } = await req.json();

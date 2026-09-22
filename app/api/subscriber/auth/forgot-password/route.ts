@@ -4,9 +4,12 @@ import Subscriber from '@/models/Subscriber';
 import OTP from '@/models/OTP';
 import { sendOTPEmail } from '@/lib/email';
 import { verifyRecaptcha } from '@/lib/recaptcha';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimiter';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 5, windowMs: 15 * 60 * 1000, key: 'forgot-pass' });
+  if (!rl.ok) return rateLimitResponse(rl.retryAfter);
   await connectDB();
   const { email, recaptchaToken } = await req.json();
   const captcha = await verifyRecaptcha(recaptchaToken, 'forgot_password');

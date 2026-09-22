@@ -5,8 +5,11 @@ import User from '@/models/User';
 import { signToken } from '@/lib/jwt';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { verifyRecaptcha } from '@/lib/recaptcha';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimiter';
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 10, windowMs: 15 * 60 * 1000, key: 'admin-login' });
+  if (!rl.ok) return rateLimitResponse(rl.retryAfter);
   try {
     await connectDB();
 

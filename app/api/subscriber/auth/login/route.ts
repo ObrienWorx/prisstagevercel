@@ -5,9 +5,12 @@ import OTP from '@/models/OTP';
 import { signSubscriberToken } from '@/lib/subscriberJwt';
 import { sendOTPEmail } from '@/lib/email';
 import { verifyRecaptcha } from '@/lib/recaptcha';
+import { rateLimit, rateLimitResponse } from '@/lib/rateLimiter';
 import crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(req, { limit: 15, windowMs: 15 * 60 * 1000, key: 'sub-login' });
+  if (!rl.ok) return rateLimitResponse(rl.retryAfter);
   await connectDB();
   const { email, password, recaptchaToken } = await req.json();
   const captcha = await verifyRecaptcha(recaptchaToken, 'login');
