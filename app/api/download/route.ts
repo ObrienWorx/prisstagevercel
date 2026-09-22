@@ -7,8 +7,9 @@ export async function GET(req: NextRequest) {
   const m = file.match(/^\/?uploads\/([A-Za-z0-9._-]+\.pdf)$/i);
   if (!m) return new NextResponse('Not found', { status: 404 });
   const filename = m[1];
+  const uploadsDir = process.env.UPLOADS_DIR ?? path.join(process.cwd(), 'public', 'uploads');
   try {
-    const buf = await readFile(path.join(process.cwd(), 'public', 'uploads', filename));
+    const buf = await readFile(path.join(uploadsDir, filename));
     return new NextResponse(new Uint8Array(buf), {
       headers: {
         'Content-Type': 'application/pdf',

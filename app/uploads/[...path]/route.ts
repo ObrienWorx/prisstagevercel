@@ -24,7 +24,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ path: s
   }
 
   const fileName = parts.join('/');
-  const filePath = path.join(process.cwd(), 'public', 'uploads', fileName);
+  const uploadsDir = process.env.UPLOADS_DIR ?? path.join(process.cwd(), 'public', 'uploads');
+  const filePath = path.join(uploadsDir, fileName);
 
   try {
     const fileStat = await stat(filePath);
