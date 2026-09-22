@@ -25,6 +25,8 @@ const PickSchema = new Schema<IPick>(
   { timestamps: true }
 );
 
+PickSchema.index({ isActive: 1, displayOrder: 1 });
+
 const Pick: Model<IPick> = mongoose.models.Pick || mongoose.model<IPick>('Pick', PickSchema);
 
 export default Pick;

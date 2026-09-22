@@ -17,6 +17,8 @@ const VideoSchema = new Schema<IVideo>(
   { timestamps: true }
 );
 
+VideoSchema.index({ isActive: 1 });
+
 const Video: Model<IVideo> =
   mongoose.models.Video || mongoose.model<IVideo>('Video', VideoSchema);
 

@@ -21,5 +21,8 @@ const LeadSubmissionSchema = new Schema<ILeadSubmission>(
   { timestamps: true }
 );
 
+LeadSubmissionSchema.index({ email: 1 });
+LeadSubmissionSchema.index({ phone: 1 });
+
 export default (mongoose.models.LeadSubmission as mongoose.Model<ILeadSubmission>) ||
   mongoose.model<ILeadSubmission>('LeadSubmission', LeadSubmissionSchema);

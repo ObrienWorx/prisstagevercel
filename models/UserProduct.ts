@@ -23,6 +23,12 @@ const UserProductSchema = new Schema<IUserProduct>(
   { timestamps: true }
 );
 
+UserProductSchema.index({ subscriber: 1 });
+UserProductSchema.index({ product: 1 });
+UserProductSchema.index({ subscriber: 1, product: 1 });
+UserProductSchema.index({ expiryDate: 1 });
+UserProductSchema.index({ isActive: 1, expiryDate: 1 });
+
 const UserProduct: Model<IUserProduct> =
   mongoose.models.UserProduct || mongoose.model<IUserProduct>('UserProduct', UserProductSchema);
 
