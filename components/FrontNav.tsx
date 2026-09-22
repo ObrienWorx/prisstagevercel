@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { cachedFetch } from '@/lib/clientCache';
 
 interface SubUser { name: string; email: string; }
 interface Sector { _id: string; name: string; slug: string; reportCount: number; featuredImage?: string; }
@@ -49,20 +50,16 @@ export default function FrontNav() {
         })
         .catch(() => { });
     }
-    fetch('/api/public/sectors')
-      .then(r => r.json())
+    cachedFetch<{ success: boolean; data: Sector[] }>('/api/public/sectors')
       .then(d => { if (d.success) setSectors(d.data); })
       .catch(() => { });
-    fetch('/api/public/products')
-      .then(r => r.json())
+    cachedFetch<{ success: boolean; data: Product[] }>('/api/public/products')
       .then(d => { if (d.success) setProducts(d.data); })
       .catch(() => { });
-    fetch('/api/public/blog-types')
-      .then(r => r.json())
+    cachedFetch<{ success: boolean; data: BlogType[] }>('/api/public/blog-types')
       .then(d => { if (d.success) setBlogTypes(d.data); })
       .catch(() => { });
-    fetch('/api/public/report-categories')
-      .then(r => r.json())
+    cachedFetch<{ success: boolean; data: ReportCat[] }>('/api/public/report-categories')
       .then(d => { if (d.success) setReportCats(d.data); })
       .catch(() => { });
   }, []);

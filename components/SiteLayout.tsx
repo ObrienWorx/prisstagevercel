@@ -5,6 +5,7 @@ import FloatingCallButton from './FloatingCallButton';
 import Link from 'next/link';
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
+import { cachedFetch } from '@/lib/clientCache';
 import { SOCIAL_LINKS } from '@/lib/socialLinks';
 
 interface StaticPageLink { _id: string; title: string; slug: string; footerColumn: string; }
@@ -17,8 +18,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const [showTop, setShowTop] = useState(false);
 
   useEffect(() => {
-    fetch('/api/public/static-pages')
-      .then(r => r.json())
+    cachedFetch<{ success: boolean; data: StaticPageLink[] }>('/api/public/static-pages')
       .then(d => { if (d.success) setFooterPages(d.data); })
       .catch(() => { });
 
