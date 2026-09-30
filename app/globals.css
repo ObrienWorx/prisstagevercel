@@ -8926,11 +8926,11 @@ button.le-chapter-pill { font-family: inherit; }
 
 /* SidebarLoginForm */
 .slf-card {
-  background: #fff;
+  background: linear-gradient(135deg, #fff8e1 0%, #fffdf5 100%);
   border-radius: 14px;
   padding: 1.5rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  box-shadow: 0 4px 28px rgba(245, 158, 11, 0.35), 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
 .slf-title {
