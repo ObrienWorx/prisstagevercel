@@ -24,8 +24,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ path: s
   }
 
   const fileName = parts.join('/');
-  const uploadsDir = process.env.UPLOADS_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads');
-  const filePath = path.join(/*turbopackIgnore: true*/ uploadsDir, fileName);
+  const filePath = process.env.UPLOADS_DIR
+    ? path.join(process.env.UPLOADS_DIR, fileName)
+    : path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads', fileName);
 
   try {
     const fileStat = await stat(filePath);

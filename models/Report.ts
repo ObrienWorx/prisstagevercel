@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model, Types } from 'mongoose';
+import mongoose, { Schema, Document, Model, Types, SchemaDefinitionProperty } from 'mongoose';
 
 export interface IReport extends Document {
   title: string;
@@ -71,7 +71,7 @@ ReportSchema.index({ product: 1, publishStatus: 1, createdAt: -1 });
 
 if (mongoose.models.Report) {
   const cachedReportSchema = mongoose.models.Report.schema;
-  const missingPaths: Record<string, unknown> = {};
+  const missingPaths: Record<string, SchemaDefinitionProperty> = {};
 
   if (!cachedReportSchema.path('pastStockRecommendation')) {
     missingPaths.pastStockRecommendation = { type: Schema.Types.ObjectId, ref: 'Report', default: null };
