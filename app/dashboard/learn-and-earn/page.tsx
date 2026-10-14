@@ -23,6 +23,9 @@ interface Module {
   title: string;
   slug: string;
   description: string;
+  featuredImage?: string;
+  authModalTitle?: string;
+  authModalSubtitle?: string;
   publishStatus: 'draft' | 'published';
   chapters: Chapter[];
   createdAt: string;
@@ -32,6 +35,7 @@ const emptyChapter = (): Chapter => ({ title: '', slug: '', content: '', content
 
 const emptyForm = {
   title: '', slug: '', description: '', featuredImage: '',
+  authModalTitle: '', authModalSubtitle: '',
   publishStatus: 'draft' as 'draft' | 'published',
   chapters: [emptyChapter()],
 };
@@ -90,6 +94,8 @@ export default function LearnAndEarnPage() {
     setForm({
       title: full.title, slug: full.slug, description: full.description || '',
       featuredImage: (full as any).featuredImage || '',
+      authModalTitle: (full as any).authModalTitle || '',
+      authModalSubtitle: (full as any).authModalSubtitle || '',
       publishStatus: full.publishStatus,
       chapters: full.chapters?.length
         ? full.chapters.map(c => ({
@@ -384,6 +390,18 @@ export default function LearnAndEarnPage() {
                     <label className="form-label fw-semibold">Short Description <span className="text-muted fw-normal">(shown on listing card)</span></label>
                     <textarea className="form-control" rows={2} value={form.description}
                       onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">Signup Popup Title</label>
+                    <input className="form-control" placeholder="Create your account" value={form.authModalTitle}
+                      onChange={e => setForm(f => ({ ...f, authModalTitle: e.target.value }))} />
+                    <div className="form-text">Signup popup heading (default: &quot;Create your account&quot;)</div>
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label fw-semibold">Signup Popup Subtitle</label>
+                    <input className="form-control" placeholder="Join thousands of Australian investors" value={form.authModalSubtitle}
+                      onChange={e => setForm(f => ({ ...f, authModalSubtitle: e.target.value }))} />
+                    <div className="form-text">Signup popup subtext (default: &quot;Join thousands of Australian investors&quot;)</div>
                   </div>
                   <div className="col-12">
                     <ImageUpload

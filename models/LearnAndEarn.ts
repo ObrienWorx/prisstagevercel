@@ -14,6 +14,8 @@ export interface ILearnAndEarn extends Document {
   slug: string;
   description: string;
   featuredImage: string;
+  authModalTitle?: string;
+  authModalSubtitle?: string;
   publishStatus: 'draft' | 'published';
   chapters: IChapter[];
   sortOrder: number;
@@ -44,6 +46,8 @@ const LearnAndEarnSchema = new Schema<ILearnAndEarn>(
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     description: { type: String, default: '' },
     featuredImage: { type: String, default: '' },
+    authModalTitle: { type: String, default: '' },
+    authModalSubtitle: { type: String, default: '' },
     publishStatus: { type: String, enum: ['draft', 'published'], default: 'draft' },
     chapters: { type: [ChapterSchema], default: [] },
     sortOrder: { type: Number, default: 0 },
@@ -51,12 +55,9 @@ const LearnAndEarnSchema = new Schema<ILearnAndEarn>(
   { timestamps: true }
 );
 
-if (mongoose.models.LearnAndEarn) {
-  const cachedSchema = mongoose.models.LearnAndEarn.schema;
-  const chapterPath = cachedSchema.path('chapters') as any;
-  if (chapterPath && chapterPath.schema && !chapterPath.schema.path('contents')) {
-    chapterPath.schema.add({ contents: { type: [String], default: [] } });
-  }
+delete (mongoose.models as any).LearnAndEarn;
+if (mongoose.connection && (mongoose.connection as any).models) {
+  delete (mongoose.connection as any).models['LearnAndEarn'];
 }
 
 const LearnAndEarn: Model<ILearnAndEarn> =

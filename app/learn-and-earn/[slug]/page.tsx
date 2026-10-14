@@ -87,6 +87,8 @@ export default async function LearnChapterPage({ params, searchParams }: P) {
                 currentIndex={chIndex}
                 slug={slug}
                 isLoggedIn={isLoggedIn}
+                authModalTitle={mod.authModalTitle || ''}
+                authModalSubtitle={mod.authModalSubtitle || ''}
               />
             </div>
           </div>

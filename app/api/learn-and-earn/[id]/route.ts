@@ -35,6 +35,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
   if (body.description !== undefined) item.description = body.description;
   if (body.featuredImage !== undefined) item.featuredImage = body.featuredImage;
+  if (body.authModalTitle !== undefined) {
+    item.authModalTitle = body.authModalTitle;
+    item.set('authModalTitle', body.authModalTitle);
+  }
+  if (body.authModalSubtitle !== undefined) {
+    item.authModalSubtitle = body.authModalSubtitle;
+    item.set('authModalSubtitle', body.authModalSubtitle);
+  }
   if (body.publishStatus !== undefined) item.publishStatus = body.publishStatus;
   if (body.chapters !== undefined) {
     item.chapters = body.chapters.map((c: any, i: number) => {
@@ -53,7 +61,16 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
 
   await item.save();
-  return successResponse(item, 'Updated successfully');
+
+  if (body.authModalTitle !== undefined || body.authModalSubtitle !== undefined) {
+    const $set: Record<string, any> = {};
+    if (body.authModalTitle !== undefined) $set.authModalTitle = body.authModalTitle;
+    if (body.authModalSubtitle !== undefined) $set.authModalSubtitle = body.authModalSubtitle;
+    await LearnAndEarn.collection.updateOne({ _id: item._id }, { $set });
+  }
+
+  const fresh = await LearnAndEarn.findById(id).lean();
+  return successResponse(fresh || item, 'Updated successfully');
 }
 
 export async function DELETE(req: NextRequest, { params }: Params) {

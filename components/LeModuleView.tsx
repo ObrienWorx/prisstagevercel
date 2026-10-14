@@ -12,9 +12,18 @@ type Props = {
   currentIndex: number;
   slug: string;
   isLoggedIn: boolean;
+  authModalTitle?: string;
+  authModalSubtitle?: string;
 };
 
-export default function LeModuleView({ chapters, currentIndex, slug, isLoggedIn }: Props) {
+export default function LeModuleView({
+  chapters,
+  currentIndex,
+  slug,
+  isLoggedIn,
+  authModalTitle,
+  authModalSubtitle,
+}: Props) {
   const chapter = chapters[currentIndex];
   const prevChapter = currentIndex > 0 ? chapters[currentIndex - 1] : null;
   const nextChapter = currentIndex < chapters.length - 1 ? chapters[currentIndex + 1] : null;
@@ -109,6 +118,8 @@ export default function LeModuleView({ chapters, currentIndex, slug, isLoggedIn 
         onClose={() => setShowModal(false)}
         defaultTab={defaultTab}
         redirectPath={`/learn-and-earn/${slug}?ch=${currentIndex + 1}`}
+        authTitle={authModalTitle}
+        authSubtitle={authModalSubtitle}
       />
     </>
   );

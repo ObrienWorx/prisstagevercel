@@ -10,9 +10,11 @@ type Props = {
   defaultTab?: 'register' | 'login';
   redirectPath?: string;
   plan?: string | null;
+  authTitle?: string;
+  authSubtitle?: string;
 };
 
-export default function AuthModal({ show, onClose, defaultTab = 'register', redirectPath, plan }: Props) {
+export default function AuthModal({ show, onClose, defaultTab = 'register', redirectPath, plan, authTitle, authSubtitle }: Props) {
   const [tab, setTab] = useState<'register' | 'login'>(defaultTab);
 
   useEffect(() => { setTab(defaultTab); }, [defaultTab]);
@@ -32,7 +34,12 @@ export default function AuthModal({ show, onClose, defaultTab = 'register', redi
         >×</button>
 
         {tab === 'register' ? (
-          <SubscriberRegisterForm plan={plan} onSwitchToLogin={() => setTab('login')} />
+          <SubscriberRegisterForm
+            plan={plan}
+            onSwitchToLogin={() => setTab('login')}
+            authTitle={authTitle}
+            authSubtitle={authSubtitle}
+          />
         ) : (
           <SubscriberLoginForm redirectPath={redirectPath} onSwitchToRegister={() => setTab('register')} />
         )}

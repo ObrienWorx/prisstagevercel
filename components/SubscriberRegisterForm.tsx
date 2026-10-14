@@ -8,9 +8,11 @@ import { getRecaptchaToken } from '@/lib/recaptcha-client';
 type Props = {
   plan?: string | null;
   onSwitchToLogin?: () => void;
+  authTitle?: string;
+  authSubtitle?: string;
 };
 
-export default function SubscriberRegisterForm({ plan = null, onSwitchToLogin }: Props) {
+export default function SubscriberRegisterForm({ plan = null, onSwitchToLogin, authTitle, authSubtitle }: Props) {
   const router = useRouter();
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
   const [agree, setAgree] = useState(false);
@@ -54,8 +56,8 @@ export default function SubscriberRegisterForm({ plan = null, onSwitchToLogin }:
         <img src="/logo2.png" alt="Pristine Gaze" className="w-75" />
       </div>
 
-      <h2 className="auth-title">Create your account</h2>
-      <p className="auth-sub">{plan ? 'Subscribe to get started with your plan' : 'Join thousands of Australian investors'}</p>
+      <h2 className="auth-title">{authTitle?.trim() || 'Create your account'}</h2>
+      <p className="auth-sub">{authSubtitle?.trim() || (plan ? 'Subscribe to get started with your plan' : 'Join thousands of Australian investors')}</p>
 
       {err && <div className="alert-inline alert-inline-danger">{err}</div>}
 
