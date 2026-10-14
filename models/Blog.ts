@@ -5,7 +5,9 @@ export interface IBlog extends Document {
   slug: string;
   content: string;
   featuredImage: string;
+  featuredImageAlt: string;
   quizQuestions: { q: string; opts: string[]; correct: number; explanation: string }[];
+  faqs: { question: string; answer: string }[];
   tags: string[];
   authorName: string;
   category: Types.ObjectId | null;
@@ -24,13 +26,20 @@ const QuizQuestionSchema = new Schema(
   { _id: false }
 );
 
+const FaqSchema = new Schema(
+  { question: { type: String, default: '', trim: true }, answer: { type: String, default: '', trim: true } },
+  { _id: false }
+);
+
 const BlogSchema = new Schema<IBlog>(
   {
     title: { type: String, required: [true, 'Title is required'], trim: true },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     content: { type: String, default: '' },
     featuredImage: { type: String, default: '' },
+    featuredImageAlt: { type: String, default: '', trim: true },
     quizQuestions: { type: [QuizQuestionSchema], default: [] },
+    faqs: { type: [FaqSchema], default: [] },
     tags: [{ type: String, trim: true }],
     authorName: { type: String, default: '', trim: true },
     category: { type: Schema.Types.ObjectId, ref: 'BlogCategory', default: null },
@@ -52,6 +61,12 @@ if (mongoose.models.Blog) {
   }
   if (!cachedBlogSchema.path('quizQuestions')) {
     cachedBlogSchema.add({ quizQuestions: { type: [QuizQuestionSchema], default: [] } });
+  }
+  if (!cachedBlogSchema.path('featuredImageAlt')) {
+    cachedBlogSchema.add({ featuredImageAlt: { type: String, default: '', trim: true } });
+  }
+  if (!cachedBlogSchema.path('faqs')) {
+    cachedBlogSchema.add({ faqs: { type: [FaqSchema], default: [] } });
   }
 }
 

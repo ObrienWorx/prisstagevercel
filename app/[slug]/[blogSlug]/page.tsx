@@ -6,6 +6,8 @@ import { notFound } from 'next/navigation';
 import BlogSidebarPromo from '@/components/BlogSidebarPromo';
 import LeadCapturePopup from '@/components/LeadCapturePopup';
 import { fmtDate } from '@/lib/dates';
+import BlogFaqSection from '@/components/BlogFaqSection';
+import { getActiveFaqs } from '@/lib/blogFaqs';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,9 +18,17 @@ export async function generateMetadata({ params }: P) {
   await connectDB();
   const blog = await Blog.findOne({ slug: blogSlug, publishStatus: 'published' }).lean() as any;
   if (!blog) return { title: 'Not Found – PristineGaze' };
+
+  const keywords = Array.isArray(blog.tags) && blog.tags.length > 0
+    ? blog.tags
+    : typeof blog.tags === 'string' && blog.tags.trim()
+    ? blog.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+    : undefined;
+
   return {
     title: blog.metaTitle || `${blog.title} – PristineGaze`,
     description: blog.metaDescription || '',
+    keywords,
     openGraph: blog.metaImage ? { images: [blog.metaImage] } : undefined,
   };
 }
@@ -33,6 +43,20 @@ export default async function BlogDetailPage({ params }: P) {
     .lean() as any;
 
   if (!blog) notFound();
+
+  const activeFaqs = getActiveFaqs(blog.faqs);
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: activeFaqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
 
   const legacyCategory = blog.category as { _id: unknown; name: string; slug: string } | null;
   const categories = (blog.categories as { _id: unknown; name: string; slug: string }[] | undefined) ?? [];
@@ -53,6 +77,10 @@ export default async function BlogDetailPage({ params }: P) {
 
   return (
     <SiteLayout>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <LeadCapturePopup source={category?.slug || categorySlug} />
       <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #101251 100%)', color: '#fff', padding: '4rem 0 3rem' }}>
         <div className="container">
@@ -72,7 +100,7 @@ export default async function BlogDetailPage({ params }: P) {
               {blog.featuredImage && (
                 <img
                   src={blog.featuredImage}
-                  alt={blog.title}
+                  alt={blog.featuredImageAlt || blog.title}
                   style={{ width: '100%', borderRadius: 14, marginBottom: '2rem', maxHeight: 420, objectFit: 'cover' }}
                 />
               )}
@@ -82,6 +110,8 @@ export default async function BlogDetailPage({ params }: P) {
                 dangerouslySetInnerHTML={{ __html: blog.content }}
               />
 
+              {/* FAQs Section */}
+              <BlogFaqSection faqs={activeFaqs} />
             </div>
 
             <div className="col-lg-4 d-none d-lg-block">

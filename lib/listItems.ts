@@ -32,6 +32,7 @@ export function toBlogListItem(b: any, catSlug: string, catName: string) {
     title: b.title,
     slug: b.slug,
     featuredImage: b.featuredImage,
+    featuredImageAlt: b.featuredImageAlt || '',
     tags: normalizeBlogTags(b.tags),
     authorName: b.authorName || '',
     date: fmtListDate(b.publishedAt ?? b.createdAt),

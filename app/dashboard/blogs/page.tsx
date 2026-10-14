@@ -6,12 +6,15 @@ import { toDateInput, todayInput } from '@/lib/dates';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
 import Pagination from '@/components/Pagination';
+import { DEFAULT_BLOG_FAQS, BlogFaq } from '@/lib/blogFaqs';
 
 const TinyEditor = dynamic(() => import('@/components/TinyEditor'), { ssr: false });
 
 interface Ref { _id: string; name: string; }
 interface Blog {
   _id: string; title: string; slug: string; content: string; featuredImage: string;
+  featuredImageAlt?: string;
+  faqs?: BlogFaq[];
   tags: string[]; authorName: string;
   category: Ref | null; categories?: Ref[]; publishStatus: 'draft' | 'published';
   publishedAt?: string | null; createdAt?: string;
@@ -20,6 +23,8 @@ interface Blog {
 
 const empty = {
   title: '', slug: '', content: '', featuredImage: '',
+  featuredImageAlt: '',
+  faqs: DEFAULT_BLOG_FAQS.map(f => ({ ...f })),
   tags: '', authorName: '',
   categories: [] as string[], publishStatus: 'draft' as 'draft' | 'published',
   publishedAt: '',
@@ -83,7 +88,7 @@ export default function BlogsPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ ...empty, publishedAt: todayInput() });
+    setForm({ ...empty, faqs: DEFAULT_BLOG_FAQS.map(f => ({ ...f })), publishedAt: todayInput() });
     setCategoryQuery('');
     setCategoryOpen(false);
     setTagInput('');
@@ -101,6 +106,10 @@ export default function BlogsPage() {
     setEditing(full);
     setForm({
       title: full.title, slug: full.slug, content: full.content || '', featuredImage: full.featuredImage,
+      featuredImageAlt: full.featuredImageAlt || '',
+      faqs: Array.isArray(full.faqs) && full.faqs.length > 0
+        ? full.faqs.map(f => ({ question: f.question || '', answer: f.answer || '' }))
+        : DEFAULT_BLOG_FAQS.map(f => ({ ...f })),
       tags: full.tags?.join(', ') || '', authorName: full.authorName || '',
       categories: full.categories?.map(category => category._id) || (full.category?._id ? [full.category._id] : []),
       publishStatus: full.publishStatus,
@@ -113,6 +122,34 @@ export default function BlogsPage() {
     setTagInput('');
     setTagOpen(false);
     setErr(''); setShowModal(true);
+  };
+
+  const addFaq = () => {
+    setForm(current => ({
+      ...current,
+      faqs: [...current.faqs, { question: '', answer: '' }],
+    }));
+  };
+
+  const updateFaq = (index: number, field: 'question' | 'answer', value: string) => {
+    setForm(current => ({
+      ...current,
+      faqs: current.faqs.map((f, i) => i === index ? { ...f, [field]: value } : f),
+    }));
+  };
+
+  const removeFaq = (index: number) => {
+    setForm(current => ({
+      ...current,
+      faqs: current.faqs.filter((_, i) => i !== index),
+    }));
+  };
+
+  const resetDefaultFaqs = () => {
+    setForm(current => ({
+      ...current,
+      faqs: DEFAULT_BLOG_FAQS.map(f => ({ ...f })),
+    }));
   };
 
   const save = async () => {
@@ -509,10 +546,90 @@ export default function BlogsPage() {
                   <div className="col-12">
                     <ImageUpload label="Featured Image" value={form.featuredImage} onChange={(url) => setForm({ ...form, featuredImage: url })} />
                   </div>
+                  <div className="col-12">
+                    <label className="form-label">Featured Image Alt Tag</label>
+                    <input
+                      className="form-control"
+                      value={form.featuredImageAlt}
+                      onChange={(e) => setForm({ ...form, featuredImageAlt: e.target.value })}
+                      placeholder="Alt text describing the featured image for SEO..."
+                    />
+                    <div className="form-text">Used as the alt tag for the featured image on the front-end blog page.</div>
+                  </div>
 
                   <div className="col-12">
                     <label className="form-label">Content</label>
                     <TinyEditor value={form.content} onChange={(v) => setForm({ ...form, content: v })} />
+                  </div>
+
+                  <div className="col-12">
+                    <hr className="my-2" />
+                    <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                      <div>
+                        <div className="form-section-title mb-0">FAQs (Frequently Asked Questions)</div>
+                        <div className="form-text mt-0">Add custom FAQs or keep the 5 default investing FAQs. Shown at the bottom of the blog and used in FAQ schema.</div>
+                      </div>
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={resetDefaultFaqs}
+                          title="Reset to 5 default investing FAQs"
+                        >
+                          Load Default FAQs
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={addFaq}
+                        >
+                          + Add FAQ
+                        </button>
+                      </div>
+                    </div>
+
+                    {form.faqs.length === 0 ? (
+                      <div className="alert alert-light border text-muted py-3 px-3 mb-0">
+                        No FAQs added yet. Click &quot;+ Add FAQ&quot; or &quot;Load Default FAQs&quot;.
+                      </div>
+                    ) : (
+                      <div className="d-flex flex-column gap-3">
+                        {form.faqs.map((faq, idx) => (
+                          <div key={idx} className="p-3 border rounded-3 bg-light position-relative">
+                            <div className="d-flex align-items-center justify-content-between mb-2">
+                              <span className="badge bg-primary">FAQ #{idx + 1}</span>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => removeFaq(idx)}
+                                title="Remove this FAQ"
+                              >
+                                × Remove
+                              </button>
+                            </div>
+                            <div className="mb-2">
+                              <label className="form-label form-label-sm mb-1 fw-semibold">Question</label>
+                              <input
+                                className="form-control"
+                                value={faq.question}
+                                onChange={(e) => updateFaq(idx, 'question', e.target.value)}
+                                placeholder="Enter FAQ question..."
+                              />
+                            </div>
+                            <div>
+                              <label className="form-label form-label-sm mb-1 fw-semibold">Answer</label>
+                              <textarea
+                                className="form-control"
+                                rows={3}
+                                value={faq.answer}
+                                onChange={(e) => updateFaq(idx, 'answer', e.target.value)}
+                                placeholder="Enter FAQ answer..."
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="col-12"><hr className="my-1" /><div className="form-section-title">SEO Settings</div></div>

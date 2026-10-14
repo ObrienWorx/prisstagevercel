@@ -50,6 +50,9 @@ export default async function LearnChapterPage({ params, searchParams }: P) {
   const chapters = mod.chapters.map((c: any) => ({
     title: c.title,
     content: c.content ?? '',
+    contents: Array.isArray(c.contents) && c.contents.length > 0
+      ? c.contents
+      : (c.content ? [c.content] : []),
     quizQuestions: c.quizQuestions ?? [],
   }));
 

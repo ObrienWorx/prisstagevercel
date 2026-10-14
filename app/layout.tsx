@@ -3,8 +3,12 @@ import Script from 'next/script';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './globals.css';
 import NavProgress from '@/components/NavProgress';
+import DynamicCanonical from '@/components/DynamicCanonical';
+
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://pristinegaze.com.au';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: { default: 'PristineGaze – Australian Investment Research', template: '%s – PristineGaze' },
   description: "Australia's premier investment research platform delivering daily market intelligence, sector analysis and expert insights.",
   icons: { icon: '/favicon.jpg', shortcut: '/favicon.jpg', apple: '/favicon.jpg' },
@@ -18,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <DynamicCanonical />
         <Script
           id="gtm"
           strategy="beforeInteractive"

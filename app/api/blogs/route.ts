@@ -45,12 +45,33 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { error } = await requirePermission(req, 'blogs'); if (error) return error;
   await connectDB();
-  const { title, slug, content, featuredImage, quizQuestions, tags, authorName, category, categories, publishStatus, publishedAt, metaTitle, metaDescription, metaImage } = await req.json();
+  const { title, slug, content, featuredImage, featuredImageAlt, faqs, quizQuestions, tags, authorName, category, categories, publishStatus, publishedAt, metaTitle, metaDescription, metaImage } = await req.json();
   if (!title) return errorResponse('Title is required');
   const finalSlug = slug ? slugify(slug) : slugify(title);
   if (await Blog.findOne({ slug: finalSlug })) return errorResponse('Slug already exists');
   const categoryIds = normalizeBlogCategories(categories, category);
-  const blog = await Blog.create({ title, slug: finalSlug, content, featuredImage, quizQuestions: quizQuestions || [], tags: normalizeBlogTags(tags), authorName, category: categoryIds[0] || null, categories: categoryIds, publishStatus: publishStatus || 'draft', publishedAt: publishedAt ? new Date(publishedAt) : new Date(), metaTitle, metaDescription, metaImage });
+  const cleanFaqs = Array.isArray(faqs)
+    ? faqs.filter((f: any) => f && typeof f.question === 'string' && f.question.trim().length > 0)
+          .map((f: any) => ({ question: f.question.trim(), answer: (f.answer || '').trim() }))
+    : [];
+  const blog = await Blog.create({
+    title,
+    slug: finalSlug,
+    content,
+    featuredImage,
+    featuredImageAlt: typeof featuredImageAlt === 'string' ? featuredImageAlt.trim() : '',
+    faqs: cleanFaqs,
+    quizQuestions: quizQuestions || [],
+    tags: normalizeBlogTags(tags),
+    authorName,
+    category: categoryIds[0] || null,
+    categories: categoryIds,
+    publishStatus: publishStatus || 'draft',
+    publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
+    metaTitle,
+    metaDescription,
+    metaImage,
+  });
   await blog.populate('category', 'name slug');
   await blog.populate('categories', 'name slug');
   return successResponse(blog, 'Blog created', 201);

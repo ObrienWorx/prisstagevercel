@@ -18,6 +18,7 @@ interface Item {
   title: string;
   slug: string;
   featuredImage?: string;
+  featuredImageAlt?: string;
   date?: string;
   excerpt?: string;
   tags?: string[] | string;
@@ -154,7 +155,7 @@ function ItemCard({ item }: { item: Item }) {
     <div className="card h-100 shadow-sm">
       <div className="ratio ratio-16x9 bg-light position-relative">
         {item.featuredImage ? (
-          <img src={item.featuredImage} alt={item.title} className="w-100 h-100 object-fit-cover" />
+          <img src={item.featuredImage} alt={item.featuredImageAlt || item.title} className="w-100 h-100 object-fit-cover" />
         ) : (
           <div className="d-flex align-items-center justify-content-center text-muted fs-1">📄</div>
         )}

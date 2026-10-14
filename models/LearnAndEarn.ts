@@ -4,6 +4,7 @@ export interface IChapter {
   title: string;
   slug: string;
   content: string;
+  contents: string[];
   quizQuestions: { q: string; opts: string[]; correct: number; explanation: string }[];
   order: number;
 }
@@ -30,6 +31,7 @@ const ChapterSchema = new Schema(
     title: { type: String, required: true, trim: true },
     slug: { type: String, required: true, trim: true, lowercase: true },
     content: { type: String, default: '' },
+    contents: { type: [String], default: [] },
     quizQuestions: { type: [QuizQuestionSchema], default: [] },
     order: { type: Number, default: 0 },
   },
@@ -48,6 +50,14 @@ const LearnAndEarnSchema = new Schema<ILearnAndEarn>(
   },
   { timestamps: true }
 );
+
+if (mongoose.models.LearnAndEarn) {
+  const cachedSchema = mongoose.models.LearnAndEarn.schema;
+  const chapterPath = cachedSchema.path('chapters') as any;
+  if (chapterPath && chapterPath.schema && !chapterPath.schema.path('contents')) {
+    chapterPath.schema.add({ contents: { type: [String], default: [] } });
+  }
+}
 
 const LearnAndEarn: Model<ILearnAndEarn> =
   mongoose.models.LearnAndEarn || mongoose.model<ILearnAndEarn>('LearnAndEarn', LearnAndEarnSchema);

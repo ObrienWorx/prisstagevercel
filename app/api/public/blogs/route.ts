@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
       const limit = Math.min(48, Math.max(1, parseInt(searchParams.get('limit') || String(LISTING_PER_PAGE), 10)));
       const [docs, total] = await Promise.all([
-        Blog.find(query).select('title slug featuredImage tags authorName createdAt metaDescription content').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+        Blog.find(query).select('title slug featuredImage featuredImageAlt tags authorName createdAt metaDescription content').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
         Blog.countDocuments(query),
       ]);
       return successResponse({ items: docs.map((b) => toBlogListItem(b, cat?.slug || '', cat?.name || '')), total, page, pages: Math.ceil(total / limit) });
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const blogs = await Blog.find(query)
       .populate('category', 'name slug')
       .populate('categories', 'name slug')
-      .select('title slug featuredImage tags authorName category categories createdAt metaDescription')
+      .select('title slug featuredImage featuredImageAlt tags authorName category categories createdAt metaDescription')
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();

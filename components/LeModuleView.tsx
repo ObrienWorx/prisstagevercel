@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import BlogQuiz from '@/components/BlogQuiz';
 import AuthModal from '@/components/AuthModal';
+import LeChapterSlider from '@/components/LeChapterSlider';
 
-type Chapter = { title: string; content: string; quizQuestions?: any[] };
+type Chapter = { title: string; content: string; contents?: string[]; quizQuestions?: any[] };
 type Props = {
   chapters: Chapter[];
   currentIndex: number;
@@ -68,9 +69,12 @@ export default function LeModuleView({ chapters, currentIndex, slug, isLoggedIn 
         </div>
       ) : (
         <>
-          <div className="tiptap-prose le-content" dangerouslySetInnerHTML={{ __html: chapter.content }} />
+          <LeChapterSlider
+            key={currentIndex}
+            slides={chapter.contents && chapter.contents.length > 0 ? chapter.contents : [chapter.content || '']}
+          />
           {Array.isArray(chapter.quizQuestions) && chapter.quizQuestions.length > 0 && (
-            <BlogQuiz questions={chapter.quizQuestions} />
+            <BlogQuiz key={currentIndex} questions={chapter.quizQuestions} />
           )}
         </>
       )}

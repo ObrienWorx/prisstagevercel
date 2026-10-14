@@ -27,10 +27,19 @@ export async function POST(req: NextRequest) {
   const item = await LearnAndEarn.create({
     title, slug: finalSlug, description: description || '', featuredImage: featuredImage || '',
     publishStatus: publishStatus || 'draft',
-    chapters: (chapters || []).map((c: any, i: number) => ({
-      title: c.title, slug: slugify(c.slug || c.title), content: c.content || '',
-      quizQuestions: c.quizQuestions || [], order: i,
-    })),
+    chapters: (chapters || []).map((c: any, i: number) => {
+      const contentsList = Array.isArray(c.contents) && c.contents.length > 0
+        ? c.contents.map((cnt: any) => typeof cnt === 'string' ? cnt : String(cnt || ''))
+        : (c.content ? [String(c.content)] : ['']);
+      return {
+        title: c.title,
+        slug: slugify(c.slug || c.title),
+        content: contentsList[0] || c.content || '',
+        contents: contentsList,
+        quizQuestions: c.quizQuestions || [],
+        order: i,
+      };
+    }),
   });
   return successResponse(item, 'Created successfully');
 }

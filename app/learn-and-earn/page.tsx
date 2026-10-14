@@ -41,7 +41,7 @@ export default async function LearnAndEarnPage() {
               const href = `/learn-and-earn/${mod.slug}`;
               return (
                 <div key={mod._id} className="col-md-6 col-lg-4">
-                  <div className="le-card">
+                  <Link href={href} className="le-card text-decoration-none">
                     {mod.featuredImage ? (
                       <img src={mod.featuredImage} alt={mod.title} className="le-card-img" />
                     ) : (
@@ -49,8 +49,8 @@ export default async function LearnAndEarnPage() {
                     )}
                     <h3 className="le-card-title">{mod.title}</h3>
                     {mod.description && <p className="le-card-desc">{mod.description}</p>}
-                    <Link href={href} className="le-card-link">Start learning →</Link>
-                  </div>
+                    <span className="le-card-link">Start learning →</span>
+                  </Link>
                 </div>
               );
             })}

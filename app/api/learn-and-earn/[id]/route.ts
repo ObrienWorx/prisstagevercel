@@ -37,10 +37,19 @@ export async function PUT(req: NextRequest, { params }: Params) {
   if (body.featuredImage !== undefined) item.featuredImage = body.featuredImage;
   if (body.publishStatus !== undefined) item.publishStatus = body.publishStatus;
   if (body.chapters !== undefined) {
-    item.chapters = body.chapters.map((c: any, i: number) => ({
-      title: c.title, slug: slugify(c.slug || c.title), content: c.content || '',
-      quizQuestions: c.quizQuestions || [], order: i,
-    }));
+    item.chapters = body.chapters.map((c: any, i: number) => {
+      const contentsList = Array.isArray(c.contents) && c.contents.length > 0
+        ? c.contents.map((cnt: any) => typeof cnt === 'string' ? cnt : String(cnt || ''))
+        : (c.content ? [String(c.content)] : ['']);
+      return {
+        title: c.title,
+        slug: slugify(c.slug || c.title),
+        content: contentsList[0] || c.content || '',
+        contents: contentsList,
+        quizQuestions: c.quizQuestions || [],
+        order: i,
+      };
+    });
   }
 
   await item.save();
