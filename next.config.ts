@@ -9,11 +9,19 @@ const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
 ];
 
+const noIndexHeader = [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }];
+
 const nextConfig: NextConfig = {
   transpilePackages: ['ckeditor5', '@ckeditor/ckeditor5-react'],
   allowedDevOrigins: ['169.254.51.5'],
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }];
+    return [
+      { source: '/(.*)', headers: securityHeaders },
+      { source: '/dashboard/:path*', headers: noIndexHeader },
+      { source: '/user/:path*', headers: noIndexHeader },
+      { source: '/OnlyAdminPanel', headers: noIndexHeader },
+      { source: '/api/:path*', headers: noIndexHeader },
+    ];
   },
 };
 

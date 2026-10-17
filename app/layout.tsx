@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   title: { default: 'PristineGaze – Australian Investment Research', template: '%s – PristineGaze' },
   description: "Australia's premier investment research platform delivering daily market intelligence, sector analysis and expert insights.",
   icons: { icon: '/favicon.jpg', shortcut: '/favicon.jpg', apple: '/favicon.jpg' },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
+  authors: [{ name: 'Pristine Gaze', url: SITE_URL }],
+  publisher: 'Pristine Gaze',
 };
 
 export default function RootLayout({
