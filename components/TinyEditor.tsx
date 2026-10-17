@@ -18,6 +18,7 @@ import {
   ImageToolbar,
   ImageUpload,
   ImageResize,
+  LinkImage,
   FileRepository,
   Indent,
   IndentBlock,
@@ -75,7 +76,7 @@ const EDITOR_CONFIG = {
     Heading, Paragraph, Alignment, BlockQuote, CodeBlock, HorizontalLine, FontSize,
     List, ListProperties, Indent, IndentBlock,
     Link, AutoLink,
-    Image, ImageCaption, ImageStyle, ImageToolbar, ImageUpload, ImageResize, FileRepository,
+    Image, ImageCaption, ImageStyle, ImageToolbar, ImageUpload, ImageResize, LinkImage, FileRepository,
     Table, TableToolbar,
     MediaEmbed, PasteFromOffice, TextTransformation,
     FindAndReplace, SourceEditing,
@@ -109,7 +110,8 @@ const EDITOR_CONFIG = {
     toolbar: [
       'imageTextAlternative', 'toggleImageCaption', '|',
       'imageStyle:inline', 'imageStyle:block', 'imageStyle:side', '|',
-      'resizeImage',
+      'resizeImage', '|',
+      'linkImage',
     ],
   },
   table: {
