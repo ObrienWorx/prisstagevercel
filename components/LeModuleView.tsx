@@ -81,6 +81,10 @@ export default function LeModuleView({
           <LeChapterSlider
             key={currentIndex}
             slides={chapter.contents && chapter.contents.length > 0 ? chapter.contents : [chapter.content || '']}
+            nextChapterHref={nextChapter ? `/learn-and-earn/${slug}?ch=${currentIndex + 2}` : undefined}
+            nextChapterTitle={nextChapter?.title}
+            isLocked={!isLoggedIn && currentIndex === 0}
+            onNextChapterLocked={() => openModal('register')}
           />
           {Array.isArray(chapter.quizQuestions) && chapter.quizQuestions.length > 0 && (
             <BlogQuiz key={currentIndex} questions={chapter.quizQuestions} />

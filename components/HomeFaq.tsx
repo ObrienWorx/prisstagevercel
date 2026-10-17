@@ -6,24 +6,24 @@ type Faq = { q: string; a: string };
 
 const FAQS: Faq[] = [
   {
-    q: 'Is Pristine Gaze a financial advisor?',
-    a: 'Pristine Gaze provides independent investment research, market insights, and educational content. Our reports are designed to help investors make more informed decisions, but they should not be considered personal financial advice.',
+    q: 'How do I start investing in the stock market?',
+    a: 'Start by learning the basics, setting a budget and understanding the risks involved. You can explore educational resources, company reports and reliable financial websites. Pristine Gaze also provides stock market research and educational content to help beginners build their knowledge.',
   },
   {
-    q: 'What do I receive with my membership?',
-    a: 'Depending on your membership plan, you\'ll receive access to expertly researched reports, market updates, sector analysis, stock opportunities, educational resources, and exclusive member-only content. Each plan is designed to cater to different investing needs.',
+    q: 'How do I know which ASX stocks to buy?',
+    a: 'Choosing stocks requires more than following market trends or tips. Investors should examine a company\'s business model, revenue, profitability, debt, valuation, growth prospects and potential risks. Comparing information from multiple reliable sources can help you develop a more informed view. Pristine Gaze provides equity research and company analysis to support your independent investment decisions.',
   },
   {
-    q: 'How often are your reports updated?',
-    a: 'Our research is published on a regular schedule. Many reports are released weekly or daily, while others are updated as significant market developments or investment opportunities arise.',
+    q: 'Is it better to invest in growth stocks or dividend stocks?',
+    a: 'It depends on your financial goals, investment horizon and tolerance for risk. Growth stocks may appeal to investors seeking potential capital appreciation, while dividend stocks may suit those interested in income. Neither approach guarantees returns. Pristine Gaze offers Emerging Growth Opportunities research and a Dividend Yield Report to help investors explore both strategies.',
   },
   {
-    q: 'Who are your research reports suitable for?',
-    a: 'Whether you\'re a new investor looking to build confidence or an experienced investor seeking deeper market insights, our research is designed to support informed investment decisions across a range of experience levels.',
+    q: 'What are the best ASX stocks to invest in?',
+    a: 'There is no single best stock for every investor. Consider company performance, valuation, industry trends and your investment goals before making a decision. Pristine Gaze researches selected ASX-listed companies to help investors understand their business performance and potential opportunities.',
   },
   {
-    q: 'Be honest… can your reports guarantee I\'ll become a millionaire? 😄',
-    a: 'We wish investing worked that way! While our research aims to uncover quality opportunities backed by thorough analysis, all investments involve risk. We focus on providing disciplined research and actionable insights—not unrealistic promises.',
+    q: 'Is it a good time to invest in stocks?',
+    a: 'It depends on your financial goals, investment timeframe and risk tolerance. Before investing, understand the market conditions and research the company you are considering. Pristine Gaze provides stock research and market insights to help investors evaluate opportunities and make informed decisions.',
   },
 ];
 
