@@ -18,7 +18,6 @@ import {
   ImageToolbar,
   ImageUpload,
   ImageResize,
-  LinkImage,
   FileRepository,
   Indent,
   IndentBlock,
@@ -40,6 +39,7 @@ import {
   SourceEditing,
   FontSize,
 } from 'ckeditor5';
+import { LinkImage } from '@ckeditor/ckeditor5-link';
 import 'ckeditor5/ckeditor5.css';
 
 interface Props {
