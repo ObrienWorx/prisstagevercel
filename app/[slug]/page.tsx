@@ -172,6 +172,7 @@ export default async function CatchAllPage({ params }: P) {
   if (blogCat) {
     const blogFilter: Record<string, unknown> = {
       publishStatus: 'published',
+      ...notFutureDated(),
       $or: [{ category: blogCat._id }, { categories: blogCat._id }],
     };
     const [blogs, total, latestBlogs, allBlogCats] = await Promise.all([
@@ -181,7 +182,7 @@ export default async function CatchAllPage({ params }: P) {
         .limit(LISTING_PER_PAGE)
         .lean() as Promise<any[]>,
       Blog.countDocuments(blogFilter),
-      Blog.find({ publishStatus: 'published' })
+      Blog.find({ publishStatus: 'published', ...notFutureDated() })
         .populate('category', 'slug')
         .populate('categories', 'slug')
         .select('title slug featuredImage createdAt category categories')

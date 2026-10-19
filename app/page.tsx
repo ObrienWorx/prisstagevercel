@@ -96,6 +96,7 @@ export default async function HomePage() {
     if (!categoryId) return [];
     const posts = await Blog.find({
       publishStatus: 'published',
+      ...notFutureDated(),
       $or: [{ category: categoryId }, { categories: categoryId }],
     })
       .select('title slug featuredImage metaDescription createdAt publishedAt')

@@ -4,6 +4,7 @@ import Blog from '@/models/Blog';
 import BlogCategory from '@/models/BlogCategory';
 import { successResponse, errorResponse } from '@/lib/apiResponse';
 import { toBlogListItem, LISTING_PER_PAGE } from '@/lib/listItems';
+import { notFutureDated } from '@/lib/reportVisibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    const query: Record<string, unknown> = { publishStatus: 'published' };
+    const query: Record<string, unknown> = { publishStatus: 'published', ...notFutureDated() };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let cat: any = null;
     if (categorySlug) {

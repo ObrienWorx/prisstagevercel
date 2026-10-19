@@ -8,6 +8,7 @@ import LeadCapturePopup from '@/components/LeadCapturePopup';
 import { fmtDate } from '@/lib/dates';
 import BlogFaqSection from '@/components/BlogFaqSection';
 import { getActiveFaqs } from '@/lib/blogFaqs';
+import { notFutureDated } from '@/lib/reportVisibility';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ type P = { params: Promise<{ slug: string; blogSlug: string }> };
 export async function generateMetadata({ params }: P) {
   const { blogSlug } = await params;
   await connectDB();
-  const blog = await Blog.findOne({ slug: blogSlug, publishStatus: 'published' }).lean() as any;
+  const blog = await Blog.findOne({ slug: blogSlug, publishStatus: 'published', ...notFutureDated() }).lean() as any;
   if (!blog) return { title: 'Not Found – PristineGaze' };
 
   const keywords = Array.isArray(blog.tags) && blog.tags.length > 0
@@ -66,6 +67,7 @@ export default async function BlogDetailPage({ params }: P) {
 
   const latestFilter: Record<string, unknown> = {
     publishStatus: 'published',
+    ...notFutureDated(),
     _id: { $ne: blog._id },
     ...(category ? { $or: [{ category: category._id }, { categories: category._id }] } : {}),
   };
