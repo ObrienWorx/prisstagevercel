@@ -20,10 +20,10 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 const TAB_DESC: Record<Tab, string> = {
-  gainers: 'AU listed companies with highest percentage gain (with market capitalization >= AUD 500million and daily price change % excluding ±300%)',
-  losers: 'AU listed companies with highest percentage loss (with market capitalization >= AUD 500million and daily price change % excluding ±300%)',
-  '52h': 'AU listed companies currently trading near their 52-week high (with market capitalization >= AUD 500million)',
-  '52l': 'AU listed companies currently trading near their 52-week low (with market capitalization >= AUD 500million)',
+  gainers: 'AU listed companies with highest percentage gain today (daily price change % excluding ±300%)',
+  losers: 'AU listed companies with highest percentage loss today (daily price change % excluding ±300%)',
+  '52h': 'AU listed companies currently trading near their 52-week high',
+  '52l': 'AU listed companies currently trading near their 52-week low',
 };
 
 function fmt(n: number, dp = 3) {
@@ -36,6 +36,7 @@ export default function MarketScan() {
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [marketClosed, setMarketClosed] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -43,6 +44,7 @@ export default function MarketScan() {
     fetch(`/api/market-scan?tab=${activeTab}`)
       .then(r => r.json())
       .then(json => {
+        setMarketClosed(!!json.marketClosed);
         if (json.error) { setError(true); setRows([]); }
         else { setRows(json.data ?? []); setUpdatedAt(json.updatedAt ?? null); }
       })
@@ -76,6 +78,8 @@ export default function MarketScan() {
           <div className="home-scan-state">Loading…</div>
         ) : error ? (
           <div className="home-scan-state">Market data unavailable.</div>
+        ) : marketClosed ? (
+          <div className="home-scan-state">ASX market is currently closed. Data will refresh on the next trading day.</div>
         ) : rows.length === 0 ? (
           <div className="home-scan-state">No data available.</div>
         ) : (

@@ -14,6 +14,7 @@ type YahooQuote = {
   regularMarketChangePercent?: number;
   fiftyTwoWeekHigh?: number;
   fiftyTwoWeekLow?: number;
+  marketCap?: number;
 };
 
 const UA = {
@@ -21,10 +22,21 @@ const UA = {
   Accept: '*/*',
 };
 
-const AU_BASE = [
-  { operator: 'eq', operands: ['region', 'au'] },
-  { operator: 'gt', operands: ['intradaymarketcap', 500_000_000] },
-];
+// Top ~120 ASX stocks by market cap for reliable coverage
+const ASX_TICKERS = [
+  'CBA.AX','BHP.AX','CSL.AX','NAB.AX','WBC.AX','ANZ.AX','WES.AX','MQG.AX','RIO.AX','TLS.AX',
+  'GMG.AX','WOW.AX','COL.AX','FMG.AX','REA.AX','TCL.AX','ALL.AX','STO.AX','IAG.AX','QBE.AX',
+  'ASX.AX','CWY.AX','MPL.AX','ORG.AX','SHL.AX','APA.AX','JHX.AX','XRO.AX','QAN.AX','CPU.AX',
+  'WDS.AX','MIN.AX','AZJ.AX','BXB.AX','ALD.AX','IEL.AX','ORI.AX','SEK.AX','NST.AX','EVN.AX',
+  'TWE.AX','NXT.AX','ALX.AX','ALQ.AX','SOL.AX','PME.AX','SUN.AX','AMP.AX','BOQ.AX','BEN.AX',
+  'VCX.AX','SCG.AX','GPT.AX','DXS.AX','CLW.AX','SCP.AX','MGR.AX','CHC.AX','ABP.AX','BWP.AX',
+  'AMC.AX','IPL.AX','SKI.AX','ANN.AX','OZL.AX','NHC.AX','WHC.AX','S32.AX','IGO.AX','LYC.AX',
+  'PLS.AX','AWC.AX','ILU.AX','SFR.AX','29M.AX','AKE.AX','PAN.AX','SIR.AX','CXO.AX','NIC.AX',
+  'HVN.AX','JBH.AX','SUL.AX','ARB.AX','KGN.AX','ELD.AX','GWA.AX','DLI.AX','PPT.AX','PTM.AX',
+  'MFG.AX','VTI.AX','PDL.AX','NAN.AX','MXT.AX','GQG.AX','HUB.AX','CIE.AX','NWL.AX','WEB.AX',
+  'CTD.AX','FLT.AX','CVL.AX','OFX.AX','CAR.AX','APX.AX','WTC.AX','AD8.AX','NEA.AX','NTO.AX',
+  'CUV.AX','PAR.AX','HLS.AX','RHC.AX','RAC.AX','EBO.AX','CAJ.AX','IDX.AX','SIG.AX','API.AX',
+].map(t => t.toUpperCase());
 
 let creds: { cookie: string; crumb: string; ts: number } | null = null;
 async function getCreds() {
@@ -38,19 +50,36 @@ async function getCreds() {
   return creds;
 }
 
-async function screener(operands: object[], sortField: string, sortType: 'ASC' | 'DESC', size: number): Promise<YahooQuote[]> {
+async function fetchQuotes(tickers: string[]): Promise<YahooQuote[]> {
   const { cookie, crumb } = await getCreds();
-  const body = {
-    size, offset: 0, sortField, sortType, quoteType: 'EQUITY',
-    query: { operator: 'AND', operands: [...AU_BASE, ...operands] },
-    userId: '', userIdType: 'guid',
-  };
-  const res = await fetch(`https://query1.finance.yahoo.com/v1/finance/screener?crumb=${encodeURIComponent(crumb)}&lang=en-AU&region=AU`, {
-    method: 'POST', headers: { ...UA, cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
-  });
-  if (!res.ok) { creds = null; throw new Error(`screener HTTP ${res.status}`); }
+  const symbols = tickers.join(',');
+  const res = await fetch(
+    `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}&crumb=${encodeURIComponent(crumb)}&region=AU&lang=en-AU`,
+    { headers: { ...UA, cookie } }
+  );
+  if (!res.ok) { creds = null; throw new Error(`quote HTTP ${res.status}`); }
   const json = await res.json();
-  return json?.finance?.result?.[0]?.quotes ?? [];
+  return json?.quoteResponse?.result ?? [];
+}
+
+async function getAllQuotes(): Promise<YahooQuote[]> {
+  const CHUNK = 50;
+  const chunks: string[][] = [];
+  for (let i = 0; i < ASX_TICKERS.length; i += CHUNK) {
+    chunks.push(ASX_TICKERS.slice(i, i + CHUNK));
+  }
+  const results = await Promise.all(chunks.map(fetchQuotes));
+  return results.flat();
+}
+
+function isAsxOpen(): boolean {
+  const now = new Date();
+  const sydney = new Date(now.toLocaleString('en-US', { timeZone: 'Australia/Sydney' }));
+  const day = sydney.getDay(); // 0=Sun, 6=Sat
+  if (day === 0 || day === 6) return false;
+  const h = sydney.getHours(), m = sydney.getMinutes();
+  const mins = h * 60 + m;
+  return mins >= 10 * 60 && mins < 16 * 60 + 15;
 }
 
 function toRow(q: YahooQuote) {
@@ -64,25 +93,39 @@ function toRow(q: YahooQuote) {
 }
 
 const cache = new Map<Tab, { data: ReturnType<typeof toRow>[]; updatedAt: string; ts: number }>();
+let universeCache: { quotes: YahooQuote[]; ts: number } | null = null;
+
+async function getUniverse(): Promise<YahooQuote[]> {
+  if (universeCache && Date.now() - universeCache.ts < 5 * 60 * 1000) return universeCache.quotes;
+  const quotes = await getAllQuotes();
+  universeCache = { quotes, ts: Date.now() };
+  return quotes;
+}
 
 async function buildTab(tab: Tab): Promise<ReturnType<typeof toRow>[]> {
+  const universe = await getUniverse();
+  const valid = universe.filter(q => q.regularMarketPrice && q.regularMarketChangePercent !== undefined);
+
   if (tab === 'gainers') {
-    const q = await screener([{ operator: 'gt', operands: ['percentchange', 0] }, { operator: 'lt', operands: ['percentchange', 300] }], 'percentchange', 'DESC', 6);
-    return q.map(toRow);
+    return valid
+      .filter(q => (q.regularMarketChangePercent ?? 0) > 0 && (q.regularMarketChangePercent ?? 0) < 300)
+      .sort((a, b) => (b.regularMarketChangePercent ?? 0) - (a.regularMarketChangePercent ?? 0))
+      .slice(0, 6).map(toRow);
   }
   if (tab === 'losers') {
-    const q = await screener([{ operator: 'lt', operands: ['percentchange', 0] }, { operator: 'gt', operands: ['percentchange', -300] }], 'percentchange', 'ASC', 6);
-    return q.map(toRow);
+    return valid
+      .filter(q => (q.regularMarketChangePercent ?? 0) < 0 && (q.regularMarketChangePercent ?? 0) > -300)
+      .sort((a, b) => (a.regularMarketChangePercent ?? 0) - (b.regularMarketChangePercent ?? 0))
+      .slice(0, 6).map(toRow);
   }
-  const universe = await screener([], 'intradaymarketcap', 'DESC', 100);
   if (tab === '52h') {
-    return universe
-      .filter((q) => q.fiftyTwoWeekHigh && q.regularMarketPrice && q.regularMarketPrice / q.fiftyTwoWeekHigh >= 0.95)
+    return valid
+      .filter(q => q.fiftyTwoWeekHigh && q.regularMarketPrice! / q.fiftyTwoWeekHigh! >= 0.95)
       .sort((a, b) => (b.regularMarketPrice! / b.fiftyTwoWeekHigh!) - (a.regularMarketPrice! / a.fiftyTwoWeekHigh!))
       .slice(0, 6).map(toRow);
   }
-  return universe
-    .filter((q) => q.fiftyTwoWeekLow && q.regularMarketPrice && q.regularMarketPrice / q.fiftyTwoWeekLow <= 1.05)
+  return valid
+    .filter(q => q.fiftyTwoWeekLow && q.regularMarketPrice! / q.fiftyTwoWeekLow! <= 1.05)
     .sort((a, b) => (a.regularMarketPrice! / a.fiftyTwoWeekLow!) - (b.regularMarketPrice! / b.fiftyTwoWeekLow!))
     .slice(0, 6).map(toRow);
 }
@@ -92,7 +135,12 @@ export async function GET(req: NextRequest) {
 
   const cached = cache.get(tab);
   if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
-    return NextResponse.json({ data: cached.data, updatedAt: cached.updatedAt });
+    return NextResponse.json({ data: cached.data, updatedAt: cached.updatedAt, marketClosed: !isAsxOpen() });
+  }
+
+  if (!isAsxOpen()) {
+    if (cached) return NextResponse.json({ data: cached.data, updatedAt: cached.updatedAt, marketClosed: true });
+    return NextResponse.json({ data: [], updatedAt: null, marketClosed: true });
   }
 
   try {
@@ -101,9 +149,9 @@ export async function GET(req: NextRequest) {
       timeZone: 'Australia/Sydney', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
     cache.set(tab, { data, updatedAt, ts: Date.now() });
-    return NextResponse.json({ data, updatedAt });
+    return NextResponse.json({ data, updatedAt, marketClosed: false });
   } catch (e) {
-    if (cached) return NextResponse.json({ data: cached.data, updatedAt: cached.updatedAt });
-    return NextResponse.json({ data: [], updatedAt: null, error: String(e) });
+    if (cached) return NextResponse.json({ data: cached.data, updatedAt: cached.updatedAt, marketClosed: false });
+    return NextResponse.json({ data: [], updatedAt: null, error: String(e), marketClosed: false });
   }
 }

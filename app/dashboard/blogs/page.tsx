@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, type ClipboardEvent, type FocusEvent, type KeyboardEvent } from 'react';
 import { slugify } from '@/lib/slugify';
-import { toDateInput, todayInput } from '@/lib/dates';
+import { toDateInput, todayInput, fmtDate } from '@/lib/dates';
 import dynamic from 'next/dynamic';
 import ImageUpload from '@/components/ImageUpload';
 import Pagination from '@/components/Pagination';
@@ -340,7 +340,7 @@ export default function BlogsPage() {
           <div className="table-responsive">
             <table className="table">
               <thead>
-                <tr><th>Title</th><th>Tags</th><th>Categories</th><th>Status</th><th style={{ width: 120 }}>Actions</th></tr>
+                <tr><th>Title</th><th>Keywords</th><th>Categories</th><th>Status</th><th style={{ width: 110 }}>Published Date</th><th style={{ width: 120 }}>Actions</th></tr>
               </thead>
               <tbody>
                 {items.map((item) => (
@@ -366,6 +366,9 @@ export default function BlogsPage() {
                       <span className={`badge ${item.publishStatus === 'published' ? 'bg-success' : 'bg-secondary'}`}>
                         {item.publishStatus}
                       </span>
+                    </td>
+                    <td style={{ fontSize: 12.5, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                      {item.publishedAt || item.createdAt ? fmtDate(item.publishedAt ?? item.createdAt!) : '—'}
                     </td>
                     <td className="d-flex">
                       <button className="btn btn-sm btn-outline-primary me-1" onClick={() => openEdit(item)}>Edit</button>
@@ -506,7 +509,7 @@ export default function BlogsPage() {
                   </div>
 
                   <div className="col-md-6">
-                    <label className="form-label">Tags</label>
+                    <label className="form-label">Keywords</label>
                     <div className={`tag-picker${tagOpen ? ' is-open' : ''}`} onBlur={closeTagDropdown}>
                       <div className="tag-input-box">
                       {tagPreview.map(tag => (
@@ -522,7 +525,7 @@ export default function BlogsPage() {
                         onKeyDown={handleTagKeyDown}
                         onPaste={handleTagPaste}
                         onBlur={() => addTags(tagInput)}
-                        placeholder={tagPreview.length ? 'Add another tag' : 'Type tag and press Enter'}
+                        placeholder={tagPreview.length ? 'Add another keyword' : 'Type keyword and press Enter'}
                       />
                       </div>
                       {tagOpen && suggestedTags.length > 0 && (

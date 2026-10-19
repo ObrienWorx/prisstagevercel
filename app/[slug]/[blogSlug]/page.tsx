@@ -112,6 +112,26 @@ export default async function BlogDetailPage({ params }: P) {
                 dangerouslySetInnerHTML={{ __html: blog.content }}
               />
 
+              {(() => {
+                const tags: string[] = Array.isArray(blog.tags)
+                  ? blog.tags
+                  : typeof blog.tags === 'string' && blog.tags.trim()
+                  ? blog.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+                  : [];
+                return tags.length > 0 ? (
+                  <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: '#94a3b8', marginBottom: '0.75rem' }}>Keywords</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      {tags.map((tag: string) => (
+                        <span key={tag} style={{ fontSize: 12.5, fontWeight: 500, color: '#475569', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 20, padding: '0.25rem 0.75rem' }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               {/* FAQs Section */}
               <BlogFaqSection faqs={activeFaqs} />
             </div>
