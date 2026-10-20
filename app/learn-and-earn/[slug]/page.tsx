@@ -83,6 +83,7 @@ export default async function LearnChapterPage({ params, searchParams }: P) {
           <div className="row justify-content-center">
             <div className="col-lg-12">
               <LeModuleView
+                key={chIndex}
                 chapters={chapters}
                 currentIndex={chIndex}
                 slug={slug}
