@@ -5,11 +5,32 @@ import LeadCaptureForm from './LeadCaptureForm';
 
 interface Props {
   source?: string;
+  title?: string;
+  buttonText?: string;
+  successText?: string;
 }
 
-export default function LeadCapturePopup({ source = 'unlock-ticker' }: Props) {
+export default function LeadCapturePopup({ source = 'unlock-ticker', title, buttonText, successText }: Props) {
   const [showModal, setShowModal] = useState(false);
+  const [cfg, setCfg] = useState({
+    title: title || 'Please fill the details to Unlock the Exclusive ASX Stock Report',
+    buttonText: buttonText || 'Unlock the Ticker',
+    successText: successText || 'You will receive the detailed Stock Report on your submitted email.',
+  });
   const autoShown = useRef(false);
+
+  useEffect(() => {
+    if (!title) {
+      fetch('/api/public/blog-settings')
+        .then(r => r.json())
+        .then(d => setCfg(prev => ({
+          title: d.blogPopupTitle || prev.title,
+          buttonText: d.blogPopupButtonText || prev.buttonText,
+          successText: d.blogPopupSuccessText || prev.successText,
+        })))
+        .catch(() => {});
+    }
+  }, [title]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('pg_lead_submitted') === '1') return;
@@ -53,9 +74,9 @@ export default function LeadCapturePopup({ source = 'unlock-ticker' }: Props) {
         <LeadCaptureForm
           source={source}
           badge=""
-          title="Please fill the details to Unlock the Exclusive ASX Stock Report"
-          buttonText="Unlock the Ticker"
-          successText="You will receive the detailed Stock Report on your submitted email."
+          title={cfg.title}
+          buttonText={cfg.buttonText}
+          successText={cfg.successText}
         />
       </div>
     </div>

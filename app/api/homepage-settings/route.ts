@@ -43,6 +43,17 @@ export async function PUT(req: NextRequest) {
     const videoSectionYoutubeUrl = typeof body.videoSectionYoutubeUrl === 'string' ? body.videoSectionYoutubeUrl.trim() : '';
     const tickerLeadPdf = typeof body.tickerLeadPdf === 'string' ? body.tickerLeadPdf.trim() : '';
     const blogLeadPdf = typeof body.blogLeadPdf === 'string' ? body.blogLeadPdf.trim() : '';
+    const blogPopupTitle = typeof body.blogPopupTitle === 'string' ? body.blogPopupTitle.trim() : '';
+    const blogPopupButtonText = typeof body.blogPopupButtonText === 'string' ? body.blogPopupButtonText.trim() : '';
+    const blogPopupSuccessText = typeof body.blogPopupSuccessText === 'string' ? body.blogPopupSuccessText.trim() : '';
+    const blogPromoHeading = typeof body.blogPromoHeading === 'string' ? body.blogPromoHeading.trim() : '';
+    const blogPromoLead = typeof body.blogPromoLead === 'string' ? body.blogPromoLead.trim() : '';
+    const blogPromoSubtitle = typeof body.blogPromoSubtitle === 'string' ? body.blogPromoSubtitle.trim() : '';
+    const blogPromoItems = Array.isArray(body.blogPromoItems) ? body.blogPromoItems.map((x: unknown) => String(x).trim()).filter(Boolean) : [];
+    const blogPromoButtonText = typeof body.blogPromoButtonText === 'string' ? body.blogPromoButtonText.trim() : '';
+    const blogPromoPopupTitle = typeof body.blogPromoPopupTitle === 'string' ? body.blogPromoPopupTitle.trim() : '';
+    const blogPromoPopupButtonText = typeof body.blogPromoPopupButtonText === 'string' ? body.blogPromoPopupButtonText.trim() : '';
+    const blogPromoPopupSuccessText = typeof body.blogPromoPopupSuccessText === 'string' ? body.blogPromoPopupSuccessText.trim() : '';
 
     const settings = await HomepageSetting.findOneAndUpdate(
       { key: 'homepage' },
@@ -57,6 +68,17 @@ export async function PUT(req: NextRequest) {
         videoSectionYoutubeUrl,
         tickerLeadPdf,
         blogLeadPdf,
+        blogPopupTitle,
+        blogPopupButtonText,
+        blogPopupSuccessText,
+        blogPromoHeading,
+        blogPromoLead,
+        blogPromoSubtitle,
+        blogPromoItems,
+        blogPromoButtonText,
+        blogPromoPopupTitle,
+        blogPromoPopupButtonText,
+        blogPromoPopupSuccessText,
       },
       { returnDocument: 'after', upsert: true, runValidators: true }
     );

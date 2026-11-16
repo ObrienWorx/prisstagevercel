@@ -17,6 +17,19 @@ export interface IHomepageSetting extends Document {
   videoSectionYoutubeUrl: string;
   tickerLeadPdf: string;
   blogLeadPdf: string;
+  // Blog popup (LeadCapturePopup)
+  blogPopupTitle: string;
+  blogPopupButtonText: string;
+  blogPopupSuccessText: string;
+  // Blog sidebar promo (BlogSidebarPromo)
+  blogPromoHeading: string;
+  blogPromoLead: string;
+  blogPromoSubtitle: string;
+  blogPromoItems: string[];
+  blogPromoButtonText: string;
+  blogPromoPopupTitle: string;
+  blogPromoPopupButtonText: string;
+  blogPromoPopupSuccessText: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +59,23 @@ const HomepageSettingSchema = new Schema<IHomepageSetting>(
     videoSectionYoutubeUrl: { type: String, default: '' },
     tickerLeadPdf: { type: String, default: '' },
     blogLeadPdf: { type: String, default: '' },
+    blogPopupTitle: { type: String, default: 'Please fill the details to Unlock the Exclusive ASX Stock Report' },
+    blogPopupButtonText: { type: String, default: 'Unlock the Ticker' },
+    blogPopupSuccessText: { type: String, default: 'You will receive the detailed Stock Report on your submitted email.' },
+    blogPromoHeading: { type: String, default: 'Some ASX Opportunities Are Still Flying Under the Radar.' },
+    blogPromoLead: { type: String, default: 'Download our Complimentary Research Report featuring 5 ASX-listed companies poised to grow this year.' },
+    blogPromoSubtitle: { type: String, default: "What's in the Complimentary Report?" },
+    blogPromoItems: { type: [String], default: [
+      '5 high-potential ASX stocks selected by our experts',
+      'Technical and fundamental analysis explained in a simple format',
+      'General research opinions and market outlook on each company',
+      'Key business highlights, sector trends, and growth drivers',
+      'Insights designed to help investors make more informed decisions',
+    ]},
+    blogPromoButtonText: { type: String, default: 'Claim your Free Copy' },
+    blogPromoPopupTitle: { type: String, default: 'Please fill the details to Unlock the Exclusive ASX Stock Report' },
+    blogPromoPopupButtonText: { type: String, default: 'Unlock the Report' },
+    blogPromoPopupSuccessText: { type: String, default: 'You will receive the detailed Stock Report on your submitted email.' },
   },
   { timestamps: true }
 );
