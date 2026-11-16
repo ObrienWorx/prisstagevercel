@@ -83,7 +83,8 @@ export default function AboutToExpirePage() {
         ]);
       });
     });
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const sanitize = (v: string) => { const s = String(v).replace(/"/g, '""'); return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s; };
+    const csv = rows.map(r => r.map(v => `"${sanitize(v)}"`).join(',')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = `expiring-subscribers-${new Date().toISOString().slice(0,10)}.csv`;
