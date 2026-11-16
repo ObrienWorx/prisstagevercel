@@ -61,6 +61,35 @@ export default function AboutToExpirePage() {
   const toggle = (id: string) =>
     setExpanded(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
+  const exportCSV = async () => {
+    const params = new URLSearchParams({ page: '1', limit: '9999', filter });
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+    const r = await fetch(`/api/subscribers/expiring?${params}`, { headers: h });
+    const d = await r.json();
+    if (!d.success) return;
+    const rows: string[][] = [['Name', 'Email', 'Phone', 'Account Status', 'Product', 'Start Date', 'Expiry Date', 'Expiry Status']];
+    (d.data as ExpiringGroup[]).forEach(group => {
+      group.products.forEach(p => {
+        const days = Math.round((new Date(p.expiryDate).getTime() - Date.now()) / 86400000);
+        rows.push([
+          group.subscriber.name,
+          group.subscriber.email,
+          group.subscriber.phone || '',
+          group.subscriber.isActive ? 'Active' : 'Inactive',
+          p.name || '',
+          fmtDate(p.startDate),
+          fmtDate(p.expiryDate),
+          days < 0 ? `Expired ${Math.abs(days)}d ago` : `Expires in ${days}d`,
+        ]);
+      });
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `expiring-subscribers-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  };
+
   const now = new Date();
 
   const daysFromNow = (dateStr: string) =>
@@ -89,6 +118,7 @@ export default function AboutToExpirePage() {
           <h4>About To Expire</h4>
           <p>Subscribers with products expiring within 30 days or already expired</p>
         </div>
+        <button className="btn btn-outline-success" onClick={exportCSV}>⬇ Export CSV</button>
       </div>
 
       <div className="d-flex align-items-center gap-3 mb-3 flex-wrap">
@@ -104,7 +134,7 @@ export default function AboutToExpirePage() {
           ))}
         </div>
         <input
-          className="form-control"
+          className="form-control ms-auto"
           style={{ maxWidth: 320 }}
           placeholder="Search by name, email, or phone…"
           value={search}

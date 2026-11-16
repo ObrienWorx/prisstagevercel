@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import Pagination from '@/components/Pagination';
 
 const PER_PAGE = 20;
@@ -220,7 +221,10 @@ export default function SubscribersPage() {
           <h4>Subscribers</h4>
           <p>Frontend registered users and their product access</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>+ Add Subscriber</button>
+        <div className="d-flex gap-2">
+          <Link href="/dashboard/subscribers/expiring" className="btn btn-outline-warning">⏳ About To Expire</Link>
+          <button className="btn btn-primary" onClick={openCreate}>+ Add Subscriber</button>
+        </div>
       </div>
 
       {ok && <div className="alert alert-success mb-4">✓ {ok}</div>}
