@@ -109,7 +109,7 @@ export default async function BlogDetailPage({ params }: P) {
               <div
                 className="tiptap-prose"
                 style={{ fontSize: 16, lineHeight: 1.85, color: '#1e293b' }}
-                dangerouslySetInnerHTML={{ __html: blog.content }}
+                dangerouslySetInnerHTML={{ __html: (blog.content || '').replace(/<img\b[^>]*\/?>/gi, '') }}
               />
 
               {(() => {
